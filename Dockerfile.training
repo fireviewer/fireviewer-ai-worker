@@ -1,0 +1,24 @@
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime@sha256:417bd75df6365104c283ea4c1651fb3530d9eb5a4c2fafa51943cff2a94e6385
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/workspace/huggingface-cache \
+    HF_HUB_ENABLE_HF_TRANSFER=1
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ffmpeg git libgl1 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/firewarning-worker
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY training ./training
+
+# This image contains executable training code only.  Corpora, checkpoints,
+# tokens and model snapshots stay on the attached private RunPod volume.
+RUN python -m pip install --no-cache-dir '.[training,spatial-training,spatial-train]' \
+    && python -m pip install --no-cache-dir --no-deps torchvision==0.23.0 \
+    && mkdir -p /workspace/firewarning /workspace/huggingface-cache
+
+ENTRYPOINT ["python"]

@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v6
+      - run: >-
+          uv sync --frozen
+          --extra dev
+          --extra eo4-conversion
+          --extra roma-registration
+          --extra spatial-training
+          --extra training
+      - run: uv run ruff check src tests scripts training tools
+      - run: uv run mypy
+      - run: uv run pytest -q
+      - run: docker buildx build --check .

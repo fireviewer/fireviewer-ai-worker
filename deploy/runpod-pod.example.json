@@ -1,0 +1,50 @@
+{
+  "mode": "persistent-validation-pod",
+  "compute": {
+    "gpu_count": 1,
+    "gpu_vram_minimum_gb": 48,
+    "cpu_ram_minimum_gb": 64,
+    "preferred_gpu": "NVIDIA A40",
+    "container_disk_gb": 30,
+    "persistent_volume_gb": 100,
+    "persistent_volume_mount_path": "/runpod-volume"
+  },
+  "image": "REPLACE_WITH_PUBLIC_IMAGE_AND_IMMUTABLE_TAG",
+  "ports": ["8000/http"],
+  "environment": {
+    "FW_RUN_MODE": "pod",
+    "FW_POD_PORT": "8000",
+    "FW_POD_AUTH_TOKEN": "INJECT_FROM_SECRET_MANAGER_MINIMUM_32_CHARACTERS",
+    "FW_ALLOWED_MEDIA_HOSTS": "private-media.example",
+    "FW_MVP_STACK_ID": "firewarning-mvp-a40-v1",
+    "FW_ENABLE_TRANSFORMERS_RUNTIME": "true",
+    "FW_HF_CACHE_ROOT": "/runpod-volume/huggingface-cache/hub",
+    "FW_ROMA_ROOT": "/runpod-volume/firewarning-roma",
+    "FW_AUTO_PREFETCH_MODELS": "true",
+    "HF_ENABLE_PARALLEL_LOADING": "true",
+    "HF_PARALLEL_LOADING_WORKERS": "4",
+    "FW_ATTENTION_IMPLEMENTATION": "flash_attention_2",
+    "FW_MAX_MEDIA_CACHE_BYTES": "4294967296",
+    "FW_QWEN_GPU_MEMORY_GIB": "44",
+    "FW_QWEN_CPU_MEMORY_GIB": "48",
+    "FW_QWEN_VL_MAX_PIXELS": "1048576",
+    "FW_QWEN_VL_TOTAL_PIXELS": "4194304",
+    "FW_ENABLE_SOURCE_RESEARCH": "true",
+    "FW_ENABLE_RTDETR_BASELINE": "true",
+    "FW_RESEARCH_RUN_DIRECTORY": "/run/firewarning",
+    "FW_RESEARCH_MODEL_TIMEOUT_SECONDS": "840"
+  },
+  "backend": {
+    "FV_AGENT_RUNPOD_TRANSPORT": "pod",
+    "FV_AGENT_RUNPOD_POD_BASE_URL": "https://REPLACE_WITH_POD_PROXY_HOST",
+    "FV_AGENT_RUNPOD_POD_AUTH_TOKEN": "SAME_SECRET_AS_FW_POD_AUTH_TOKEN",
+    "FV_AGENT_RESEARCH_ENABLED": "true",
+    "FV_AGENT_RESEARCH_SOURCE_REGISTRY_VERSION": "firewarning-fr-sources-2026-07-19-v1"
+  },
+  "constraints": [
+    "No model weights, datasets, signed URLs, environment files, or secrets in the image.",
+    "The pod must fail startup when the seccomp AF_INET denial probe fails.",
+    "Stop the pod after validation; retain only the model volume.",
+    "Do not create a Serverless endpoint during this phase."
+  ]
+}
