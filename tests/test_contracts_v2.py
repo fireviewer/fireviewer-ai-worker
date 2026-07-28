@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from firewarning_worker.contracts import (
     ReportSectionV2,
+    SourceAnnotationV2,
     SpatialProposalV2,
     WorkerInputV2,
     WorkerOutputV2,
@@ -62,6 +63,40 @@ def test_worker_v2_abstention_requires_a_reason() -> None:
                 "status": "insufficient_geometry",
             }
         )
+
+
+def test_worker_v2_supports_front_geometry_without_a_fake_point() -> None:
+    annotation = SourceAnnotationV2.model_validate(
+        {
+            "annotation_id": "ANN-FRONT",
+            "evidence_id": "IMAGE-1",
+            "evidence_kind": "image",
+            "semantic_anchor": "visible_fire_front",
+            "source_geometry_normalized": {
+                "type": "LineString",
+                "coordinates": [[0.15, 0.8], [0.5, 0.7], [0.85, 0.75]],
+            },
+        }
+    )
+    proposal = SpatialProposalV2.model_validate(
+        {
+            "proposal_id": "SP-FRONT",
+            "annotation_id": "ANN-FRONT",
+            "status": "projected_geometry",
+            "proposal_kind": "visible_fire_front",
+            "observed_at": "2026-07-12T15:00:00+02:00",
+            "geometry_origin": "CROSS_VIEW_RAYCAST",
+            "geometry_geojson": {
+                "type": "LineString",
+                "coordinates": [[2.65, 48.39], [2.66, 48.395]],
+            },
+            "horizontal_accuracy_m": 120,
+            "reference_bundle_sha256": "b" * 64,
+        }
+    )
+
+    assert annotation.source_point_normalized is None
+    assert proposal.proposal_kind == "visible_fire_front"
 
 
 def test_worker_v2_abstention_does_not_require_a_source_annotation() -> None:
