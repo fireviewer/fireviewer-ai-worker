@@ -5,7 +5,7 @@ import math
 import os
 import re
 from collections.abc import Iterator, Mapping, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +27,12 @@ from firewarning_worker.contracts import (
 )
 from firewarning_worker.media_fetcher import MediaFetcher
 from firewarning_worker.model_registry import ModelSpec, resolve_cached_snapshot
+from firewarning_worker.model_workers.detection import (
+    IMAGE_SIZE,
+    center_letterbox,
+    is_fireviewer_detector,
+    unletterbox,
+)
 
 
 def _torch_runtime() -> tuple[Any, Any]:
@@ -174,12 +180,17 @@ class RTDETRAdapter(_BaseAdapter):
         self.processor = transformers.AutoImageProcessor.from_pretrained(
             self.model_path, local_files_only=True
         )
+        # FireViewer checkpoints were validated with FP32 weights and BF16
+        # autocast. Permanently converting their weights to FP16 reproduces the
+        # invalid historical benchmark contract.
+        dtype = torch.float32 if self.spec.source == "local" else torch.float16
         self.model = transformers.AutoModelForObjectDetection.from_pretrained(
             self.model_path,
             local_files_only=True,
-            dtype=torch.float16,
+            dtype=dtype,
             low_cpu_mem_usage=True,
         ).to("cuda")
+        self.model.eval()
 
     def infer(
         self,
@@ -202,12 +213,34 @@ class RTDETRAdapter(_BaseAdapter):
                 with self.fetcher.download(url) as image_path, Image.open(image_path) as image:
                     rgb = image.convert("RGB")
                     width, height = rgb.size
-                    inputs = self.processor(images=rgb, return_tensors="pt").to("cuda")
-                    with torch.inference_mode():
-                        outputs = self.model(**inputs)
-                    predictions = self.processor.post_process_object_detection(
-                        outputs, threshold=0.25, target_sizes=[(height, width)]
-                    )[0]
+                    if is_fireviewer_detector(self.model):
+                        canvas, geometry = center_letterbox(rgb)
+                        inputs = self.processor(
+                            images=canvas,
+                            do_resize=False,
+                            do_pad=False,
+                            return_tensors="pt",
+                        )
+                        inputs = {key: value.to("cuda") for key, value in inputs.items()}
+                        autocast = torch.autocast("cuda", dtype=torch.bfloat16)
+                        with torch.inference_mode(), autocast:
+                            outputs = self.model(**inputs)
+                        canvas_predictions = self.processor.post_process_object_detection(
+                            outputs,
+                            threshold=0.25,
+                            target_sizes=torch.tensor(
+                                [[IMAGE_SIZE, IMAGE_SIZE]],
+                                device="cuda",
+                            ),
+                        )[0]
+                        predictions = unletterbox(canvas_predictions, geometry)
+                    else:
+                        inputs = self.processor(images=rgb, return_tensors="pt").to("cuda")
+                        with torch.inference_mode(), nullcontext():
+                            outputs = self.model(**inputs)
+                        predictions = self.processor.post_process_object_detection(
+                            outputs, threshold=0.25, target_sizes=[(height, width)]
+                        )[0]
                 for index, (score, label_id, box) in enumerate(
                     zip(
                         predictions["scores"],
