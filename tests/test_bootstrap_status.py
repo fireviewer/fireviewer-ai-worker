@@ -68,11 +68,14 @@ def test_bootstrap_root_is_liveness_but_not_readiness() -> None:
 
         root_status, root_payload = _get_json(status_server.port, "/")
         health_status, health_payload = _get_json(status_server.port, "/healthz")
+        ready_status, ready_payload = _get_json(status_server.port, "/readyz")
 
         assert root_status == 200
         assert root_payload["ready"] is False
         assert root_payload["stage"] == "provisioning_models"
         assert health_status == 503
         assert health_payload["ready"] is False
+        assert ready_status == 503
+        assert ready_payload["ready"] is False
     finally:
         status_server.close()

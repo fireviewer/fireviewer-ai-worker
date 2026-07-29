@@ -78,15 +78,15 @@ class _BootstrapRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             return
-        if self.path not in {"/", "/healthz"}:
+        if self.path not in {"/", "/healthz", "/readyz"}:
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         body = json.dumps(
             self.server.bootstrap_status.payload(), separators=(",", ":"), ensure_ascii=False
         ).encode("utf-8")
         # RunPod probes the root path while the image is provisioning. Root is
-        # a liveness endpoint; /healthz remains the strict readiness endpoint
-        # used by the dispatcher and stays unavailable until the worker starts.
+        # a liveness endpoint; /healthz and /readyz are strict readiness
+        # endpoints and stay unavailable until the worker starts.
         self.send_response(HTTPStatus.OK if self.path == "/" else HTTPStatus.SERVICE_UNAVAILABLE)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))

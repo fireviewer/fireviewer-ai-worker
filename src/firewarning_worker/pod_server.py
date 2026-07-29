@@ -148,7 +148,7 @@ class PodRequestHandler(BaseHTTPRequestHandler):
         return value
 
     def do_GET(self) -> None:
-        if self.path in {"/", "/healthz"}:
+        if self.path in {"/", "/healthz", "/readyz"}:
             self._write_json(HTTPStatus.OK, {"status": "ready", "mode": "runpod-pod"})
             return
         if self.path == "/favicon.ico":

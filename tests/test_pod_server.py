@@ -7,12 +7,12 @@ from http.client import HTTPConnection
 from firewarning_worker import pod_server
 
 
-def test_root_and_health_are_public_ready_endpoints() -> None:
+def test_root_health_and_readiness_are_public_ready_endpoints() -> None:
     server = pod_server.PodHttpServer(("127.0.0.1", 0), auth_token="x" * 32)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        for path in ("/", "/healthz"):
+        for path in ("/", "/healthz", "/readyz"):
             connection = HTTPConnection("127.0.0.1", server.server_port, timeout=5)
             try:
                 connection.request("GET", path)
