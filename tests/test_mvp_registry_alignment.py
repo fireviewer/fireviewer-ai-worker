@@ -6,7 +6,7 @@ from firewarning_worker.roma_registration import ROMA_SOURCE_REVISION
 
 
 def test_public_model_provisioning_matches_the_frozen_manifest(monkeypatch) -> None:
-    monkeypatch.setenv("FW_ENABLE_RTDETR_BASELINE", "true")
+    monkeypatch.setenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE", "true")
     monkeypatch.delenv("FW_ENABLE_CONSENSUS_JUDGE", raising=False)
     stack = load_mvp_stack()
 

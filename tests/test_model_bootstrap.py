@@ -97,17 +97,19 @@ def test_runtime_dependencies_are_reported_without_installing_at_boot(
     assert "attention=flash_attention_2" in output
 
 
-def test_rtdetr_baseline_changes_the_persisted_model_set(
+def test_detector_ensemble_changes_the_persisted_model_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("FW_ENABLE_RTDETR_BASELINE", "false")
+    monkeypatch.setenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE", "false")
     without_detector = provisioning._selected_models(skip_qwen=False)
     assert "fire_detection" not in {spec.role for spec in without_detector}
 
-    monkeypatch.setenv("FW_ENABLE_RTDETR_BASELINE", "true")
+    monkeypatch.setenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE", "true")
     with_detector = provisioning._selected_models(skip_qwen=False)
     assert "fire_detection" in {spec.role for spec in with_detector}
-    assert len(with_detector) == len(without_detector) + 1
+    detectors = [spec for spec in with_detector if spec.role == "fire_detection"]
+    assert len(detectors) == 2
+    assert len(with_detector) == len(without_detector) + 2
 
 
 def test_fixed_gid_mount_falls_back_without_weakening_other_permissions(

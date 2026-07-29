@@ -56,10 +56,10 @@
       "policy": "single_with_rules",
       "candidates": [
         {
-          "candidate_id": "asr.whisper_large_v3",
-          "model_id": "openai/whisper-large-v3",
+          "candidate_id": "asr.whisper_large_v3_turbo",
+          "model_id": "openai/whisper-large-v3-turbo",
           "source": "huggingface",
-          "revision": "06f233fe06e710322aca913c1bc4249a0d71fce1",
+          "revision": "41f01f3fe87f28c78e2fbf8b568835947dd65ed9",
           "rank": 1,
           "status": "integrated",
           "provisioned_by_mvp": true,
@@ -70,45 +70,44 @@
     },
     {
       "stage_id": "fire_detection",
-      "activation": "baseline_only",
+      "activation": "open",
       "policy": "quorum",
       "candidates": [
         {
           "candidate_id": "detection.dfine_firewarning",
-          "model_id": "ustc-community/dfine-xlarge-obj365",
+          "model_id": "fireviewer/dfine-xlarge-fire-smoke",
           "source": "huggingface",
-          "revision": "a99923ec2727499f769a82edba864299fceaca48",
+          "revision": "3b3c2171ec78f3d33a9031df512a839e912b36f2",
           "rank": 1,
-          "status": "training_required",
-          "notes": ["Promotion requires the frozen detector benchmark and a private checkpoint digest."]
+          "status": "integrated",
+          "provisioned_by_mvp": true,
+          "current_candidate": true,
+          "notes": ["Primary trained fire and smoke detector; FP32 weights with BF16 autocast."]
+        },
+        {
+          "candidate_id": "detection.rtdetr_firewarning",
+          "model_id": "fireviewer/rtdetr-v2-r50-fire-smoke",
+          "source": "huggingface",
+          "revision": "27ca0bcdebdb1b9b860932fc4935513a5dfc7652",
+          "rank": 2,
+          "status": "integrated",
+          "provisioned_by_mvp": true,
+          "current_candidate": false,
+          "notes": ["Second trained detector; every result is retained for contradiction detection."]
         },
         {
           "candidate_id": "detection.pyronear_yolo11s",
           "model_id": "pyronear/yolo11s_quick-quokka_v8.0.0",
           "source": "huggingface",
           "revision": "086799292e7e84a6ff8bd6394a5011575a6400ea",
-          "rank": 2,
-          "status": "benchmark_required",
-          "notes": ["Independent specialist challenger evaluated on the frozen detector benchmark."]
-        },
-        {
-          "candidate_id": "detection.rtdetr_v2_r50vd",
-          "model_id": "PekingU/rtdetr_v2_r50vd",
-          "source": "huggingface",
-          "revision": "282494075698cab9faa1096ae26856890030c817",
           "rank": 3,
-          "status": "baseline_only",
-          "provisioned_by_mvp": true,
-          "current_candidate": true,
-          "notes": ["COCO comparison baseline; it cannot confirm firefighting resources or a fire front."]
+          "status": "benchmark_required",
+          "notes": ["Deferred benchmark candidate; absent from the runtime image."]
         }
       ],
       "outputs": ["detection_regions"],
       "judge_on_contradiction": true,
-      "activation_requirements": [
-        "D-FINE and Pyronear pass the same frozen test set.",
-        "Class calibration and duplicate-source splits are validated."
-      ]
+      "activation_requirements": []
     },
     {
       "stage_id": "fire_pointing",

@@ -27,13 +27,15 @@ def test_pod_and_serverless_examples_are_a40_only() -> None:
     assert endpoint["gpu_vram_minimum_gb"] == 48
     assert endpoint["environment"]["FW_MVP_STACK_ID"] == "firewarning-mvp-a40-v1"
     for environment in (pod["environment"], endpoint["environment"]):
-        assert environment["FW_ENABLE_RTDETR_BASELINE"] == "true"
+        assert environment["FW_ENABLE_FIRE_DETECTOR_ENSEMBLE"] == "true"
+        assert environment["FW_ENABLE_CONSENSUS_JUDGE"] == "true"
         assert "FW_RTDETR_CHECKPOINT_PATH" not in environment
         assert "FW_RTDETR_CHECKPOINT_SHA256" not in environment
 
 
-def test_container_enables_the_pinned_public_detector_baseline() -> None:
+def test_container_enables_the_pinned_public_detector_ensemble() -> None:
     dockerfile = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
-    assert "FW_ENABLE_RTDETR_BASELINE=true" in dockerfile
+    assert "FW_ENABLE_FIRE_DETECTOR_ENSEMBLE=true" in dockerfile
+    assert "FW_ENABLE_CONSENSUS_JUDGE=true" in dockerfile
     assert "FW_RTDETR_CHECKPOINT_PATH" not in dockerfile

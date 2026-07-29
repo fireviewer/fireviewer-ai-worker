@@ -9,8 +9,8 @@ doivent reproduire le benchmark.
 
 | Modèle FireViewer | Rôle | Contrat worker | Branchement orchestrateur |
 |---|---|---|---|
-| RT-DETRv2-R50 feu/fumée | détection | **implémenté** : letterbox centré 768, poids FP32, autocast BF16, dé-letterbox | **actif** via `RTDETRAdapter` pour un checkpoint local FireViewer |
-| D-FINE X-Large feu/fumée | détection/contradicteur | géométrie partagée disponible, mais chargement D-FINE spécifique non intégré | **non actif** |
+| D-FINE X-Large feu/fumée | détection principale | **implémenté** : checkpoint public épinglé, letterbox centré 768, poids FP32, autocast BF16, dé-letterbox | **actif**, candidat de rang 1 |
+| RT-DETRv2-R50 feu/fumée | contre-détection | **implémenté** avec le même contrat géométrique et numérique | **actif**, candidat de rang 2 ; sa sortie est conservée même lorsque D-FINE est retenu |
 | MolmoPoint-8B FireViewer | points flamme/front/origine fumée | **implémenté** : API native de jetons de point, métadonnées du processeur et coordonnées normalisées | **actif pour les lots V2** entre la sélection visuelle et la projection caméra/MNT |
 | Prithvi FireViewer | surface brûlée | blocage explicite du checkpoint déprécié | **interdit** : régression HLS confirmée ; modèle officiel conservé comme référence |
 
@@ -28,8 +28,13 @@ Les checkpoints FireViewer restent en FP32 en mémoire. L’inférence CUDA util
 un autocast BF16. Le passage permanent des poids en BF16 ou FP16 n’est pas le
 contrat validé.
 
-Le worker générique de la baseline COCO RT-DETR conserve son propre processeur ;
-ses objets génériques ne sont jamais renommés en moyens de lutte.
+Les deux détecteurs FireViewer sont exécutés séquentiellement sur les mêmes
+preuves. D-FINE produit la proposition principale. RT-DETR produit une
+contre-analyse persistée. Une divergence au-dessus du seuil de consensus appelle
+l’arbitre Qwen3-14B sur les sorties structurées ; s’il manque la preuve visuelle
+nécessaire pour trancher, le résultat reste privé et requiert une revue humaine.
+Aucun consensus de détection n’est accepté si l’un des deux détecteurs échoue.
+Aucun objet générique n’est renommé en moyen de lutte.
 
 ## MolmoPoint
 

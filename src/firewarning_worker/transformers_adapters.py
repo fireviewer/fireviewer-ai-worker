@@ -186,9 +186,13 @@ class RTDETRAdapter(_BaseAdapter):
             self.model_path, local_files_only=True
         )
         # FireViewer checkpoints were validated with FP32 weights and BF16
-        # autocast. Permanently converting their weights to FP16 reproduces the
-        # invalid historical benchmark contract.
-        dtype = torch.float32 if self.spec.source == "local" else torch.float16
+        # autocast, including the public immutable repositories. Permanently
+        # converting their weights to FP16 reproduces the invalid historical
+        # benchmark contract.
+        is_fireviewer_checkpoint = self.spec.source == "local" or self.spec.model_id.startswith(
+            "fireviewer/"
+        )
+        dtype = torch.float32 if is_fireviewer_checkpoint else torch.float16
         self.model = transformers.AutoModelForObjectDetection.from_pretrained(
             self.model_path,
             local_files_only=True,

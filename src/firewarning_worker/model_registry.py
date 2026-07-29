@@ -135,8 +135,8 @@ PUBLIC_MODELS: tuple[ModelSpec, ...] = (
     ),
     ModelSpec(
         role="asr",
-        model_id="openai/whisper-large-v3",
-        revision="06f233fe06e710322aca913c1bc4249a0d71fce1",
+        model_id="openai/whisper-large-v3-turbo",
+        revision="41f01f3fe87f28c78e2fbf8b568835947dd65ed9",
     ),
     ModelSpec(
         role="visual_grounding",
@@ -155,11 +155,19 @@ PUBLIC_MODELS: tuple[ModelSpec, ...] = (
     ),
 )
 
-RTDETR_BASELINE = ModelSpec(
+DFINE_FIREVIEWER = ModelSpec(
     role="fire_detection",
-    model_id="PekingU/rtdetr_v2_r50vd",
-    revision="282494075698cab9faa1096ae26856890030c817",
+    model_id="fireviewer/dfine-xlarge-fire-smoke",
+    revision="3b3c2171ec78f3d33a9031df512a839e912b36f2",
 )
+
+RTDETR_FIREVIEWER = ModelSpec(
+    role="fire_detection",
+    model_id="fireviewer/rtdetr-v2-r50-fire-smoke",
+    revision="27ca0bcdebdb1b9b860932fc4935513a5dfc7652",
+)
+# Legacy import kept temporarily while callers migrate to the explicit ensemble name.
+RTDETR_BASELINE = RTDETR_FIREVIEWER
 
 # The MVP uses the same pinned text model for source research and rare final
 # adjudication. It fits the A40 in BF16 and is loaded only after every stage
@@ -171,9 +179,15 @@ CONSENSUS_JUDGE = ModelSpec(
 )
 
 
-def rtdetr_baseline_enabled() -> bool:
-    value = os.getenv("FW_ENABLE_RTDETR_BASELINE", "false")
+def detector_ensemble_enabled() -> bool:
+    value = os.getenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE")
+    if value is None:
+        # Temporary compatibility with already provisioned validation pods.
+        value = os.getenv("FW_ENABLE_RTDETR_BASELINE", "false")
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+rtdetr_baseline_enabled = detector_ensemble_enabled
 
 
 def consensus_judge_enabled() -> bool:
@@ -183,18 +197,24 @@ def consensus_judge_enabled() -> bool:
 
 def enabled_public_models() -> tuple[ModelSpec, ...]:
     models = PUBLIC_MODELS
-    if rtdetr_baseline_enabled():
-        # Provisioning follows the media pipeline order: Whisper, optional visual
-        # filtering, Florence, then Qwen3-VL. Source research remains first because
-        # it is an independent operation sharing the same persistent cache.
-        models = (*PUBLIC_MODELS[:2], RTDETR_BASELINE, *PUBLIC_MODELS[2:])
+    if detector_ensemble_enabled():
+        # Both trained detectors are provisioned. SessionRunner unloads one before
+        # loading the other, so the A40 never keeps both checkpoints in VRAM.
+        models = (
+            *PUBLIC_MODELS[:2],
+            DFINE_FIREVIEWER,
+            RTDETR_FIREVIEWER,
+            *PUBLIC_MODELS[2:],
+        )
     if consensus_judge_enabled():
         models = (*models, CONSENSUS_JUDGE)
     return models
 
 
 def build_registry() -> dict[ModelRole, ModelSpec]:
-    registry = {spec.role: spec for spec in enabled_public_models()}
+    registry: dict[ModelRole, ModelSpec] = {}
+    for spec in enabled_public_models():
+        registry.setdefault(spec.role, spec)
     checkpoint = os.getenv("FW_RTDETR_CHECKPOINT_PATH")
     digest = os.getenv("FW_RTDETR_CHECKPOINT_SHA256")
     if checkpoint or digest:
@@ -227,10 +247,43 @@ def build_registry() -> dict[ModelRole, ModelSpec]:
 
 
 def build_model_group_registry() -> dict[ModelRole, ModelGroupSpec]:
-    """Build execution groups without pretending unsupported challengers can run."""
+    """Build execution groups for the models that can actually run in this image."""
 
     groups: dict[ModelRole, ModelGroupSpec] = {}
-    for role, spec in build_registry().items():
+    registry = build_registry()
+    for role, spec in registry.items():
+        if role == "fire_detection" and detector_ensemble_enabled():
+            rtdetr_spec = spec if spec.source == "local" else RTDETR_FIREVIEWER
+            detector_specs = (DFINE_FIREVIEWER, rtdetr_spec)
+            group = ModelGroupSpec(
+                role=role,
+                candidates=tuple(
+                    ModelCandidateSpec(
+                        candidate_id=(
+                            "fire_detection.dfine.primary"
+                            if rank == 1
+                            else "fire_detection.rtdetr.challenger"
+                        ),
+                        spec=candidate,
+                        rank=rank,
+                    )
+                    for rank, candidate in enumerate(detector_specs, start=1)
+                ),
+                strategy=ConsensusStrategy.QUORUM,
+                minimum_successful=2,
+                minimum_agreeing=2,
+                agreement_threshold=0.4,
+                disagreement_decision=ConsensusFailureDecision.HUMAN_REVIEW,
+                adjudicator=ModelCandidateSpec(
+                    candidate_id="fire_detection.qwen3_14b.judge",
+                    spec=CONSENSUS_JUDGE,
+                    rank=3,
+                ),
+                adjudication_confidence_threshold=0.65,
+            )
+            group.validate()
+            groups[role] = group
+            continue
         group = ModelGroupSpec(
             role=role,
             candidates=(

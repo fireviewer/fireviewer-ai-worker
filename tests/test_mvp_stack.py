@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import json
 
-from firewarning_worker.model_registry import PUBLIC_MODELS, RTDETR_BASELINE
+from firewarning_worker.model_registry import (
+    DFINE_FIREVIEWER,
+    PUBLIC_MODELS,
+    RTDETR_FIREVIEWER,
+)
 from firewarning_worker.mvp_stack import (
     ImplementationStatus,
     StageActivation,
@@ -53,7 +57,7 @@ def test_every_current_runtime_model_is_represented_by_the_frozen_stack() -> Non
         if candidate.revision is not None
     }
 
-    for spec in (*PUBLIC_MODELS, RTDETR_BASELINE):
+    for spec in (*PUBLIC_MODELS, DFINE_FIREVIEWER, RTDETR_FIREVIEWER):
         assert (spec.model_id, spec.revision) in manifest_models
 
 

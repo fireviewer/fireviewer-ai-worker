@@ -27,7 +27,8 @@
     "FW_ATTENTION_IMPLEMENTATION": "flash_attention_2",
     "FW_QWEN_GPU_MEMORY_GIB": "44",
     "FW_QWEN_CPU_MEMORY_GIB": "48",
-    "FW_ENABLE_RTDETR_BASELINE": "true"
+    "FW_ENABLE_FIRE_DETECTOR_ENSEMBLE": "true",
+    "FW_ENABLE_CONSENSUS_JUDGE": "true"
   },
   "warning": "Documentation example, not a directly importable RunPod API payload. Benchmark before production."
 }

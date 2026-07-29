@@ -5,9 +5,13 @@ from hashlib import sha256
 import pytest
 
 from firewarning_worker.model_registry import (
-    RTDETR_BASELINE,
+    CONSENSUS_JUDGE,
+    DFINE_FIREVIEWER,
+    RTDETR_FIREVIEWER,
+    ConsensusStrategy,
     ModelSpec,
     RegistryError,
+    build_model_group_registry,
     build_registry,
     resolve_cached_snapshot,
 )
@@ -43,22 +47,31 @@ def test_private_detector_digest_is_recalculated(monkeypatch, tmp_path) -> None:
         build_registry()
 
 
-def test_public_detector_baseline_is_explicitly_toggleable(monkeypatch) -> None:
+def test_public_detector_ensemble_is_explicitly_toggleable(monkeypatch) -> None:
     monkeypatch.delenv("FW_RTDETR_CHECKPOINT_PATH", raising=False)
     monkeypatch.delenv("FW_RTDETR_CHECKPOINT_SHA256", raising=False)
-    monkeypatch.setenv("FW_ENABLE_RTDETR_BASELINE", "false")
+    monkeypatch.setenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE", "false")
 
     assert "fire_detection" not in build_registry()
 
-    monkeypatch.setenv("FW_ENABLE_RTDETR_BASELINE", "true")
+    monkeypatch.setenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE", "true")
     detector = build_registry()["fire_detection"]
-    assert detector == RTDETR_BASELINE
-    assert detector.model_id == "PekingU/rtdetr_v2_r50vd"
-    assert detector.revision == "282494075698cab9faa1096ae26856890030c817"
+    assert detector == DFINE_FIREVIEWER
+
+    group = build_model_group_registry()["fire_detection"]
+    assert group.strategy == ConsensusStrategy.QUORUM
+    assert [candidate.spec for candidate in group.candidates] == [
+        DFINE_FIREVIEWER,
+        RTDETR_FIREVIEWER,
+    ]
+    assert group.minimum_successful == 2
+    assert group.minimum_agreeing == 2
+    assert group.adjudicator is not None
+    assert group.adjudicator.spec == CONSENSUS_JUDGE
 
 
 def test_runtime_models_use_full_strength_pinned_variants(monkeypatch) -> None:
-    monkeypatch.setenv("FW_ENABLE_RTDETR_BASELINE", "false")
+    monkeypatch.setenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE", "false")
     registry = build_registry()
 
     assert registry["source_research"].model_id == "Qwen/Qwen3-14B"
@@ -67,7 +80,7 @@ def test_runtime_models_use_full_strength_pinned_variants(monkeypatch) -> None:
     assert registry["multimodal_extraction"].revision == (
         "c202236235762e1c871ad0ccb60c8ee5ba337b9a"
     )
-    assert registry["asr"].model_id == "openai/whisper-large-v3"
+    assert registry["asr"].model_id == "openai/whisper-large-v3-turbo"
     assert registry["fire_pointing"].model_id == ("fireviewer/molmopoint-8b-fire-smoke-pointing")
     assert registry["fire_pointing"].revision == ("67829947ac3aa55632ef752ed9c8f486dba60ae2")
 
@@ -78,7 +91,7 @@ def test_private_detector_overrides_enabled_public_baseline(monkeypatch, tmp_pat
     weights = checkpoint / "model.safetensors"
     weights.write_bytes(b"private FireWarning checkpoint")
     digest = sha256(weights.read_bytes()).hexdigest()
-    monkeypatch.setenv("FW_ENABLE_RTDETR_BASELINE", "true")
+    monkeypatch.setenv("FW_ENABLE_FIRE_DETECTOR_ENSEMBLE", "true")
     monkeypatch.setenv("FW_RTDETR_CHECKPOINT_PATH", str(checkpoint))
     monkeypatch.setenv("FW_RTDETR_CHECKPOINT_SHA256", digest)
 
@@ -86,3 +99,13 @@ def test_private_detector_overrides_enabled_public_baseline(monkeypatch, tmp_pat
 
     assert detector.source == "local"
     assert detector.revision == f"sha256:{digest}"
+
+    group = build_model_group_registry()["fire_detection"]
+    assert [candidate.spec for candidate in group.candidates] == [
+        DFINE_FIREVIEWER,
+        detector,
+    ]
+    assert [candidate.candidate_id for candidate in group.candidates] == [
+        "fire_detection.dfine.primary",
+        "fire_detection.rtdetr.challenger",
+    ]
