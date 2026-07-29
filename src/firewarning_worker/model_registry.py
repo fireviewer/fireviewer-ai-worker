@@ -10,6 +10,7 @@ from typing import Literal
 
 ModelRole = Literal[
     "asr",
+    "burned_area",
     "fire_detection",
     "visual_grounding",
     "multimodal_extraction",
@@ -153,6 +154,11 @@ PUBLIC_MODELS: tuple[ModelSpec, ...] = (
         model_id="Qwen/Qwen3.5-9B",
         revision="c202236235762e1c871ad0ccb60c8ee5ba337b9a",
     ),
+    ModelSpec(
+        role="burned_area",
+        model_id="ibm-nasa-geospatial/Prithvi-EO-2.0-300M-BurnScars",
+        revision="a3f2c410e45b8ac7417976614528a872f024d831",
+    ),
 )
 
 DFINE_FIREVIEWER = ModelSpec(
@@ -252,6 +258,10 @@ def build_model_group_registry() -> dict[ModelRole, ModelGroupSpec]:
     groups: dict[ModelRole, ModelGroupSpec] = {}
     registry = build_registry()
     for role, spec in registry.items():
+        if role == "burned_area":
+            # Burned-area inference consumes the native V2 satellite contract
+            # after the legacy media session and has its own fail-closed gate.
+            continue
         if role == "fire_detection" and detector_ensemble_enabled():
             rtdetr_spec = spec if spec.source == "local" else RTDETR_FIREVIEWER
             detector_specs = (DFINE_FIREVIEWER, rtdetr_spec)

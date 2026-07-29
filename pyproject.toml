@@ -26,6 +26,11 @@ runtime = [
   "transformers==5.14.1",
   "vercel==0.7.0",
 ]
+burned-area-runtime = [
+  "pyyaml==6.0.3",
+  "rasterio==1.4.4",
+  "terratorch==1.2.10",
+]
 roma-registration = [
   "einops==0.8.2",
   "kornia==0.8.3",
@@ -138,7 +143,7 @@ strict = true
 packages = ["firewarning_worker"]
 
 [[tool.mypy.overrides]]
-module = ["cv2.*", "huggingface_hub.*", "kornia.*", "numpy.*", "pyproj.*", "romatch.*", "torch.*", "torchvision.*", "transformers.*", "PIL.*", "qwen_vl_utils.*", "httpx.*", "runpod.*", "flash_attn.*", "vercel.*"]
+module = ["cv2.*", "huggingface_hub.*", "kornia.*", "numpy.*", "pyproj.*", "rasterio.*", "romatch.*", "terratorch.*", "torch.*", "torchvision.*", "transformers.*", "PIL.*", "qwen_vl_utils.*", "httpx.*", "runpod.*", "flash_attn.*", "vercel.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

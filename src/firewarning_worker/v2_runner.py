@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -33,6 +34,7 @@ from firewarning_worker.stage_contracts import StageRole, load_stage_contract_re
 
 if TYPE_CHECKING:
     from firewarning_worker.spatial_pipeline import DeterministicSpatialPipeline
+    from firewarning_worker.v2_burned_area import BurnedAreaExecution
     from firewarning_worker.v2_pointing import FirePointingExecution
 
 
@@ -121,7 +123,11 @@ def to_legacy_input(batch: WorkerInputV2) -> WorkerInput:
             "items": [
                 {
                     "input_id": item.input_id,
-                    "media_type": item.media_type,
+                    "media_type": (
+                        "article"
+                        if item.media_type.value == "satellite_data"
+                        else item.media_type
+                    ),
                     "working_file_url": item.working_file_url,
                     "metadata": _legacy_metadata(item).model_dump(mode="json", exclude_none=True),
                     "frames": [frame.model_dump(mode="json") for frame in item.frames],
@@ -267,6 +273,8 @@ def _spatial_proposals(
     item: WorkerBatchItemV2,
     annotations: tuple[SourceAnnotationV2, ...],
 ) -> tuple[SpatialProposalV2, ...]:
+    if item.media_type.value == "satellite_data":
+        return _hotspot_spatial_proposals(batch, item)
     if not annotations and (item.working_file_url is not None or item.frames):
         return (
             SpatialProposalV2(
@@ -289,6 +297,95 @@ def _spatial_proposals(
             )
         )
     return tuple(proposals)
+
+
+def _hotspot_spatial_proposals(
+    batch: WorkerInputV2,
+    item: WorkerBatchItemV2,
+) -> tuple[SpatialProposalV2, ...]:
+    hotspot = item.hotspot
+    reference = batch.reference_bundle
+    if hotspot is None or item.article_text is None:
+        return (
+            SpatialProposalV2(
+                proposal_id=_stable_id("SP", item.input_id, "hotspot-metadata-missing"),
+                status="insufficient_geometry",
+                uncertainty_codes=("hotspot_metadata_missing",),
+            ),
+        )
+    if reference is None:
+        return (
+            SpatialProposalV2(
+                proposal_id=_stable_id("SP", item.input_id, "reference-missing"),
+                status="insufficient_geometry",
+                uncertainty_codes=("reference_bundle_missing",),
+            ),
+        )
+    try:
+        payload = json.loads(item.article_text)
+    except json.JSONDecodeError:
+        payload = None
+    if not isinstance(payload, dict) or payload.get("type") != "FeatureCollection":
+        return (
+            SpatialProposalV2(
+                proposal_id=_stable_id("SP", item.input_id, "invalid-geojson"),
+                status="insufficient_geometry",
+                uncertainty_codes=("hotspot_geojson_invalid",),
+            ),
+        )
+    raw_features = payload.get("features")
+    if not isinstance(raw_features, list) or len(raw_features) > 5_000:
+        return (
+            SpatialProposalV2(
+                proposal_id=_stable_id("SP", item.input_id, "feature-count-invalid"),
+                status="insufficient_geometry",
+                uncertainty_codes=("hotspot_feature_count_invalid",),
+            ),
+        )
+    min_lon, min_lat, max_lon, max_lat = hotspot.bbox_wgs84
+    proposals: list[SpatialProposalV2] = []
+    for index, feature in enumerate(raw_features, start=1):
+        if not isinstance(feature, dict):
+            continue
+        geometry = feature.get("geometry")
+        if not isinstance(geometry, dict) or geometry.get("type") != "Point":
+            continue
+        coordinates = geometry.get("coordinates")
+        if (
+            not isinstance(coordinates, list | tuple)
+            or len(coordinates) < 2
+            or not all(isinstance(value, int | float) for value in coordinates[:2])
+        ):
+            continue
+        longitude, latitude = float(coordinates[0]), float(coordinates[1])
+        if not (min_lon <= longitude <= max_lon and min_lat <= latitude <= max_lat):
+            continue
+        proposals.append(
+            SpatialProposalV2(
+                proposal_id=_stable_id("SP", item.input_id, "hotspot", str(index)),
+                status="projected_geometry",
+                proposal_kind="active_fire_point",
+                observed_at=hotspot.acquired_at,
+                geometry_origin="EXPLICIT_SOURCE_GEOMETRY",
+                longitude=longitude,
+                latitude=latitude,
+                geometry_geojson={
+                    "type": "Point",
+                    "coordinates": [longitude, latitude],
+                },
+                horizontal_accuracy_m=hotspot.resolution_m,
+                reference_bundle_sha256=reference.manifest_sha256,
+            )
+        )
+    if proposals:
+        return tuple(proposals)
+    return (
+        SpatialProposalV2(
+            proposal_id=_stable_id("SP", item.input_id, "no-hotspots"),
+            status="insufficient_geometry",
+            uncertainty_codes=("hotspot_observations_empty",),
+        ),
+    )
 
 
 def _fact_category(fact_type: str) -> FactCategory:
@@ -497,6 +594,7 @@ def from_legacy_output(
     consensus_results: tuple[WorkerConsensusResultV2, ...],
     contract_digest: str,
     fire_pointing_execution: FirePointingExecution | None = None,
+    burned_area_execution: BurnedAreaExecution | None = None,
     spatial_pipeline: DeterministicSpatialPipeline | None = None,
 ) -> WorkerOutputV2:
     source_by_id = {item.input_id: item for item in batch.items}
@@ -510,15 +608,23 @@ def from_legacy_output(
             if fire_pointing_execution is not None
             else ()
         )
+        burned_area_annotations = (
+            burned_area_execution.annotations_by_input.get(source.input_id, ())
+            if burned_area_execution is not None
+            else ()
+        )
         # MolmoPoint is authoritative for its dedicated pixel contract. Florence
         # remains a per-item fallback when Molmo explicitly abstains or fails.
-        annotations = pointed_annotations or legacy_annotations
+        annotations = burned_area_annotations + (pointed_annotations or legacy_annotations)
         prepared.append((legacy_result, source, annotations))
         annotations_by_input[source.input_id] = annotations
     pointing_traces = (
         (fire_pointing_execution.stage_trace,) if fire_pointing_execution is not None else ()
     )
-    traces_before_spatial = stage_traces + pointing_traces
+    burned_area_traces = (
+        (burned_area_execution.stage_trace,) if burned_area_execution is not None else ()
+    )
+    traces_before_spatial = stage_traces + pointing_traces + burned_area_traces
     spatial_execution = (
         spatial_pipeline.project(
             batch,
@@ -530,10 +636,19 @@ def from_legacy_output(
     )
     items: list[WorkerItemResultV2] = []
     for legacy_result, source, annotations in prepared:
-        spatial_proposals = (
-            spatial_execution.proposals_by_input.get(source.input_id)
-            if spatial_execution is not None
+        burned_area_proposals = (
+            burned_area_execution.proposals_by_input.get(source.input_id)
+            if burned_area_execution is not None
             else None
+        )
+        spatial_proposals = (
+            _hotspot_spatial_proposals(batch, source)
+            if source.media_type.value == "satellite_data"
+            else burned_area_proposals or (
+                spatial_execution.proposals_by_input.get(source.input_id)
+                if spatial_execution is not None
+                else None
+            )
         )
         items.append(
             WorkerItemResultV2(
@@ -572,6 +687,8 @@ def from_legacy_output(
     )
     if fire_pointing_execution is not None and fire_pointing_execution.model_run is not None:
         runs += (fire_pointing_execution.model_run,)
+    if burned_area_execution is not None and burned_area_execution.model_run is not None:
+        runs += (burned_area_execution.model_run,)
     runs += spatial_execution.model_runs if spatial_execution is not None else ()
     result_items = tuple(items)
     traces = traces_before_spatial
@@ -605,6 +722,12 @@ def from_legacy_output(
     if (
         fire_pointing_execution is not None
         and fire_pointing_execution.stage_trace.status == "failed"
+        and status == "succeeded"
+    ):
+        status = "partial_failure"
+    if (
+        burned_area_execution is not None
+        and burned_area_execution.stage_trace.status == "failed"
         and status == "succeeded"
     ):
         status = "partial_failure"

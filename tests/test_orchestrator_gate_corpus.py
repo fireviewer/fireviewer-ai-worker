@@ -15,13 +15,13 @@ def test_orchestrator_gate_bundle_builds_and_passes_real_preflight(tmp_path: Pat
     assert report["rows"]["split_leakage_groups"] == 0
     assert report["rows"]["task_counts"] == {
         "consensus_decision": 8,
-        "stage_gate_decision": 110,
+        "stage_gate_decision": 121,
     }
     assert report["workflows"]["workflow_examples"] == 2
 
     preflight = _preflight(tmp_path / BUNDLE_ID)
     assert preflight["dataset_ready"] is True
-    assert preflight["rows"] == 118
+    assert preflight["rows"] == 129
     assert preflight["contains_operational_incident"] is False
 
     with zipfile.ZipFile(tmp_path / f"{BUNDLE_ID}.zip") as archive:

@@ -14,6 +14,7 @@ from firewarning_worker.contracts import (
     WorkerInputV2,
     WorkerOutputV2,
 )
+from firewarning_worker.v2_runner import _hotspot_spatial_proposals, to_legacy_input
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "contracts" / "agent-worker" / "v2" / "examples"
 
@@ -149,3 +150,99 @@ def test_worker_v2_stage_trace_sequences_cannot_overlap() -> None:
 
     with pytest.raises(ValidationError, match="duplicate stage sequences"):
         WorkerOutputV2.model_validate(payload)
+
+
+def test_satellite_hotspot_geojson_keeps_explicit_sensor_points() -> None:
+    payload = _example("valid-input.json")
+    payload["batch_type"] = "satellite_media"
+    items = payload["items"]
+    assert isinstance(items, list)
+    items[0] = {
+        "input_id": "INPUT-HOTSPOTS",
+        "media_type": "satellite_data",
+        "provenance": {
+            "source_key": "NASA-FIRMS-2026-07-13",
+            "source_reference_url": "https://firms.modaps.eosdis.nasa.gov/",
+            "attribution": "NASA FIRMS",
+            "license_identifier": "NASA-OPEN-DATA",
+            "trust": "institutional",
+        },
+        "hotspot": {
+            "product_id": "VIIRS-FONT-2026-07-13",
+            "provider": "NASA FIRMS",
+            "acquired_at": "2026-07-13T18:00:00Z",
+            "sensor_names": ["VIIRS SNPP", "VIIRS NOAA20"],
+            "resolution_m": 375,
+            "bbox_wgs84": [2.46, 48.34, 2.72, 48.44],
+        },
+        "article_text": json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [2.61, 48.39],
+                        },
+                        "properties": {"sensor": "VIIRS SNPP"},
+                    }
+                ],
+            }
+        ),
+    }
+    batch = WorkerInputV2.model_validate(payload)
+
+    legacy = to_legacy_input(batch)
+    proposals = _hotspot_spatial_proposals(batch, batch.items[0])
+
+    assert legacy.items[0].media_type.value == "article"
+    assert len(proposals) == 1
+    assert proposals[0].geometry_origin == "EXPLICIT_SOURCE_GEOMETRY"
+    assert proposals[0].longitude == 2.61
+    assert proposals[0].latitude == 48.39
+
+
+def test_satellite_hotspot_geojson_rejects_points_outside_declared_product_bbox() -> None:
+    payload = _example("valid-input.json")
+    payload["batch_type"] = "satellite_media"
+    items = payload["items"]
+    assert isinstance(items, list)
+    items[0] = {
+        "input_id": "INPUT-HOTSPOTS",
+        "media_type": "satellite_data",
+        "provenance": {
+            "source_key": "NASA-FIRMS-2026-07-13",
+            "source_reference_url": "https://firms.modaps.eosdis.nasa.gov/",
+            "attribution": "NASA FIRMS",
+            "license_identifier": "NASA-OPEN-DATA",
+            "trust": "institutional",
+        },
+        "hotspot": {
+            "product_id": "VIIRS-FONT-2026-07-13",
+            "provider": "NASA FIRMS",
+            "acquired_at": "2026-07-13T18:00:00Z",
+            "sensor_names": ["VIIRS SNPP"],
+            "resolution_m": 375,
+            "bbox_wgs84": [2.46, 48.34, 2.72, 48.44],
+        },
+        "article_text": json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [5.0, 45.0]},
+                        "properties": {},
+                    }
+                ],
+            }
+        ),
+    }
+    batch = WorkerInputV2.model_validate(payload)
+
+    proposals = _hotspot_spatial_proposals(batch, batch.items[0])
+
+    assert len(proposals) == 1
+    assert proposals[0].status == "insufficient_geometry"
+    assert proposals[0].uncertainty_codes == ("hotspot_observations_empty",)

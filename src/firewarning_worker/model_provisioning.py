@@ -43,7 +43,12 @@ def _snapshot_path(cache_root: Path, spec: ModelSpec) -> Path:
 def _snapshot_weight_files(snapshot: Path) -> tuple[Path, ...]:
     if not snapshot.is_dir():
         return ()
-    return tuple(path for path in snapshot.rglob("*.safetensors") if path.is_file())
+    weight_suffixes = {".safetensors", ".pt", ".pth"}
+    return tuple(
+        path
+        for path in snapshot.rglob("*")
+        if path.is_file() and path.suffix.casefold() in weight_suffixes
+    )
 
 
 def _snapshot_size_bytes(snapshot: Path) -> int:
@@ -134,7 +139,7 @@ def provision_model_cache(
                 flush=True,
             )
         if not _snapshot_weight_files(snapshot):
-            raise RuntimeError(f"pinned snapshot contains no safetensors weights: {snapshot}")
+            raise RuntimeError(f"pinned snapshot contains no supported weights: {snapshot}")
         print(
             "firewarning bootstrap: model ready "
             f"role={spec.role} model={spec.model_id} bytes={_snapshot_size_bytes(snapshot)}",

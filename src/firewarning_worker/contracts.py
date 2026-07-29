@@ -34,6 +34,7 @@ class MediaType(StrEnum):
     AUDIO = "audio"
     ARTICLE = "article"
     SATELLITE_IMAGE = "satellite_image"
+    SATELLITE_DATA = "satellite_data"
 
 
 class LocationOrigin(StrEnum):
@@ -410,8 +411,34 @@ class SatelliteMetadataV2(StrictModel):
         return self
 
 
+class HotspotMetadataV2(StrictModel):
+    product_id: SafeIdentifierV2
+    provider: str = Field(min_length=1, max_length=128)
+    acquired_at: datetime
+    sensor_names: tuple[str, ...] = Field(min_length=1, max_length=16)
+    resolution_m: float = Field(gt=0, le=100_000)
+    bbox_wgs84: tuple[float, float, float, float]
+
+    @model_validator(mode="after")
+    def validate_hotspots(self) -> HotspotMetadataV2:
+        if not _is_timezone_aware_v2(self.acquired_at):
+            raise ValueError("hotspot acquisition time must include a timezone")
+        if len(self.sensor_names) != len(set(self.sensor_names)):
+            raise ValueError("hotspot sensor names must be unique")
+        min_lon, min_lat, max_lon, max_lat = self.bbox_wgs84
+        if not (-180 <= min_lon < max_lon <= 180 and -90 <= min_lat < max_lat <= 90):
+            raise ValueError("hotspot bbox must be an ordered WGS84 extent")
+        return self
+
+
 class SpatialReferenceAssetV2(StrictModel):
-    kind: Literal["terrain_mnt", "surface_dsm", "orthophoto", "scene_catalog"]
+    kind: Literal[
+        "terrain_mnt",
+        "surface_dsm",
+        "orthophoto",
+        "scene_catalog",
+        "source_manifest",
+    ]
     working_file_url: AnyHttpUrl
     sha256: Sha256HexV2
     crs: str = Field(min_length=3, max_length=128)
@@ -439,6 +466,7 @@ class WorkerBatchItemV2(StrictModel):
     captured_at: datetime | None = None
     camera: CameraMetadataV2 | None = None
     satellite: SatelliteMetadataV2 | None = None
+    hotspot: HotspotMetadataV2 | None = None
     frames: tuple[FrameInput, ...] = Field(default=(), max_length=64)
     audio_url: AnyHttpUrl | None = None
     article_text: str | None = Field(default=None, max_length=100_000)
@@ -456,8 +484,17 @@ class WorkerBatchItemV2(StrictModel):
                 raise ValueError("satellite images require satellite metadata")
             if self.camera is not None:
                 raise ValueError("satellite images cannot carry terrestrial camera metadata")
+            if self.hotspot is not None:
+                raise ValueError("satellite images cannot carry hotspot metadata")
+        elif self.media_type == MediaType.SATELLITE_DATA:
+            if self.hotspot is None or self.article_text is None:
+                raise ValueError("satellite data require hotspot metadata and GeoJSON text")
+            if self.camera is not None or self.satellite is not None:
+                raise ValueError("satellite data cannot carry image or camera metadata")
         elif self.satellite is not None:
             raise ValueError("satellite metadata is reserved for satellite images")
+        elif self.hotspot is not None:
+            raise ValueError("hotspot metadata is reserved for satellite data")
         if self.camera is not None and self.media_type not in {MediaType.IMAGE, MediaType.VIDEO}:
             raise ValueError("camera metadata is reserved for images and videos")
         return self
@@ -482,13 +519,14 @@ class WorkerInputV2(StrictModel):
             raise ValueError("input_id values must be unique")
         if sum(len(item.frames) for item in self.items) > 256:
             raise ValueError("a batch may contain at most 256 frames")
-        has_satellite = any(item.media_type == MediaType.SATELLITE_IMAGE for item in self.items)
+        satellite_types = {MediaType.SATELLITE_IMAGE, MediaType.SATELLITE_DATA}
+        has_satellite = any(item.media_type in satellite_types for item in self.items)
         if self.batch_type == BatchType.SATELLITE_MEDIA and not all(
-            item.media_type == MediaType.SATELLITE_IMAGE for item in self.items
+            item.media_type in satellite_types for item in self.items
         ):
-            raise ValueError("satellite batches may contain only satellite images")
+            raise ValueError("satellite batches may contain only satellite images or data")
         if self.batch_type != BatchType.SATELLITE_MEDIA and has_satellite:
-            raise ValueError("satellite images require a satellite batch")
+            raise ValueError("satellite inputs require a satellite batch")
         return self
 
 
@@ -800,6 +838,7 @@ StageRoleV2 = Literal[
     "visual_grounding",
     "multimodal_extraction",
     "fire_pointing",
+    "burned_area",
     "cross_view_registration",
     "spatial_projection",
     "evidence_fusion",
@@ -811,6 +850,7 @@ WorkerModelRoleV2 = Literal[
     "visual_grounding",
     "multimodal_extraction",
     "fire_pointing",
+    "burned_area",
     "cross_view_registration",
     "consensus_judge",
 ]
@@ -1070,6 +1110,7 @@ class WorkerOutputV2(StrictModel):
             "visual_grounding": "visual_grounding",
             "multimodal_extraction": "multimodal_extraction",
             "fire_pointing": "fire_pointing",
+            "burned_area": "burned_area",
             "cross_view_registration": "cross_view_registration",
         }
         for result in self.consensus_results:

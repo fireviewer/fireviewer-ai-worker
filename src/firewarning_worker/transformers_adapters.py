@@ -1131,6 +1131,17 @@ class TransformersAdapterFactory:
             fetcher=self.fetcher,
         )
 
+    def create_burned_area(self, spec: ModelSpec) -> object:
+        if spec.role != "burned_area":
+            raise ValueError("burned area factory requires a burned_area model")
+        from firewarning_worker.prithvi_burned_area import PrithviBurnedAreaAdapter
+
+        return PrithviBurnedAreaAdapter(
+            spec,
+            cache_root=self.cache_root,
+            fetcher=self.fetcher,
+        )
+
     def create_consensus_judge(
         self,
         spec: ModelSpec,

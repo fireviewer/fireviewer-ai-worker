@@ -284,8 +284,8 @@
     },
     {
       "stage_id": "burned_area",
-      "activation": "closed",
-      "policy": "quorum",
+      "activation": "open",
+      "policy": "cascade",
       "candidates": [
         {
           "candidate_id": "burned_area.prithvi_eo_2",
@@ -293,7 +293,9 @@
           "source": "huggingface",
           "revision": "a3f2c410e45b8ac7417976614528a872f024d831",
           "rank": 1,
-          "status": "training_required"
+          "status": "integrated",
+          "provisioned_by_mvp": true,
+          "current_candidate": true
         },
         {
           "candidate_id": "burned_area.terramind_1",
@@ -305,10 +307,9 @@
         }
       ],
       "outputs": ["observed_burned_perimeter"],
-      "judge_on_contradiction": true,
       "activation_requirements": [
-        "HLS Burn Scars training and LA Fire independent evaluation pass.",
-        "Cloud and temporal-consistency gates pass."
+        "Input is a signed six-band georeferenced reflectance GeoTIFF in the canonical band order.",
+        "Cloud and temporal-consistency gates pass; incompatible or absent products cause abstention."
       ]
     },
     {

@@ -30,13 +30,7 @@ class MemoryManager:
 
     def release(self, adapter: Releasable) -> None:
         adapter.unload()
-        gc.collect()
-        try:
-            import torch
-        except ImportError:
-            return
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        release_cuda_memory()
 
     def finalize_job(self) -> None:
         """Release CUDA IPC allocations once after the whole sequential model session."""
@@ -56,3 +50,15 @@ def synchronize_cuda() -> None:
         return
     if torch.cuda.is_available():
         torch.cuda.synchronize()
+
+
+def release_cuda_memory() -> None:
+    """Collect Python objects and release unused CUDA allocations between models."""
+
+    gc.collect()
+    try:
+        import torch
+    except ImportError:
+        return
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()

@@ -35,14 +35,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=sandbox-builder /fw-research-sandbox /usr/local/bin/fw-research-sandbox
 
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends ffmpeg libgl1 \
+    && apt-get install --yes --no-install-recommends ffmpeg libgl1 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/firewarning-worker
 COPY pyproject.toml README.md ./
+COPY docker/runtime-constraints.txt ./docker/runtime-constraints.txt
 COPY src ./src
-RUN python -m pip install --no-cache-dir '.[runtime,roma-registration]' \
-    && python -m pip install --no-cache-dir --no-deps torchvision==0.23.0 \
+RUN python -m pip install --no-cache-dir --no-deps torchvision==0.23.0 \
+    && python -m pip install --no-cache-dir \
+        --constraint docker/runtime-constraints.txt \
+        '.[runtime,roma-registration,burned-area-runtime]' \
+    && python -c "import torch, torchvision; assert torch.__version__.startswith('2.8.0'); assert torchvision.__version__.startswith('0.23.0')" \
     && rm -rf build src
 
 # Install only the audited inference source at its immutable commit.  The

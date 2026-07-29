@@ -71,6 +71,7 @@ def test_handler_keeps_v2_stage_traces_at_the_transport_boundary(monkeypatch) ->
         "visual_grounding",
         "multimodal_extraction",
         "fire_pointing",
+        "burned_area",
         "evidence_fusion",
         "situation_report",
     ]

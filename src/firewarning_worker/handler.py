@@ -5,7 +5,7 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import ValidationError
 
@@ -38,6 +38,7 @@ from firewarning_worker.validation import (
 
 if TYPE_CHECKING:
     from firewarning_worker.spatial_pipeline import DeterministicSpatialPipeline
+    from firewarning_worker.v2_burned_area import BurnedAreaAdapter
     from firewarning_worker.v2_pointing import FirePointingAdapter
 
 BOOT_READY_MS = round((perf_counter() - BOOT_STARTED_AT) * 1_000)
@@ -110,6 +111,17 @@ def _runtime_fire_pointing_adapter(
         return None
     spec = build_registry()["fire_pointing"]
     return factory.create_fire_pointing(spec)
+
+
+def _runtime_burned_area_adapter(
+    factory: AdapterFactory,
+) -> BurnedAreaAdapter | None:
+    from firewarning_worker.transformers_adapters import TransformersAdapterFactory
+
+    if not isinstance(factory, TransformersAdapterFactory):
+        return None
+    spec = build_registry()["burned_area"]
+    return cast("BurnedAreaAdapter", factory.create_burned_area(spec))
 
 
 def handle_job(
@@ -200,6 +212,7 @@ def handle_job(
             with adapter_factory_job_scope(adapter_factory):
                 execution = runner.run_with_trace(batch)
                 if batch_v2 is not None:
+                    from firewarning_worker.v2_burned_area import run_burned_area_stage
                     from firewarning_worker.v2_pointing import run_fire_pointing_stage
 
                     pointing_execution = run_fire_pointing_stage(
@@ -207,6 +220,11 @@ def handle_job(
                         execution.output,
                         adapter=_runtime_fire_pointing_adapter(adapter_factory),
                         sequence=len(execution.stage_traces) + 1,
+                    )
+                    burned_area_execution = run_burned_area_stage(
+                        batch_v2,
+                        adapter=_runtime_burned_area_adapter(adapter_factory),
+                        sequence=len(execution.stage_traces) + 2,
                     )
                     resolved_spatial_pipeline = spatial_pipeline or _runtime_spatial_pipeline(
                         adapter_factory
@@ -219,6 +237,7 @@ def handle_job(
                         consensus_results=execution.consensus_results,
                         contract_digest=execution.contract_digest,
                         fire_pointing_execution=pointing_execution,
+                        burned_area_execution=burned_area_execution,
                         spatial_pipeline=resolved_spatial_pipeline,
                     ).model_dump(mode="json")
             return execution.output.model_dump(mode="json")
