@@ -10,6 +10,7 @@ from PIL import Image
 from firewarning_worker.contracts import BatchItem
 from firewarning_worker.model_registry import ModelSpec
 from firewarning_worker.transformers_adapters import (
+    MolmoPointAdapter,
     WhisperAdapter,
     _bounded_image,
     _qwen_memory_limits,
@@ -110,3 +111,119 @@ def test_whisper_pipeline_is_built_once_per_loaded_adapter(monkeypatch, tmp_path
     assert adapter.pipeline is None
     assert adapter.model is None
     assert adapter.processor is None
+
+
+def test_molmopoint_decodes_only_generated_point_tokens(monkeypatch, tmp_path: Path) -> None:
+    calls: dict[str, Any] = {}
+
+    class FakeTensor:
+        def __init__(self, name: str) -> None:
+            self.name = name
+
+        def to(self, device: str):
+            calls.setdefault("devices", []).append(device)
+            return self
+
+        def size(self, dimension: int) -> int:
+            assert dimension == 1
+            return 3
+
+        def __getitem__(self, key: Any):
+            calls["generated_slice"] = key
+            return FakeTensor("generated_tokens")
+
+    class FakeProcessor:
+        def apply_chat_template(self, messages: Any, **options: Any):
+            calls["messages"] = messages
+            calls["template_options"] = options
+            return {
+                "input_ids": FakeTensor("input_ids"),
+                "pixel_values": FakeTensor("pixel_values"),
+                "metadata": {
+                    "token_pooling": "pooling",
+                    "subpatch_mapping": "mapping",
+                    "image_sizes": "sizes",
+                },
+            }
+
+        def post_process_image_text_to_text(self, tokens: FakeTensor, **options: Any):
+            calls["decoded_tokens"] = tokens.name
+            calls["decode_options"] = options
+            return ["point-tokens"]
+
+    class FakeModel:
+        def build_logit_processor_from_inputs(self, inputs: dict[str, Any]):
+            calls["logits_inputs"] = tuple(sorted(inputs))
+            return "logits"
+
+        def generate(self, **options: Any):
+            calls["generate_options"] = options
+            return FakeTensor("full_generation")
+
+        def extract_image_points(self, text: str, pooling: str, mapping: str, sizes: str):
+            calls["extract"] = (text, pooling, mapping, sizes)
+            return [[1, 0, 50.0, 25.0]]
+
+    @contextmanager
+    def autocast(_device: str, *, dtype: str):
+        calls["autocast"] = dtype
+        yield
+
+    @contextmanager
+    def inference_mode():
+        yield
+
+    torch = SimpleNamespace(
+        bfloat16="bfloat16",
+        inference_mode=inference_mode,
+        autocast=autocast,
+    )
+    monkeypatch.setattr(
+        "firewarning_worker.transformers_adapters._torch_runtime",
+        lambda: (torch, object()),
+    )
+    adapter = MolmoPointAdapter(
+        ModelSpec(
+            role="fire_pointing",
+            model_id="fireviewer/molmopoint-8b-fire-smoke-pointing",
+            revision="67829947ac3aa55632ef752ed9c8f486dba60ae2",
+        ),
+        cache_root=tmp_path,
+        fetcher=object(),  # type: ignore[arg-type]
+    )
+    adapter.processor = FakeProcessor()
+    adapter.model = FakeModel()
+    image = Image.new("RGB", (100, 50))
+
+    points = adapter._point(image=image, prompt="Point to visible flames")
+
+    assert points == [(0.5, 0.5)]
+    assert calls["decoded_tokens"] == "generated_tokens"
+    assert calls["decode_options"] == {
+        "skip_special_tokens": False,
+        "clean_up_tokenization_spaces": False,
+    }
+    assert calls["generate_options"]["max_new_tokens"] == 200
+    assert calls["generate_options"]["logits_processor"] == "logits"
+    assert calls["extract"] == ("point-tokens", "pooling", "mapping", "sizes")
+    image.close()
+
+
+def test_molmopoint_requires_extracted_frames_for_video() -> None:
+    video = SimpleNamespace(
+        input_id="VIDEO-1",
+        media_type=SimpleNamespace(value="video"),
+        working_file_url="https://media.internal/video.mp4",
+        frames=(),
+    )
+    image = SimpleNamespace(
+        input_id="IMAGE-1",
+        media_type=SimpleNamespace(value="image"),
+        working_file_url="https://media.internal/image.jpg",
+        frames=(),
+    )
+
+    assert MolmoPointAdapter._sources(video, frozenset()) == []
+    assert MolmoPointAdapter._sources(image, frozenset()) == [
+        ("IMAGE-1", "https://media.internal/image.jpg", "image")
+    ]

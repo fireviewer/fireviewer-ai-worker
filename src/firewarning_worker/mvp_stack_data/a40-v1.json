@@ -112,16 +112,19 @@
     },
     {
       "stage_id": "fire_pointing",
-      "activation": "baseline_only",
-      "policy": "quorum",
+      "activation": "open",
+      "policy": "cascade",
       "candidates": [
         {
-          "candidate_id": "pointing.molmopoint_8b",
-          "model_id": "allenai/MolmoPoint-8B",
+          "candidate_id": "pointing.molmopoint_8b_firewarning",
+          "model_id": "fireviewer/molmopoint-8b-fire-smoke-pointing",
           "source": "huggingface",
-          "revision": "188130f961c8e0888a34e11121a1423c461a01ba",
+          "revision": "67829947ac3aa55632ef752ed9c8f486dba60ae2",
           "rank": 1,
-          "status": "training_required"
+          "status": "integrated",
+          "provisioned_by_mvp": true,
+          "current_candidate": true,
+          "notes": ["Native point-token decoding; geographic projection remains camera/ray/MNT only."]
         },
         {
           "candidate_id": "pointing.florence_2_large_ft",
@@ -131,7 +134,7 @@
           "rank": 2,
           "status": "baseline_only",
           "provisioned_by_mvp": true,
-          "current_candidate": true
+          "notes": ["Per-item visual fallback when the primary pointing model abstains or fails."]
         },
         {
           "candidate_id": "pointing.qwen3_5_9b_verifier",
@@ -146,8 +149,8 @@
       "outputs": ["fire_point_pixel"],
       "judge_on_contradiction": true,
       "activation_requirements": [
-        "Double-validated fire, visible-front and smoke-base point annotations are available.",
-        "Normalized pixel distance passes the frozen pointing benchmark."
+        "The FireViewer checkpoint remains pinned to its frozen pointing benchmark revision.",
+        "Geographic coordinates require confirmed camera/ray/MNT projection."
       ]
     },
     {

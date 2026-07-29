@@ -200,7 +200,7 @@ def _pipeline(monkeypatch, *, terrain_url: str, payload: bytes, enabled: bool = 
     )
 
 
-def test_confirmed_pose_produces_a_private_ground_point(monkeypatch) -> None:
+def test_confirmed_pose_produces_a_native_private_active_fire_point(monkeypatch) -> None:
     terrain_url = "https://media.internal/private/global.fwterrain"
     payload = _far_container()
     fetcher, pipeline = _pipeline(monkeypatch, terrain_url=terrain_url, payload=payload)
@@ -210,7 +210,12 @@ def test_confirmed_pose_produces_a_private_ground_point(monkeypatch) -> None:
         result = pipeline.project(batch, {"INPUT-1": (_annotation(),)}, sequence_start=5)
 
     proposal = result.proposals_by_input["INPUT-1"][0]
-    assert proposal.status == "ground_point"
+    assert proposal.status == "projected_geometry"
+    assert proposal.proposal_kind == "active_fire_point"
+    assert proposal.geometry_geojson == {
+        "type": "Point",
+        "coordinates": [proposal.longitude, proposal.latitude],
+    }
     assert proposal.geometry_origin == "CAMERA_RAYCAST"
     assert proposal.reference_bundle_sha256 == "a" * 64
     assert proposal.horizontal_accuracy_m is not None and proposal.horizontal_accuracy_m < 1_000

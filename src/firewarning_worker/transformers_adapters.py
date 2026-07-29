@@ -6,8 +6,9 @@ import os
 import re
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager, nullcontext
+from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from firewarning_worker.adapters import ItemPatch, ModelAdapter, ModelOutputError
 from firewarning_worker.consensus import (
@@ -20,10 +21,14 @@ from firewarning_worker.contracts import (
     ExplicitLiteral,
     FactualObservation,
     PixelRegion,
+    SourceAnnotationV2,
+    SourceSemanticAnchorV2,
     Transcript,
     TranscriptSegment,
     VisualEvidenceSelection,
     WorkerInput,
+    WorkerInputV2,
+    WorkerOutput,
 )
 from firewarning_worker.media_fetcher import MediaFetcher
 from firewarning_worker.model_registry import ModelSpec, resolve_cached_snapshot
@@ -393,6 +398,181 @@ class FlorenceAdapter(_BaseAdapter):
                     )
             patches[item.input_id] = ItemPatch(pixel_regions=tuple(existing))
         return patches
+
+
+class MolmoPointAdapter(_BaseAdapter):
+    """Dedicated pixel-point worker; geographic projection remains downstream."""
+
+    QUERIES: tuple[tuple[SourceSemanticAnchorV2, str], ...] = (
+        (
+            "active_fire_point",
+            "Point to every directly visible active flame. Do not point to smoke alone.",
+        ),
+        (
+            "visible_fire_front_point",
+            "Point to representative locations along each directly visible active flame front.",
+        ),
+        (
+            "smoke_origin_point",
+            "Point to the visible terrain origin of each smoke column. Abstain if hidden.",
+        ),
+    )
+
+    def load(self) -> None:
+        torch, transformers = _torch_runtime()
+        self.processor = transformers.AutoProcessor.from_pretrained(
+            self.model_path,
+            local_files_only=True,
+            trust_remote_code=True,
+            padding_side="left",
+        )
+        self.model = transformers.AutoModelForImageTextToText.from_pretrained(
+            self.model_path,
+            local_files_only=True,
+            trust_remote_code=True,
+            dtype=torch.bfloat16,
+            low_cpu_mem_usage=True,
+            attn_implementation="flash_attention_2",
+        ).to("cuda")
+        self.model.eval()
+
+    @staticmethod
+    def _annotation_id(
+        input_id: str,
+        evidence_id: str,
+        semantic_anchor: str,
+        index: int,
+    ) -> str:
+        digest = sha256(
+            f"{input_id}\x1f{evidence_id}\x1f{semantic_anchor}\x1f{index}".encode()
+        ).hexdigest()[:24]
+        return f"ANN-{digest}"
+
+    @staticmethod
+    def _sources(
+        item: Any,
+        selected: frozenset[str],
+    ) -> list[tuple[str, str, Literal["image", "frame"]]]:
+        sources: list[tuple[str, str, Literal["image", "frame"]]] = [
+            (str(frame.frame_id), str(frame.working_file_url), "frame")
+            for frame in item.frames
+            if not selected or frame.frame_id in selected
+        ]
+        if not sources and item.media_type.value == "image" and item.working_file_url is not None:
+            sources = [(str(item.input_id), str(item.working_file_url), "image")]
+        return sources[:8]
+
+    def _point(
+        self,
+        *,
+        image: Any,
+        prompt: str,
+    ) -> list[tuple[float, float]]:
+        if self.model is None or self.processor is None:
+            raise RuntimeError("MolmoPoint adapter is not loaded")
+        torch, _ = _torch_runtime()
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": image},
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+        encoded = self.processor.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_dict=True,
+            return_tensors="pt",
+            padding=True,
+            return_pointing_metadata=True,
+        )
+        metadata = encoded.pop("metadata")
+        encoded = {
+            key: value.to("cuda") if hasattr(value, "to") else value
+            for key, value in encoded.items()
+        }
+        logits_processor = self.model.build_logit_processor_from_inputs(encoded)
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+            generated = self.model.generate(
+                **encoded,
+                logits_processor=logits_processor,
+                max_new_tokens=200,
+            )
+        generated_tokens = generated[:, encoded["input_ids"].size(1) :]
+        generated_text = self.processor.post_process_image_text_to_text(
+            generated_tokens,
+            skip_special_tokens=False,
+            clean_up_tokenization_spaces=False,
+        )
+        if isinstance(generated_text, list):
+            generated_text = generated_text[0]
+        points = self.model.extract_image_points(
+            generated_text,
+            metadata["token_pooling"],
+            metadata["subpatch_mapping"],
+            metadata["image_sizes"],
+        )
+        width, height = image.size
+        normalized: list[tuple[float, float]] = []
+        for point in points:
+            if not isinstance(point, (list, tuple)) or len(point) < 4:
+                continue
+            x = min(max(float(point[-2]) / width, 0.0), 1.0)
+            y = min(max(float(point[-1]) / height, 0.0), 1.0)
+            normalized.append((x, y))
+        return normalized[:16]
+
+    def infer(
+        self,
+        batch: WorkerInputV2,
+        legacy: WorkerOutput,
+    ) -> dict[str, tuple[SourceAnnotationV2, ...]]:
+        from PIL import Image
+
+        legacy_by_id = {item.input_id: item for item in legacy.items}
+        annotations_by_input: dict[str, tuple[SourceAnnotationV2, ...]] = {}
+        for item in batch.items:
+            if item.media_type.value not in {"image", "video"}:
+                continue
+            legacy_item = legacy_by_id.get(item.input_id)
+            selected = frozenset(
+                selection.evidence_id
+                for selection in (
+                    legacy_item.visual_evidence_selection if legacy_item is not None else ()
+                )
+                if selection.selected_for_grounding
+            )
+            annotations: list[SourceAnnotationV2] = []
+            for evidence_id, url, evidence_kind in self._sources(item, selected):
+                with self.fetcher.download(url) as image_path, Image.open(image_path) as image:
+                    rgb = image.convert("RGB")
+                    try:
+                        for semantic_anchor, query in self.QUERIES:
+                            for index, (x, y) in enumerate(
+                                self._point(image=rgb, prompt=query),
+                                start=1,
+                            ):
+                                annotations.append(
+                                    SourceAnnotationV2(
+                                        annotation_id=self._annotation_id(
+                                            item.input_id,
+                                            evidence_id,
+                                            semantic_anchor,
+                                            index,
+                                        ),
+                                        evidence_id=evidence_id,
+                                        evidence_kind=evidence_kind,
+                                        semantic_anchor=semantic_anchor,
+                                        source_point_normalized=(x, y),
+                                    )
+                                )
+                    finally:
+                        rgb.close()
+            annotations_by_input[item.input_id] = tuple(annotations[:64])
+        return annotations_by_input
 
 
 class QwenAdapter(_BaseAdapter):
@@ -937,6 +1117,15 @@ class TransformersAdapterFactory:
         else:
             adapter_type = QwenAdapter
         return adapter_type(spec, cache_root=self.cache_root, fetcher=self.fetcher)
+
+    def create_fire_pointing(self, spec: ModelSpec) -> MolmoPointAdapter:
+        if spec.role != "fire_pointing":
+            raise ValueError("fire pointing factory requires a fire_pointing model")
+        return MolmoPointAdapter(
+            spec,
+            cache_root=self.cache_root,
+            fetcher=self.fetcher,
+        )
 
     def create_consensus_judge(
         self,

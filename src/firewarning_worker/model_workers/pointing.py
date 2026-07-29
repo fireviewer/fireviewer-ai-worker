@@ -1,9 +1,9 @@
-"""Closed output contract for FireViewer MolmoPoint inference.
+"""Compatibility parser for the former JSON pointing export.
 
-This module defines the production-facing prompt and parser only.  The
-``fire_pointing`` stage is not yet wired into ``SessionRunner``; callers must
-not present these helpers as an active production stage until that binding is
-implemented and integration-tested.
+The native production binding now lives in ``v2_pointing.py`` and
+``transformers_adapters.MolmoPointAdapter`` because MolmoPoint emits point
+tokens plus preprocessing metadata rather than JSON.  This parser remains for
+older offline artifacts only and is not used by the V2 runtime.
 """
 
 from __future__ import annotations
@@ -61,7 +61,5 @@ def parse_pointing_response(
             or not 0 <= float(y) <= 1
         ):
             raise ValueError("pointing coordinates must be normalized numbers")
-        predictions.append(
-            PointingPrediction(kind=kind, x=float(x), y=float(y))
-        )
+        predictions.append(PointingPrediction(kind=kind, x=float(x), y=float(y)))
     return tuple(predictions)

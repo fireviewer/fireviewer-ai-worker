@@ -13,6 +13,7 @@ ModelRole = Literal[
     "fire_detection",
     "visual_grounding",
     "multimodal_extraction",
+    "fire_pointing",
     "source_research",
     "consensus_judge",
 ]
@@ -141,6 +142,11 @@ PUBLIC_MODELS: tuple[ModelSpec, ...] = (
         role="visual_grounding",
         model_id="microsoft/Florence-2-large-ft",
         revision="4a12a2b54b7016a48a22037fbd62da90cd566f2a",
+    ),
+    ModelSpec(
+        role="fire_pointing",
+        model_id="fireviewer/molmopoint-8b-fire-smoke-pointing",
+        revision="67829947ac3aa55632ef752ed9c8f486dba60ae2",
     ),
     ModelSpec(
         role="multimodal_extraction",

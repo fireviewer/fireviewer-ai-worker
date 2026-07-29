@@ -810,6 +810,7 @@ WorkerModelRoleV2 = Literal[
     "visual_filtering",
     "visual_grounding",
     "multimodal_extraction",
+    "fire_pointing",
     "cross_view_registration",
     "consensus_judge",
 ]
@@ -1068,6 +1069,7 @@ class WorkerOutputV2(StrictModel):
             "fire_detection": "visual_filtering",
             "visual_grounding": "visual_grounding",
             "multimodal_extraction": "multimodal_extraction",
+            "fire_pointing": "fire_pointing",
             "cross_view_registration": "cross_view_registration",
         }
         for result in self.consensus_results:

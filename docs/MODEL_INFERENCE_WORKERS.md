@@ -11,7 +11,7 @@ doivent reproduire le benchmark.
 |---|---|---|---|
 | RT-DETRv2-R50 feu/fumée | détection | **implémenté** : letterbox centré 768, poids FP32, autocast BF16, dé-letterbox | **actif** via `RTDETRAdapter` pour un checkpoint local FireViewer |
 | D-FINE X-Large feu/fumée | détection/contradicteur | géométrie partagée disponible, mais chargement D-FINE spécifique non intégré | **non actif** |
-| MolmoPoint-8B FireViewer | points flamme/front/origine fumée | prompt fermé et parseur normalisé disponibles | **non actif** : le rôle `fire_pointing` n’est pas encore exécuté par `SessionRunner` |
+| MolmoPoint-8B FireViewer | points flamme/front/origine fumée | **implémenté** : API native de jetons de point, métadonnées du processeur et coordonnées normalisées | **actif pour les lots V2** entre la sélection visuelle et la projection caméra/MNT |
 | Prithvi FireViewer | surface brûlée | blocage explicite du checkpoint déprécié | **interdit** : régression HLS confirmée ; modèle officiel conservé comme référence |
 
 ## Détecteurs RT-DETR et D-FINE
@@ -33,23 +33,26 @@ ses objets génériques ne sont jamais renommés en moyens de lutte.
 
 ## MolmoPoint
 
-`model_workers/pointing.py` n’accepte que trois sorties :
+Le runtime V2 interroge séparément le modèle pour trois sorties :
 
 - `flame_point` ;
 - `visible_front_point` ;
 - `smoke_origin`, uniquement à l’origine visible sur le terrain.
 
-Chaque point est limité aux coordonnées image normalisées `[0,1]`. Toute
-coordonnée géographique, clé supplémentaire, type inconnu ou valeur hors image
-est refusé. Une absence de preuve visible produit une liste vide.
+Le checkpoint `fireviewer/molmopoint-8b-fire-smoke-pointing` est épinglé par
+révision. Le worker suit l’API native MolmoPoint : il conserve les métadonnées
+du processeur, contraint la génération par le `logits_processor` du modèle,
+retire les jetons d’entrée avant décodage puis transforme les points pixels en
+coordonnées image normalisées `[0,1]`.
 
-Ce fichier ne prouve pas l’intégration au pipeline. Avant activation il reste à :
+Ces points ne sont jamais des coordonnées géographiques. Ils traversent ensuite
+la projection caméra/rayon/MNT existante. Sans pose fiable, le worker s’abstient
+et Florence reste la doublure visuelle par élément. Les propositions projetées
+utilisent les types V2 `active_fire_point` et `smoke_origin_point`, puis
+réutilisent la revue spatiale admin existante après persistance.
 
-1. ajouter `fire_pointing` au registre/runtime ;
-2. charger le checkpoint FireViewer épinglé ;
-3. convertir les points en `ImagePointAnnotation` ;
-4. traverser les gates de projection caméra/MNT ;
-5. tester l’abstention et le déchargement CUDA.
+`model_workers/pointing.py` ne sert plus qu’à lire d’anciens exports JSON hors
+ligne ; il n’est pas le chemin d’inférence du runtime V2.
 
 ## Prithvi BurnScars
 

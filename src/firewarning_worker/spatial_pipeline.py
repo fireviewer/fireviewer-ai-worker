@@ -702,6 +702,11 @@ class DeterministicSpatialPipeline:
                         pose_errors[item.input_id] = exc.code
                 for annotation in annotations:
                     any_projection_attempted = True
+                    if annotation.source_point_normalized is None:
+                        item_proposals.append(
+                            self._abstention(item, annotation, "source_point_missing")
+                        )
+                        continue
                     if reference is None:
                         code = reference_error or "terrain_reference_missing"
                         item_proposals.append(self._abstention(item, annotation, code))
@@ -741,12 +746,22 @@ class DeterministicSpatialPipeline:
                             SpatialProposalV2(
                                 proposal_id=_stable_id("SP", annotation.annotation_id, pose.origin),
                                 annotation_id=annotation.annotation_id,
-                                status="ground_point",
+                                status="projected_geometry",
+                                proposal_kind=(
+                                    "smoke_origin_point"
+                                    if annotation.semantic_anchor
+                                    in {"smoke_column_base", "smoke_origin_point"}
+                                    else "active_fire_point"
+                                ),
                                 observed_at=item.captured_at,
                                 geometry_origin=pose.origin,
                                 longitude=longitude,
                                 latitude=latitude,
                                 altitude_m=hit.altitude_m,
+                                geometry_geojson={
+                                    "type": "Point",
+                                    "coordinates": [longitude, latitude],
+                                },
                                 horizontal_accuracy_m=accuracy,
                                 reference_bundle_sha256=batch.reference_bundle.manifest_sha256,
                                 uncertainty_codes=(
@@ -793,7 +808,7 @@ class DeterministicSpatialPipeline:
                         available_after=(
                             "explicit_abstention"
                             if not any(
-                                proposal.status == "ground_point"
+                                proposal.status == "projected_geometry"
                                 for group in proposals.values()
                                 for proposal in group
                             )

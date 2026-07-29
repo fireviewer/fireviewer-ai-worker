@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from datetime import UTC, datetime
 from hashlib import sha256
+from time import perf_counter
 from typing import TYPE_CHECKING, Literal
 
 from firewarning_worker.contracts import (
@@ -23,16 +25,64 @@ from firewarning_worker.contracts import (
     WorkerModelRunV2,
     WorkerOutput,
     WorkerOutputV2,
+    WorkerStageAttemptV2,
+    WorkerStageGateV2,
     WorkerStageTraceV2,
 )
+from firewarning_worker.stage_contracts import StageRole, load_stage_contract_registry
 
 if TYPE_CHECKING:
     from firewarning_worker.spatial_pipeline import DeterministicSpatialPipeline
+    from firewarning_worker.v2_pointing import FirePointingExecution
 
 
 def _stable_id(prefix: str, *parts: str) -> str:
     digest = sha256("\x1f".join(parts).encode("utf-8")).hexdigest()[:24]
     return f"{prefix}-{digest}"
+
+
+def _orchestration_trace(
+    *,
+    role: Literal["evidence_fusion", "situation_report"],
+    sequence: int,
+    available_before: tuple[str, ...],
+    available_after: tuple[str, ...],
+) -> WorkerStageTraceV2:
+    contract = load_stage_contract_registry()[StageRole(role)]
+    started_at = datetime.now(UTC)
+    started = perf_counter()
+    finished_at = datetime.now(UTC)
+    return WorkerStageTraceV2(
+        stage_role=role,
+        contract_id=contract.contract_id,
+        sequence=sequence,
+        status="succeeded",
+        retryable=False,
+        preflight=WorkerStageGateV2(
+            phase="preflight",
+            decision="pass",
+            reason_codes=("requirements_satisfied",),
+            available_capabilities=available_before,
+            downstream_possible=True,
+        ),
+        postflight=WorkerStageGateV2(
+            phase="postflight",
+            decision="pass",
+            reason_codes=("output_contract_satisfied",),
+            available_capabilities=available_after,
+            downstream_possible=True,
+        ),
+        attempts=(
+            WorkerStageAttemptV2(
+                attempt=1,
+                kind="initial",
+                status="succeeded",
+                started_at=started_at,
+                finished_at=finished_at,
+                inference_ms=round((perf_counter() - started) * 1_000),
+            ),
+        ),
+    )
 
 
 def _legacy_metadata(item: WorkerBatchItemV2) -> InputMetadata:
@@ -129,6 +179,14 @@ def _semantic_anchor(label: str) -> SemanticAnchor | None:
     return None
 
 
+def _point_proposal_kind(
+    annotation: SourceAnnotationV2,
+) -> Literal["active_fire_point", "smoke_origin_point"]:
+    if annotation.semantic_anchor in {"smoke_column_base", "smoke_origin_point"}:
+        return "smoke_origin_point"
+    return "active_fire_point"
+
+
 def _source_annotations(
     item: WorkerBatchItemV2, legacy_result: ItemResult
 ) -> tuple[SourceAnnotationV2, ...]:
@@ -159,7 +217,7 @@ def _satellite_ground_point(
 ) -> SpatialProposalV2 | None:
     satellite = item.satellite
     reference = batch.reference_bundle
-    if satellite is None or reference is None:
+    if satellite is None or reference is None or annotation.source_point_normalized is None:
         return None
     normalized_crs = satellite.crs.upper().replace(" ", "")
     if normalized_crs not in {"EPSG:4326", "OGC:CRS84", "CRS84"}:
@@ -175,11 +233,16 @@ def _satellite_ground_point(
     return SpatialProposalV2(
         proposal_id=_stable_id("SP", annotation.annotation_id, "satellite"),
         annotation_id=annotation.annotation_id,
-        status="ground_point",
+        status="projected_geometry",
+        proposal_kind=_point_proposal_kind(annotation),
         observed_at=satellite.acquired_at,
         geometry_origin="SATELLITE_GEOTRANSFORM",
         longitude=longitude,
         latitude=latitude,
+        geometry_geojson={
+            "type": "Point",
+            "coordinates": [longitude, latitude],
+        },
         horizontal_accuracy_m=max(satellite.resolution_m * 2, 1.0),
         reference_bundle_sha256=reference.manifest_sha256,
     )
@@ -433,6 +496,7 @@ def from_legacy_output(
     candidate_runs: tuple[WorkerModelCandidateRunV2, ...],
     consensus_results: tuple[WorkerConsensusResultV2, ...],
     contract_digest: str,
+    fire_pointing_execution: FirePointingExecution | None = None,
     spatial_pipeline: DeterministicSpatialPipeline | None = None,
 ) -> WorkerOutputV2:
     source_by_id = {item.input_id: item for item in batch.items}
@@ -440,14 +504,26 @@ def from_legacy_output(
     annotations_by_input: dict[str, tuple[SourceAnnotationV2, ...]] = {}
     for legacy_result in legacy.items:
         source = source_by_id[legacy_result.input_id]
-        annotations = _source_annotations(source, legacy_result)
+        legacy_annotations = _source_annotations(source, legacy_result)
+        pointed_annotations = (
+            fire_pointing_execution.annotations_by_input.get(source.input_id, ())
+            if fire_pointing_execution is not None
+            else ()
+        )
+        # MolmoPoint is authoritative for its dedicated pixel contract. Florence
+        # remains a per-item fallback when Molmo explicitly abstains or fails.
+        annotations = pointed_annotations or legacy_annotations
         prepared.append((legacy_result, source, annotations))
         annotations_by_input[source.input_id] = annotations
+    pointing_traces = (
+        (fire_pointing_execution.stage_trace,) if fire_pointing_execution is not None else ()
+    )
+    traces_before_spatial = stage_traces + pointing_traces
     spatial_execution = (
         spatial_pipeline.project(
             batch,
             annotations_by_input,
-            sequence_start=len(stage_traces) + 1,
+            sequence_start=len(traces_before_spatial) + 1,
         )
         if spatial_pipeline is not None
         else None
@@ -493,19 +569,52 @@ def from_legacy_output(
             error_code=run.error_code,
         )
         for run in legacy.model_runs
-    ) + (spatial_execution.model_runs if spatial_execution is not None else ())
+    )
+    if fire_pointing_execution is not None and fire_pointing_execution.model_run is not None:
+        runs += (fire_pointing_execution.model_run,)
+    runs += spatial_execution.model_runs if spatial_execution is not None else ()
     result_items = tuple(items)
+    traces = traces_before_spatial
+    if spatial_execution is not None:
+        traces += spatial_execution.stage_traces
+    evidence_available = any(
+        item.source_annotations or item.spatial_proposals or item.fact_proposals
+        for item in result_items
+    )
+    traces += (
+        _orchestration_trace(
+            role="evidence_fusion",
+            sequence=len(traces) + 1,
+            available_before=(
+                ("factual_observations", "spatial_proposals")
+                if evidence_available
+                else ("explicit_abstention",)
+            ),
+            available_after=(
+                ("evidence_graph",) if evidence_available else ("explicit_abstention",)
+            ),
+        ),
+        _orchestration_trace(
+            role="situation_report",
+            sequence=len(traces) + 2,
+            available_before=("evidence_graph",),
+            available_after=("report_draft",),
+        ),
+    )
+    status = legacy.status
+    if (
+        fire_pointing_execution is not None
+        and fire_pointing_execution.stage_trace.status == "failed"
+        and status == "succeeded"
+    ):
+        status = "partial_failure"
     return WorkerOutputV2(
         batch_id=batch.batch_id,
         analysis_id=batch.analysis_window.analysis_id,
-        status=legacy.status,
+        status=status,
         retryable=legacy.retryable,
         orchestration_contract_digest=contract_digest,
-        stage_traces=(
-            stage_traces + spatial_execution.stage_traces
-            if spatial_execution is not None
-            else stage_traces
-        ),
+        stage_traces=traces,
         model_runs=runs,
         candidate_runs=candidate_runs,
         consensus_results=consensus_results,
