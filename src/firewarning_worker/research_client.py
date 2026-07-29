@@ -10,7 +10,12 @@ from firewarning_worker.research_rpc import call
 
 
 class ResearchServiceError(RuntimeError):
-    pass
+    """A structured failure reported by the isolated research service."""
+
+    def __init__(self, code: str, detail: str | None = None) -> None:
+        self.code = code
+        self.detail = detail or code
+        super().__init__(self.detail)
 
 
 def run_isolated_research(research: ResearchInputV1) -> ResearchOutputV1:
@@ -21,6 +26,13 @@ def run_isolated_research(research: ResearchInputV1) -> ResearchOutputV1:
         timeout=float(os.getenv("FW_RESEARCH_SERVICE_TIMEOUT_SECONDS", "900")),
     )
     if response.get("ok") is not True:
-        raise ResearchServiceError(str(response.get("error") or "research service failed"))
+        error = response.get("error")
+        if isinstance(error, dict):
+            code = str(error.get("code") or "research_service_failed")
+            detail = str(error.get("detail") or code)
+        else:
+            code = "research_service_failed"
+            detail = str(error or code)
+        raise ResearchServiceError(code, detail)
     output = response.get("output")
     return ResearchOutputV1.model_validate(output)

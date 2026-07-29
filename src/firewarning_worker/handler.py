@@ -26,6 +26,7 @@ from firewarning_worker.model_registry import (
     build_model_group_registry,
     build_registry,
 )
+from firewarning_worker.research_client import ResearchServiceError
 from firewarning_worker.security import ConfigurationError, WorkerSettings
 from firewarning_worker.session_runner import SessionRunner
 from firewarning_worker.stage_contracts import load_stage_contract_registry
@@ -48,6 +49,7 @@ _GPU_SESSION_LOCK = threading.Lock()
 def _research_failure(
     raw_input: dict[str, Any],
     *,
+    error_code: str,
     detail: str,
     retryable: bool,
 ) -> dict[str, Any]:
@@ -62,12 +64,12 @@ def _research_failure(
             "model_run": {
                 "model_id": spec.model_id,
                 "revision": spec.revision,
-                "status": "skipped",
+                "status": "failed",
                 "started_at": now,
                 "finished_at": now,
                 "load_ms": 0,
                 "inference_ms": 0,
-                "error_code": detail[:128],
+                "error_code": error_code[:128],
             },
             "queries": [],
             "candidates": [],
@@ -149,6 +151,7 @@ def handle_job(
             if not _GPU_SESSION_LOCK.acquire(blocking=False):
                 return _research_failure(
                     raw_input,
+                    error_code="gpu_session_already_active",
                     detail="worker:gpu_session_already_active",
                     retryable=True,
                 )
@@ -158,15 +161,24 @@ def handle_job(
                 return run_isolated_research(research).model_dump(mode="json")
             finally:
                 _GPU_SESSION_LOCK.release()
+        except ResearchServiceError as exc:
+            return _research_failure(
+                raw_input,
+                error_code=exc.code,
+                detail=exc.detail,
+                retryable=True,
+            )
         except (RegistryError, ValidationError) as exc:
             return _research_failure(
                 raw_input,
+                error_code="research_input_invalid",
                 detail=f"input:{type(exc).__name__}:{exc}",
                 retryable=False,
             )
         except Exception as exc:  # isolated service is the runtime failure boundary
             return _research_failure(
                 raw_input,
+                error_code="research_worker_unhandled_exception",
                 detail=f"research:{type(exc).__name__}:{exc}",
                 retryable=True,
             )

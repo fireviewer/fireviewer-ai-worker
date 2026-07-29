@@ -5,6 +5,7 @@ import subprocess
 from datetime import UTC, datetime, timedelta
 
 from firewarning_worker import research_service
+from firewarning_worker.research_client import ResearchServiceError, run_isolated_research
 
 
 def _input() -> dict[str, object]:
@@ -103,3 +104,50 @@ def test_service_keeps_upload_grant_out_of_qwen_process(monkeypatch) -> None:
     assert len(child_inputs) == 1
     assert [call["action"] for call in broker_calls] == ["configure", "revoke"]
     assert broker_calls[0]["policy"]["upload_grant"] == "g" * 128
+
+
+def test_service_preserves_sandbox_failure_detail(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "FW_RESEARCH_BROKER_CONTROL_TOKEN",
+        "control-credential-for-service-tests-000000000000",
+    )
+
+    def fake_broker(value):
+        if value["action"] == "configure":
+            return {"session_token": "session-token-for-tests-000000000000000000"}
+        return {"revoked": True}
+
+    def fake_run(*_args, **_kwargs):
+        return subprocess.CompletedProcess([], 1, stdout="", stderr="model load failed")
+
+    monkeypatch.setattr(research_service, "_broker_call", fake_broker)
+    monkeypatch.setattr(research_service.subprocess, "run", fake_run)
+
+    try:
+        research_service.execute_research(_input())
+    except research_service.ResearchServiceError as exc:
+        assert exc.code == "sandboxed_research_process_failed"
+        assert exc.detail == "model load failed"
+    else:
+        raise AssertionError("expected the sandboxed process failure")
+
+
+def test_client_preserves_structured_service_failure(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "firewarning_worker.research_client.call",
+        lambda *_args, **_kwargs: {
+            "ok": False,
+            "error": {
+                "code": "sandboxed_research_process_failed",
+                "detail": "model load failed",
+            },
+        },
+    )
+
+    try:
+        run_isolated_research(research_service.ResearchInputV1.model_validate(_input()))
+    except ResearchServiceError as exc:
+        assert exc.code == "sandboxed_research_process_failed"
+        assert exc.detail == "model load failed"
+    else:
+        raise AssertionError("expected the structured service failure")

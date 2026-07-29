@@ -57,6 +57,22 @@ def test_handler_rejects_an_external_media_url(monkeypatch) -> None:
     assert "not allowed" in result["validation_errors"][0]
 
 
+def test_handler_reports_invalid_research_input_without_hiding_its_failure() -> None:
+    result = handle_job(
+        {
+            "input": {
+                "schema_version": "research-1.0",
+                "research_id": "research-invalid-0001",
+            }
+        }
+    )
+
+    assert result["status"] == "failed"
+    assert result["retryable"] is False
+    assert result["model_run"]["status"] == "failed"
+    assert result["model_run"]["error_code"] == "research_input_invalid"
+
+
 def test_handler_keeps_v2_stage_traces_at_the_transport_boundary(monkeypatch) -> None:
     monkeypatch.setenv("FW_ALLOWED_MEDIA_HOSTS", "media.internal")
     payload = json.loads((EXAMPLES / "valid-input.json").read_text(encoding="utf-8"))

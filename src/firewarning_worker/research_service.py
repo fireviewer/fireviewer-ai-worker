@@ -17,7 +17,12 @@ from firewarning_worker.research_rpc import call, read_message, write_message
 
 
 class ResearchServiceError(RuntimeError):
-    pass
+    """Failure boundary between the brokered service and the sandboxed model."""
+
+    def __init__(self, code: str, detail: str | None = None) -> None:
+        self.code = code
+        self.detail = detail or code
+        super().__init__(self.detail)
 
 
 def _broker_call(value: dict[str, Any]) -> dict[str, Any]:
@@ -26,7 +31,10 @@ def _broker_call(value: dict[str, Any]) -> dict[str, Any]:
         value,
     )
     if response.get("ok") is not True or not isinstance(response.get("result"), dict):
-        raise ResearchServiceError(str(response.get("error") or "broker request failed"))
+        raise ResearchServiceError(
+            "research_broker_request_failed",
+            str(response.get("error") or "broker request failed"),
+        )
     return dict(response["result"])
 
 
@@ -85,7 +93,10 @@ def execute_research(raw_input: object) -> dict[str, Any]:
     research = ResearchInputV1.model_validate(raw_input)
     control_token = os.getenv("FW_RESEARCH_BROKER_CONTROL_TOKEN", "")
     if len(control_token) < 32:
-        raise ResearchServiceError("research broker control credential is unavailable")
+        raise ResearchServiceError(
+            "research_broker_control_credential_unavailable",
+            "research broker control credential is unavailable",
+        )
     configured = _broker_call(
         {
             "action": "configure",
@@ -95,7 +106,10 @@ def execute_research(raw_input: object) -> dict[str, Any]:
     )
     session_token = str(configured.get("session_token", ""))
     if len(session_token) < 32:
-        raise ResearchServiceError("research broker returned an invalid session")
+        raise ResearchServiceError(
+            "research_broker_invalid_session",
+            "research broker returned an invalid session",
+        )
     sanitized = research.model_dump(mode="json", exclude={"private_upload"})
     try:
         with tempfile.TemporaryDirectory(prefix="firewarning-research-") as directory:
@@ -114,10 +128,16 @@ def execute_research(raw_input: object) -> dict[str, Any]:
             )
         if completed.returncode != 0:
             detail = completed.stderr.strip()[-1_000:]
-            raise ResearchServiceError(f"sandboxed research process failed: {detail}")
+            raise ResearchServiceError(
+                "sandboxed_research_process_failed",
+                detail or "sandboxed research process exited without an error message",
+            )
         output = ResearchOutputV1.model_validate_json(completed.stdout)
         if output.research_id != research.research_id:
-            raise ResearchServiceError("research output identifier does not match input")
+            raise ResearchServiceError(
+                "research_output_identifier_mismatch",
+                "research output identifier does not match input",
+            )
         return output.model_dump(mode="json")
     finally:
         _broker_call(
@@ -139,10 +159,21 @@ class _ResearchHandler(socketserver.StreamRequestHandler):
                 raise ResearchServiceError("research service action is invalid")
             output = execute_research(request.get("input"))
             write_message(self.wfile, {"ok": True, "output": output})
+        except ResearchServiceError as exc:
+            write_message(
+                self.wfile,
+                {"ok": False, "error": {"code": exc.code, "detail": exc.detail[:1_000]}},
+            )
         except Exception as exc:
             write_message(
                 self.wfile,
-                {"ok": False, "error": f"{type(exc).__name__}:{exc}"[:1_000]},
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "research_service_unhandled_exception",
+                        "detail": f"{type(exc).__name__}:{exc}"[:1_000],
+                    },
+                },
             )
 
 
