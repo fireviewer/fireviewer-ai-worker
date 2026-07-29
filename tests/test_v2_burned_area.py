@@ -107,6 +107,7 @@ def test_burned_area_skips_rgb_without_requesting_a_model() -> None:
     assert execution.stage_trace.preflight.reason_codes == (
         "no_compatible_multispectral_product",
     )
+    assert execution.stage_trace.preflight.downstream_possible is True
     assert execution.model_run is None
 
 

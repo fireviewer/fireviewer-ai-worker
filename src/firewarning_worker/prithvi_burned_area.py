@@ -1,8 +1,9 @@
 """Official Prithvi BurnScars inference adapter.
 
 The adapter deliberately accepts only the explicit FireViewer six-band
-GeoTIFF contract. RGB previews remain useful to operators but never enter this
-model.
+GeoTIFF contract. RGB previews, thermal products and hotspots remain useful to
+the rest of the satellite pipeline but never enter this model. This adapter is
+an opportunistic burned-area enhancement, not the satellite-operation gate.
 """
 
 from __future__ import annotations

@@ -309,7 +309,8 @@
       "outputs": ["observed_burned_perimeter"],
       "activation_requirements": [
         "Input is a signed six-band georeferenced reflectance GeoTIFF in the canonical band order.",
-        "Cloud and temporal-consistency gates pass; incompatible or absent products cause abstention."
+        "Cloud and temporal-consistency gates pass; incompatible or absent products make only this auxiliary stage not applicable.",
+        "This stage never blocks RGB satellite imagery, thermal products, hotspot processing, evidence fusion or the daily report."
       ]
     },
     {

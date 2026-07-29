@@ -12,7 +12,7 @@ doivent reproduire le benchmark.
 | D-FINE X-Large feu/fumée | détection principale | **implémenté** : checkpoint public épinglé, letterbox centré 768, poids FP32, autocast BF16, dé-letterbox | **actif**, candidat de rang 1 |
 | RT-DETRv2-R50 feu/fumée | contre-détection | **implémenté** avec le même contrat géométrique et numérique | **actif**, candidat de rang 2 ; sa sortie est conservée même lorsque D-FINE est retenu |
 | MolmoPoint-8B FireViewer | points flamme/front/origine fumée | **implémenté** : API native de jetons de point, métadonnées du processeur et coordonnées normalisées | **actif pour les lots V2** entre la sélection visuelle et la projection caméra/MNT |
-| Prithvi FireViewer | surface brûlée | blocage explicite du checkpoint déprécié | **interdit** : régression HLS confirmée ; modèle officiel conservé comme référence |
+| Prithvi officiel BurnScars | surface brûlée historique | **implémenté** : adaptateur TerraTorch, GeoTIFF six bandes signé et projection par géotransformation | **auxiliaire opportuniste** ; son absence ou son abstention ne bloque jamais l’analyse satellite quotidienne |
 
 ## Détecteurs RT-DETR et D-FINE
 
@@ -66,10 +66,22 @@ refusé avant chargement. Sur le lot indépendant HLS, son IoU de 0,789 est
 inférieur au 0,864 du modèle officiel ; sa perfection sur EO4 provenait d’un
 sous-domaine all-positive et ne constitue pas une preuve de généralisation.
 
-Le contrat d’entrée de référence reste six bandes HLS
+Le modèle officiel est branché par l’adaptateur TerraTorch. Son contrat d’entrée
+reste six bandes HLS
 `BLUE/GREEN/RED/NIR_NARROW/SWIR_1/SWIR_2`, tuiles 512×512 et sortie binaire
-`burned_area`. L’adaptateur TerraTorch du modèle officiel reste à implémenter
-avant tout branchement.
+`burned_area`.
+
+Prithvi n’est pas « l’analyse satellite ». La branche satellite quotidienne
+conserve et traite séparément les images RGB géoréférencées, les produits
+thermiques et les points chauds FIRMS/VIIRS/SLSTR. Prithvi ajoute uniquement une
+proposition de surface brûlée lorsqu’un produit multispectral compatible est
+déjà disponible. Dans les autres cas, il n’est pas chargé et son étape est
+marquée non applicable sans dégrader ni bloquer les autres résultats.
+
+Pour la campagne interne courante, la couche de préparation matérialise les
+produits six bandes disponibles avant leur transfert privé. Cette matérialisation
+n’est pas une saisie attendue de l’opérateur et Prithvi ne constitue pas un
+prérequis de réussite d’une journée.
 
 ## Graphiques et fiches
 
