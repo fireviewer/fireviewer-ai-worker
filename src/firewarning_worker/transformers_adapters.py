@@ -8,7 +8,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager, nullcontext
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from firewarning_worker.adapters import ItemPatch, ModelAdapter, ModelOutputError
 from firewarning_worker.consensus import (
@@ -38,6 +38,9 @@ from firewarning_worker.model_workers.detection import (
     is_fireviewer_detector,
     unletterbox,
 )
+
+if TYPE_CHECKING:
+    from firewarning_worker.event_perception import EventPerceptionPoint
 
 
 def _torch_runtime() -> tuple[Any, Any]:
@@ -528,6 +531,35 @@ class MolmoPointAdapter(_BaseAdapter):
             y = min(max(float(point[-1]) / height, 0.0), 1.0)
             normalized.append((x, y))
         return normalized[:16]
+
+    def infer_event_image(
+        self,
+        *,
+        evidence_asset_id: str,
+        working_file_url: str,
+    ) -> tuple[EventPerceptionPoint, ...]:
+        """Run the existing MolmoPoint queries for one private event image."""
+
+        from PIL import Image
+
+        from firewarning_worker.event_perception import EventPerceptionPoint
+
+        del evidence_asset_id  # The caller owns the evidence-to-anchor association.
+        points: list[EventPerceptionPoint] = []
+        with self.fetcher.download(working_file_url) as image_path, Image.open(image_path) as image:
+            rgb = image.convert("RGB")
+            try:
+                for semantic_anchor, query in self.QUERIES:
+                    for x, y in self._point(image=rgb, prompt=query):
+                        points.append(
+                            EventPerceptionPoint(
+                                semantic_anchor=semantic_anchor,
+                                source_point_normalized=(x, y),
+                            )
+                        )
+            finally:
+                rgb.close()
+        return tuple(points)
 
     def infer(
         self,

@@ -38,12 +38,31 @@ from firewarning_worker.validation import (
 )
 
 if TYPE_CHECKING:
+    from firewarning_worker.event_perception import EventPerceptionAdapter
     from firewarning_worker.spatial_pipeline import DeterministicSpatialPipeline
     from firewarning_worker.v2_burned_area import BurnedAreaAdapter
     from firewarning_worker.v2_pointing import FirePointingAdapter
 
 BOOT_READY_MS = round((perf_counter() - BOOT_STARTED_AT) * 1_000)
 _GPU_SESSION_LOCK = threading.Lock()
+
+
+def _event_candidate_id(raw_input: dict[str, Any]) -> str:
+    bundle = raw_input.get("bundle")
+    if not isinstance(bundle, dict):
+        return "INVALID"
+    candidate_id = bundle.get("candidate_id")
+    return candidate_id if isinstance(candidate_id, str) else "INVALID"
+
+
+def _event_validation_codes(exc: ValidationError) -> list[str]:
+    """Return closed validation codes without echoing private input values."""
+
+    codes: list[str] = []
+    for error in exc.errors(include_url=False, include_context=False, include_input=False):
+        location = ".".join(str(part) for part in error["loc"])
+        codes.append(f"event_input_invalid:{location}:{error['type']}")
+    return codes or ["event_input_invalid"]
 
 
 def _research_failure(
@@ -126,11 +145,23 @@ def _runtime_burned_area_adapter(
     return cast("BurnedAreaAdapter", factory.create_burned_area(spec))
 
 
+def _runtime_event_perception_adapter(
+    factory: AdapterFactory,
+) -> EventPerceptionAdapter | None:
+    from firewarning_worker.transformers_adapters import TransformersAdapterFactory
+
+    if not isinstance(factory, TransformersAdapterFactory):
+        return None
+    spec = build_registry()["fire_pointing"]
+    return cast("EventPerceptionAdapter", factory.create_fire_pointing(spec))
+
+
 def handle_job(
     job: dict[str, Any],
     *,
     factory: AdapterFactory | None = None,
     spatial_pipeline: DeterministicSpatialPipeline | None = None,
+    event_perception_adapter: EventPerceptionAdapter | None = None,
 ) -> dict[str, Any]:
     raw_input = job.get("input")
     if not isinstance(raw_input, dict):
@@ -145,6 +176,138 @@ def handle_job(
             "boot_ms": BOOT_READY_MS,
         }
     requested_schema = raw_input.get("schema_version", "1.0")
+    if requested_schema == "event-2.0":
+        from firewarning_worker.event_perception import (
+            event_has_working_urls,
+            event_requires_image_inference,
+            run_event_image_perception,
+            validate_event_working_urls,
+        )
+        from firewarning_worker.event_pipeline import (
+            DeterministicEventPipeline,
+            EventPipelineInput,
+            PerceptionFailure,
+            event_pipeline_enabled,
+        )
+
+        if not event_pipeline_enabled():
+            return {
+                "schema_version": "event-result-2.0",
+                "candidate_id": _event_candidate_id(raw_input),
+                "status": "failed",
+                "view_profile": None,
+                "perception_anchors": [],
+                "spatial_evidence": [],
+                "localization_attempts": [],
+                "event_proposals": [],
+                "independent_external_families": [],
+                "contradictions": [],
+                "reason_codes": ["event_pipeline_disabled"],
+                "requires_human_review": True,
+            }
+        try:
+            request = EventPipelineInput.model_validate(raw_input)
+            url_failures: tuple[PerceptionFailure, ...] = ()
+            settings: WorkerSettings | None = None
+            if event_has_working_urls(request):
+                try:
+                    settings = WorkerSettings.from_environment()
+                except ConfigurationError:
+                    url_failures = tuple(
+                        PerceptionFailure(
+                            evidence_asset_id=asset.evidence_asset_id,
+                            reason_code="media_url_allowlist_unconfigured",
+                        )
+                        for asset in request.bundle.evidence_assets
+                        if asset.working_file_url is not None
+                    )
+                else:
+                    url_failures = validate_event_working_urls(
+                        request,
+                        settings.allowed_media_hosts,
+                    )
+
+            invalid_assets = {
+                failure.evidence_asset_id
+                for failure in url_failures
+                if failure.evidence_asset_id is not None
+            }
+            if invalid_assets:
+                safe_anchors = tuple(
+                    anchor
+                    for anchor in request.perception_anchors
+                    if anchor.evidence_asset_id not in invalid_assets
+                )
+                safe_anchor_ids = {anchor.anchor_id for anchor in safe_anchors}
+                request = EventPipelineInput.model_validate(
+                    request.model_copy(
+                        update={
+                            "perception_anchors": safe_anchors,
+                            "spatial_evidence": tuple(
+                                item
+                                for item in request.spatial_evidence
+                                if item.anchor_id in safe_anchor_ids
+                            ),
+                        }
+                    )
+                )
+
+            requires_inference = event_requires_image_inference(request, url_failures)
+            adapter_factory: AdapterFactory | None = factory
+            if requires_inference and adapter_factory is None and settings is not None:
+                adapter_factory = _runtime_factory(settings)
+            adapter = event_perception_adapter
+            if adapter is None and adapter_factory is not None:
+                adapter = _runtime_event_perception_adapter(adapter_factory)
+
+            if requires_inference and adapter is not None:
+                if not _GPU_SESSION_LOCK.acquire(blocking=False):
+                    enriched, failures = run_event_image_perception(
+                        request,
+                        adapter=None,
+                        url_failures=url_failures,
+                        unavailable_reason_code="gpu_session_already_active",
+                    )
+                else:
+                    try:
+                        assert adapter_factory is not None
+                        with adapter_factory_job_scope(adapter_factory):
+                            enriched, failures = run_event_image_perception(
+                                request,
+                                adapter=adapter,
+                                url_failures=url_failures,
+                            )
+                    finally:
+                        _GPU_SESSION_LOCK.release()
+            else:
+                enriched, failures = run_event_image_perception(
+                    request,
+                    adapter=adapter,
+                    url_failures=url_failures,
+                )
+            return (
+                DeterministicEventPipeline()
+                .run(
+                    enriched,
+                    perception_failures=failures,
+                )
+                .model_dump(mode="json")
+            )
+        except ValidationError as exc:
+            return {
+                "schema_version": "event-result-2.0",
+                "candidate_id": _event_candidate_id(raw_input),
+                "status": "failed",
+                "view_profile": None,
+                "perception_anchors": [],
+                "spatial_evidence": [],
+                "localization_attempts": [],
+                "event_proposals": [],
+                "independent_external_families": [],
+                "contradictions": [],
+                "reason_codes": _event_validation_codes(exc),
+                "requires_human_review": True,
+            }
     if requested_schema == "research-1.0":
         try:
             research = ResearchInputV1.model_validate(raw_input)

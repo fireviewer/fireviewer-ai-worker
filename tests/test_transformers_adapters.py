@@ -227,3 +227,43 @@ def test_molmopoint_requires_extracted_frames_for_video() -> None:
     assert MolmoPointAdapter._sources(image, frozenset()) == [
         ("IMAGE-1", "https://media.internal/image.jpg", "image")
     ]
+
+
+def test_molmopoint_event_bridge_reuses_pixel_queries_without_geographic_output(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    image_path = tmp_path / "event.jpg"
+    Image.new("RGB", (20, 10), color="red").save(image_path)
+    fetcher = FakeWhisperFetcher(image_path)
+    adapter = MolmoPointAdapter(
+        ModelSpec(
+            role="fire_pointing",
+            model_id="fireviewer/molmopoint-8b-fire-smoke-pointing",
+            revision="67829947ac3aa55632ef752ed9c8f486dba60ae2",
+        ),
+        cache_root=tmp_path,
+        fetcher=fetcher,  # type: ignore[arg-type]
+    )
+    prompts: list[str] = []
+
+    def fake_point(*, image: Any, prompt: str) -> list[tuple[float, float]]:
+        assert image.mode == "RGB"
+        prompts.append(prompt)
+        return [(0.25, 0.75)]
+
+    monkeypatch.setattr(adapter, "_point", fake_point)
+
+    points = adapter.infer_event_image(
+        evidence_asset_id="ASSET-1",
+        working_file_url="https://media.internal/event.jpg",
+    )
+
+    assert [point.semantic_anchor for point in points] == [
+        "active_fire_point",
+        "visible_fire_front_point",
+        "smoke_origin_point",
+    ]
+    assert all(point.source_point_normalized == (0.25, 0.75) for point in points)
+    assert len(prompts) == 3
+    assert all(not hasattr(point, "geometry_geojson") for point in points)
