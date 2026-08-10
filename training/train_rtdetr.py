@@ -985,9 +985,12 @@ def run_training(
     *,
     model_spec: DetectorModelSpec = RTDETR_MODEL_SPEC,
 ) -> None:
-    import albumentations as A
-    import torch
-    from datasets import Dataset, DatasetDict, Image
+    def report_stage(stage: str) -> None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "runtime-stage.txt").write_text(stage + "\n", encoding="ascii")
+        print(f"{model_spec.output_prefix}_STAGE={stage}", flush=True)
+
+    report_stage("imports_start")
     from transformers import (
         AutoImageProcessor,
         AutoModelForObjectDetection,
@@ -997,8 +1000,20 @@ def run_training(
         set_seed,
     )
 
+    report_stage("transformers_imported")
+    import torch
+
+    report_stage("torch_imported")
+    from datasets import Dataset, DatasetDict, Image
+
+    report_stage("datasets_imported")
+    import albumentations as A
+
+    report_stage("imports_complete")
+
     if not torch.cuda.is_available():
         raise RuntimeError(f"{model_spec.family} training requires a CUDA GPU")
+    report_stage("cuda_ready")
 
     class ProcessTreeMemoryGuard(TrainerCallback):
         def __init__(self, limit_bytes: int) -> None:
@@ -1054,6 +1069,7 @@ def run_training(
         )
     else:
         run_records = records
+    report_stage("records_selected")
 
     rows_by_split, tile_report = _dataset_rows(
         run_records,
@@ -1063,6 +1079,7 @@ def run_training(
         max_positive_tiles_per_image=args.max_positive_tiles_per_image,
         negative_tile_fraction=args.negative_tile_fraction,
     )
+    report_stage("views_built")
     optimizer_plan = _build_optimizer_plan(
         train_views=len(rows_by_split["train"]),
         batch_size=args.batch_size,
@@ -1082,6 +1099,7 @@ def run_training(
         dataset = Dataset.from_list(rows).cast_column("image", Image())
         datasets[split] = dataset
     dataset_dict = DatasetDict(datasets)
+    report_stage("datasets_materialized")
 
     id2label = dict(class_names)
     label2id = {name: identifier for identifier, name in id2label.items()}
@@ -1090,6 +1108,7 @@ def run_training(
         "trust_remote_code": False,
         "cache_dir": str(args.cache_dir),
     }
+    report_stage("image_processor_load_start")
     image_processor = AutoImageProcessor.from_pretrained(
         model_spec.model_id,
         do_resize=False,
@@ -1097,6 +1116,7 @@ def run_training(
         use_fast=True,
         **pretrained,
     )
+    report_stage("image_processor_loaded")
     deployment_image_processor = AutoImageProcessor.from_pretrained(
         model_spec.model_id,
         do_resize=True,
@@ -1112,6 +1132,7 @@ def run_training(
         use_fast=True,
         **pretrained,
     )
+    report_stage("deployment_processor_loaded")
     model = AutoModelForObjectDetection.from_pretrained(
         model_spec.model_id,
         id2label=id2label,
@@ -1119,6 +1140,7 @@ def run_training(
         ignore_mismatched_sizes=True,
         **pretrained,
     )
+    report_stage("model_loaded")
     supports_gradient_checkpointing = bool(getattr(model, "supports_gradient_checkpointing", False))
     if args.gradient_checkpointing and not supports_gradient_checkpointing:
         raise ValueError(
@@ -1237,6 +1259,7 @@ def run_training(
         json.dumps(provenance, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    report_stage("provenance_written")
 
     if not smoke_mode and not benchmark_mode:
         print(
@@ -1315,7 +1338,9 @@ def run_training(
         ),
         callbacks=callbacks,
     )
+    report_stage("trainer_ready")
     torch.cuda.reset_peak_memory_stats()
+    report_stage("training_start")
     train_result = trainer.train(resume_from_checkpoint=resume_checkpoint)
     train_result.metrics.update(
         {

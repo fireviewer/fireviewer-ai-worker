@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from training.train_rfdetr_large import (
+    DATASET_PROFILES,
     HISTORICAL_ENCODER_LEARNING_RATE,
     HISTORICAL_LEARNING_RATE,
     HISTORICAL_RESOLUTION,
@@ -42,6 +43,17 @@ def test_large_defaults_reapply_historical_training_profile(tmp_path: Path) -> N
     assert args.pretrain_weights == tmp_path / "rf-detr-large-2026.pth"
 
 
+def test_small_defaults_use_accelerated_premium_profile(tmp_path: Path) -> None:
+    args = _args(tmp_path, variant="small")
+
+    _resolve_variant_defaults(args)
+
+    assert args.epochs == 12
+    assert args.batch_size == 8
+    assert args.grad_accum_steps == 4
+    assert args.pretrain_weights == tmp_path / "rf-detr-small.pth"
+
+
 def test_pretrain_weight_gate_rejects_digest_drift(tmp_path: Path) -> None:
     weights = tmp_path / "weights.pth"
     weights.write_bytes(b"pinned-rfdetr")
@@ -52,6 +64,20 @@ def test_pretrain_weight_gate_rejects_digest_drift(tmp_path: Path) -> None:
     assert report["md5"] == expected
     with pytest.raises(ValueError, match="MD5 drift"):
         _check_pretrain_weights(weights, "0" * 32)
+
+
+def test_ground_premium_profile_is_pinned_to_selected_corpus() -> None:
+    profile = DATASET_PROFILES["ground-premium"]
+
+    assert profile["dataset_id"] == "fireviewer/fire-smoke-ground-premium-rfdetr-small-v1"
+    assert profile["splits"]["train"] == {"images": 21224, "annotations": 24053}
+
+
+def test_ground_elite_profile_is_pinned_to_low_ram_corpus() -> None:
+    profile = DATASET_PROFILES["ground-elite"]
+
+    assert profile["dataset_id"] == "fireviewer/fire-smoke-ground-elite-rfdetr-small-v1"
+    assert profile["splits"]["train"] == {"images": 5813, "annotations": 6792}
 
 
 def test_plan_records_complete_historical_methodology(tmp_path: Path) -> None:
@@ -81,7 +107,4 @@ def test_plan_records_complete_historical_methodology(tmp_path: Path) -> None:
         "num_workers": 0,
         "seed": 420,
     }
-    assert (
-        plan["methodology"]["training_profile"]
-        == "historical_pushed_adapted_to_expanded_corpus"
-    )
+    assert plan["methodology"]["training_profile"] == "historical_pushed_adapted_to_expanded_corpus"

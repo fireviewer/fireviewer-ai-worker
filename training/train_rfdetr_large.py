@@ -32,12 +32,53 @@ EXPECTED_SPLITS = {
     "valid": {"images": 30406, "annotations": 39895},
     "test": {"images": 25144, "annotations": 34125},
 }
+GROUND_EXPECTED_SPLITS = {
+    "train": {"images": 88374, "annotations": 107691},
+    "valid": {"images": 19593, "annotations": 24960},
+    "test": {"images": 19791, "annotations": 24734},
+}
+GROUND_PREMIUM_EXPECTED_SPLITS = {
+    "train": {"images": 21224, "annotations": 24053},
+    "valid": {"images": 3591, "annotations": 4370},
+    "test": {"images": 3680, "annotations": 4562},
+}
+GROUND_ELITE_EXPECTED_SPLITS = {
+    "train": {"images": 5813, "annotations": 6792},
+    "valid": {"images": 680, "annotations": 796},
+    "test": {"images": 712, "annotations": 899},
+}
 EXPECTED_SOURCE_MANIFESTS = (
     "manifests/fasdd/manifest.jsonl",
     "manifests/pyro-sdis/manifest.jsonl",
     "manifests/alarmod/manifest.rtdetr.jsonl",
     "manifests/boreal/manifest.jsonl",
 )
+GROUND_SOURCE_MANIFESTS = (
+    "manifests/fasdd-cv/manifest.jsonl",
+    "manifests/pyro-sdis/manifest.jsonl",
+)
+DATASET_PROFILES = {
+    "full": {
+        "splits": EXPECTED_SPLITS,
+        "manifests": EXPECTED_SOURCE_MANIFESTS,
+        "dataset_id": "fireviewer/fire-smoke-detection-corpus-v1",
+    },
+    "ground-only": {
+        "splits": GROUND_EXPECTED_SPLITS,
+        "manifests": GROUND_SOURCE_MANIFESTS,
+        "dataset_id": "fireviewer/fire-smoke-ground-only-rfdetr-large-v1",
+    },
+    "ground-premium": {
+        "splits": GROUND_PREMIUM_EXPECTED_SPLITS,
+        "manifests": GROUND_SOURCE_MANIFESTS,
+        "dataset_id": "fireviewer/fire-smoke-ground-premium-rfdetr-small-v1",
+    },
+    "ground-elite": {
+        "splits": GROUND_ELITE_EXPECTED_SPLITS,
+        "manifests": GROUND_SOURCE_MANIFESTS,
+        "dataset_id": "fireviewer/fire-smoke-ground-elite-rfdetr-small-v1",
+    },
+}
 MODEL_VARIANTS = {
     "large": {
         "family": "RF-DETR Large",
@@ -56,10 +97,10 @@ MODEL_VARIANTS = {
         "model_class": "RFDETRSmall",
         "pretrain_filename": "rf-detr-small.pth",
         "pretrain_md5": "fb37061c1af7bace359c91b723a8d5c1",
-        "profile": "historical_standard",
-        "epochs": 240,
-        "batch_size": 4,
-        "grad_accum_steps": 8,
+        "profile": "premium_ground_accelerated",
+        "epochs": 12,
+        "batch_size": 8,
+        "grad_accum_steps": 4,
         "eval_max_dets": 300,
         "run_test": True,
     },
@@ -132,7 +173,9 @@ def _annotation_path(coco_root: Path, split: str) -> Path:
     return coco_root / split / "_annotations.coco.json"
 
 
-def _check_coco(path: Path, expected: dict[str, int]) -> dict[str, Any]:
+def _check_coco(
+    path: Path, expected: dict[str, int], *, verify_hashes: bool = False
+) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"RF-DETR COCO annotations are missing: {path}")
     value = _json(path)
@@ -153,25 +196,30 @@ def _check_coco(path: Path, expected: dict[str, int]) -> dict[str, Any]:
     if not annotation_image_ids <= image_ids:
         raise ValueError(f"COCO annotation references an unknown image in {path}")
     category_counts = Counter(int(item["category_id"]) for item in annotations)
-    return {
+    report = {
         "path": str(path.resolve()),
-        "sha256": _sha256(path),
         "images": len(images),
         "annotations": len(annotations),
         "categories": list(names),
         "category_counts": dict(sorted(category_counts.items())),
         "negative_images": len(image_ids - annotation_image_ids),
     }
+    if verify_hashes:
+        report["sha256"] = _sha256(path)
+    return report
 
 
 def build_preflight_report(
     dataset_root: Path,
     *,
     model_family: str = "RF-DETR Large",
+    dataset_profile: str = "full",
     pretrain_weights: Path | None = None,
     expected_pretrain_md5: str | None = None,
+    verify_hashes: bool = False,
 ) -> dict[str, Any]:
     dataset_root = dataset_root.resolve()
+    profile = DATASET_PROFILES[dataset_profile]
     conversion_root = dataset_root / "_rfdetr_coco"
     completion_path = conversion_root / "_conversion_complete.json"
     publication_path = dataset_root / "publication-manifest.json"
@@ -182,35 +230,50 @@ def build_preflight_report(
         f"missing:{path.relative_to(dataset_root)}" for path in required if not path.is_file()
     )
     source_manifests: dict[str, str] = {}
-    for relative in EXPECTED_SOURCE_MANIFESTS:
+    for relative in profile["manifests"]:
         path = dataset_root / relative
         if not path.is_file():
             errors.append(f"missing:{relative}")
-        else:
+        elif verify_hashes:
             source_manifests[relative] = _sha256(path)
     conversion: dict[str, Any] = {}
     split_reports: dict[str, Any] = {}
     pretrain: dict[str, Any] = {}
-    if pretrain_weights is not None and expected_pretrain_md5 is not None:
-        try:
-            pretrain = _check_pretrain_weights(pretrain_weights, expected_pretrain_md5)
-        except (FileNotFoundError, ValueError) as exc:
-            errors.append(str(exc))
+    if pretrain_weights is not None:
+        if not pretrain_weights.is_file():
+            errors.append(f"RF-DETR pretrained weights are missing: {pretrain_weights.resolve()}")
+        elif verify_hashes and expected_pretrain_md5 is not None:
+            try:
+                pretrain = _check_pretrain_weights(pretrain_weights, expected_pretrain_md5)
+            except (FileNotFoundError, ValueError) as exc:
+                errors.append(str(exc))
+        else:
+            pretrain = {
+                "path": str(pretrain_weights.resolve()),
+                "bytes": pretrain_weights.stat().st_size,
+                "content_hash_verification": "disabled",
+            }
     if not errors:
         completion = _json(completion_path)
         if completion.get("classes") != list(EXPECTED_CLASSES):
             errors.append("conversion_class_map_drift")
+        if completion.get("dataset_profile", "full") != dataset_profile:
+            errors.append("conversion_dataset_profile_drift")
         if completion.get("max_samples_per_split") is not None:
             errors.append("conversion_is_sample_limited")
         conversion = {
-            "completion_sha256": _sha256(completion_path),
             "prepared_coco_dir": str(conversion_root),
             "source_dataset_dir": str(dataset_root),
+            "dataset_profile": dataset_profile,
         }
-        for split, expected in EXPECTED_SPLITS.items():
+        if verify_hashes:
+            conversion["completion_sha256"] = _sha256(completion_path)
+        for split, expected in profile["splits"].items():
             try:
                 split_reports[split] = _check_coco(
-                    _annotation_path(conversion_root, split), expected
+                    _annotation_path(conversion_root, split),
+                    expected,
+                    verify_hashes=verify_hashes,
                 )
             except (FileNotFoundError, ValueError) as exc:
                 errors.append(str(exc))
@@ -218,11 +281,14 @@ def build_preflight_report(
         "schema_version": 1,
         "model_family": model_family,
         "role": "benchmark_only_challenger",
+        "dataset_profile": dataset_profile,
+        "dataset_id": profile["dataset_id"],
+        "hash_verification": verify_hashes,
         "dataset_root": str(dataset_root),
         "source_manifest_paths": [
-            str((dataset_root / item).resolve()) for item in EXPECTED_SOURCE_MANIFESTS
+            str((dataset_root / item).resolve()) for item in profile["manifests"]
         ],
-        "source_manifest_sha256": source_manifests,
+        "source_manifest_sha256": source_manifests if verify_hashes else None,
         "conversion": conversion,
         "pretrain_weights": pretrain,
         "splits": split_reports,
@@ -243,6 +309,31 @@ def _write_json(path: Path, value: dict[str, Any]) -> None:
 
 def _build_plan(args: argparse.Namespace, report: dict[str, Any]) -> dict[str, Any]:
     variant = _variant_config(args.variant)
+    low_ram_loader = args.variant == "small"
+    hyperparameters = {
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "grad_accum_steps": args.grad_accum_steps,
+        "learning_rate": args.learning_rate,
+        "encoder_learning_rate": args.encoder_learning_rate,
+        "weight_decay": args.weight_decay,
+        "resolution": args.resolution,
+        "gradient_checkpointing": True,
+        "freeze_encoder": False,
+        "amp_dtype": "bf16",
+        "use_ema": True,
+        "checkpoint_interval": 1,
+        "num_workers": getattr(args, "num_workers", 0),
+        "seed": args.seed,
+    }
+    if low_ram_loader:
+        hyperparameters.update(
+            {
+                "persistent_workers": False,
+                "prefetch_factor": 1,
+                "pin_memory": False,
+            }
+        )
     return {
         "schema_version": 1,
         "model_family": variant["family"],
@@ -251,22 +342,7 @@ def _build_plan(args: argparse.Namespace, report: dict[str, Any]) -> dict[str, A
         "dataset": report["conversion"],
         "pretrain_weights": report["pretrain_weights"],
         "classes": list(EXPECTED_CLASSES),
-        "hyperparameters": {
-            "epochs": args.epochs,
-            "batch_size": args.batch_size,
-            "grad_accum_steps": args.grad_accum_steps,
-            "learning_rate": args.learning_rate,
-            "encoder_learning_rate": args.encoder_learning_rate,
-            "weight_decay": args.weight_decay,
-            "resolution": args.resolution,
-            "gradient_checkpointing": True,
-            "freeze_encoder": False,
-            "amp_dtype": "bf16",
-            "use_ema": True,
-            "checkpoint_interval": 1,
-            "num_workers": 0,
-            "seed": args.seed,
-        },
+        "hyperparameters": hyperparameters,
         "methodology": {
             "training_profile": variant["profile"],
             "frozen_input_conversion": True,
@@ -309,7 +385,7 @@ def _run_training(args: argparse.Namespace, report: dict[str, Any]) -> None:
         "dataset": report["conversion"],
         "pretrain_weights": report["pretrain_weights"],
         "source_manifest_sha256": report["source_manifest_sha256"],
-        "preflight_sha256": _sha256(preflight_path),
+        "preflight_sha256": _sha256(preflight_path) if args.verify_hashes else None,
         "args": {
             key: str(value) if isinstance(value, Path) else value
             for key, value in vars(args).items()
@@ -338,7 +414,7 @@ def _run_training(args: argparse.Namespace, report: dict[str, Any]) -> None:
         "output_dir": str(output),
         "seed": args.seed,
         "class_names": list(EXPECTED_CLASSES),
-        "num_workers": 0,
+        "num_workers": args.num_workers,
         "amp_dtype": "bf16",
         "use_ema": True,
         "checkpoint_interval": 1,
@@ -358,23 +434,35 @@ def _run_training(args: argparse.Namespace, report: dict[str, Any]) -> None:
         "save_dataset_grids": False,
         "notes": {
             "project": "FireViewer",
-            "dataset": "fireviewer/fire-smoke-detection-corpus-v1",
+            "dataset": report["dataset_id"],
             "classes": list(EXPECTED_CLASSES),
             "seed": args.seed,
             "training_profile": variant["profile"],
             "rfdetr_variant": args.variant,
-            "pretrained_weights_md5": report["pretrain_weights"]["md5"],
+            "pretrained_weights_md5": report["pretrain_weights"].get("md5"),
         },
     }
+    if args.variant == "small":
+        requested.update(
+            {
+                "persistent_workers": False,
+                "prefetch_factor": 1,
+                "pin_memory": False,
+            }
+        )
     if args.resume is not None:
         requested["resume"] = args.resume
-    unsupported = sorted(name for name in requested if name not in parameters and not any(
-        parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values()
-    ))
+    unsupported = sorted(
+        name
+        for name in requested
+        if name not in parameters
+        and not any(
+            parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values()
+        )
+    )
     if unsupported:
         raise RuntimeError(
-            "installed RF-DETR API does not support required arguments: "
-            f"{unsupported}"
+            f"installed RF-DETR API does not support required arguments: {unsupported}"
         )
     train(**requested)
 
@@ -383,11 +471,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="FireViewer RF-DETR Large training")
     parser.add_argument("command", choices=("preflight", "plan", "train"))
     parser.add_argument("--variant", choices=tuple(MODEL_VARIANTS), default="large")
+    parser.add_argument("--dataset-profile", choices=tuple(DATASET_PROFILES), default="full")
     parser.add_argument("--dataset-root", type=Path, default=DEFAULT_DATASET_ROOT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--grad-accum-steps", type=int)
+    parser.add_argument("--num-workers", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=HISTORICAL_LEARNING_RATE)
     parser.add_argument(
         "--encoder-learning-rate", type=float, default=HISTORICAL_ENCODER_LEARNING_RATE
@@ -402,6 +492,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path(os.environ.get("RF_HOME", "models/rfdetr")),
     )
     parser.add_argument("--pretrain-weights", type=Path)
+    parser.add_argument("--verify-hashes", action="store_true")
     return parser
 
 
@@ -412,6 +503,7 @@ def main() -> None:
         args.epochs <= 0
         or args.batch_size <= 0
         or args.grad_accum_steps <= 0
+        or args.num_workers < 0
         or args.learning_rate <= 0
         or args.encoder_learning_rate <= 0
         or args.weight_decay <= 0
@@ -422,8 +514,10 @@ def main() -> None:
     report = build_preflight_report(
         args.dataset_root,
         model_family=variant["family"],
+        dataset_profile=args.dataset_profile,
         pretrain_weights=args.pretrain_weights,
         expected_pretrain_md5=variant["pretrain_md5"],
+        verify_hashes=args.verify_hashes,
     )
     args.output.mkdir(parents=True, exist_ok=True)
     _write_json(args.output / "preflight-report.json", report)
