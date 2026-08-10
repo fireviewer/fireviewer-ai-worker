@@ -17,6 +17,7 @@ def test_moge_preflight_requires_all_isolated_splits(tmp_path: Path) -> None:
             "image_relpath": f"images/{split}.jpg",
             "image_sha256": "a" * 64,
             "depth_relpath": f"depth/{split}.npy",
+            "depth_kind": "sparse_sfm_points3D",
             "fov_ground_truth_deg": 60.0,
         }
         for split in ("train", "validation", "test")
