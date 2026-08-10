@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 MODEL_REVISION = "5931719e67bbdb9737e363e781fb0c67687896bc"
-DEFAULT_REPO = "fireviewer/dinov3-vitb16-multitask-boreal-v1"
+DEFAULT_REPO = "fireviewer/dinov3-vitb16-multitask-fireviewer-v3"
 
 
 def _sha256(path: Path) -> str:
@@ -49,6 +49,7 @@ def merge_checkpoint(
     metrics: Path,
     manifest: Path,
     model_revision: str,
+    adapter_source: Path | None = None,
 ) -> dict[str, Any]:
     """Materialize a complete, uploadable release from the best checkpoint."""
 
@@ -102,6 +103,11 @@ def merge_checkpoint(
         + "\n",
         encoding="utf-8",
     )
+    if adapter_source is not None:
+        adapter_source = adapter_source.resolve()
+        if not adapter_source.is_file():
+            raise FileNotFoundError(adapter_source)
+        shutil.copy2(adapter_source, output / "dinov3_adapter.py")
     return metadata
 
 
@@ -123,24 +129,26 @@ license_link: https://ai.meta.com/resources/models-and-libraries/dinov3-license
 
 This repository contains the FireViewer full-parameter multi-task checkpoint
 based on the gated DINOv3 ViT-B/16 pretraining revision
-`{metadata['base_model_revision']}`. It exposes segmentation, anchor heatmap
+`{metadata["base_model_revision"]}`. It exposes segmentation, anchor heatmap
 pointing, and explicit visual-abstention heads through the FireViewer adapter.
 
 The DINOv3-derived weights remain subject to the [DINOv3 License](https://ai.meta.com/resources/models-and-libraries/dinov3-license/).
-The training corpus is sourced from a CC-BY-4.0 Boreal dataset; its weak-mask
-coverage and the DINOv3 redistribution terms must be reviewed before any
-commercial or production use.
+The training manifest combines the FireViewer Boreal corpus, Camp Swift,
+RxCADRE, and FireSentry. It contains strong, weak-teacher, sensor-derived, and
+temporal-negative annotations. Source rights and the DINOv3 redistribution
+terms must be reviewed independently before any downstream redistribution or
+commercial use.
 
 The release was selected by minimum validation loss: epoch
-`{metadata['epoch']}` with validation loss `{metadata['validation_loss']:.10f}`.
+`{metadata["epoch"]}` with validation loss `{metadata["validation_loss"]:.10f}`.
 The weight file is a complete PyTorch state dict; no LoRA/PEFT adapter remains
 to be merged.
 
 ## Provenance
 
-- Dataset manifest SHA-256: `{metadata['dataset_manifest_sha256']}`
-- Final checkpoint SHA-256: `{metadata['checkpoint_sha256']}`
-- Training mode: `{metadata['fine_tuning_mode']}`
+- Dataset manifest SHA-256: `{metadata["dataset_manifest_sha256"]}`
+- Final checkpoint SHA-256: `{metadata["checkpoint_sha256"]}`
+- Training mode: `{metadata["fine_tuning_mode"]}`
 - Weak/strong annotation quality remains a promotion gate; this repository is
   a trained challenger, not an automatic production promotion.
 
@@ -180,6 +188,7 @@ def main() -> int:
     merge.add_argument("--manifest", type=Path, required=True)
     merge.add_argument("--output", type=Path, required=True)
     merge.add_argument("--model-revision", default=MODEL_REVISION)
+    merge.add_argument("--adapter-source", type=Path)
     publish = sub.add_parser("push", help="create/update the HF model repo")
     publish.add_argument("--output", type=Path, required=True)
     publish.add_argument("--repo-id", default=DEFAULT_REPO)
@@ -193,6 +202,7 @@ def main() -> int:
             metrics=args.metrics,
             manifest=args.manifest,
             model_revision=args.model_revision,
+            adapter_source=args.adapter_source,
         )
         write_readme(args.output, metadata)
         print(json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True))

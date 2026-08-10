@@ -1,12 +1,15 @@
 [CmdletBinding()]
 param(
     [string]$Python = "python",
-    [string]$BundleRoot = $env:FIREVIEWER_CROSS_VIEW_BUNDLE_ROOT,
+    [string]$BundleRoot = "data\campaigns-v2",
+    [string]$ManifestRelpath = "prepared\cross-view-training-v1\manifest.jsonl",
     [string]$Output = "data\training\dinov3-cross-view-retrieval-v1",
     [string]$LogRoot = $env:TEMP,
     [int]$Epochs = 40,
+    [int]$MinEpochs = 20,
     [int]$BatchSize = 4,
-    [int]$GradientAccumulationSteps = 8
+    [int]$GradientAccumulationSteps = 8,
+    [int]$NumWorkers = 4
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,17 +35,19 @@ $pythonCommand = Get-Command $Python -ErrorAction Stop
 $arguments = @(
     "-m", "training.train_dinov3_cross_view", "train",
     "--bundle-root", $BundleRoot,
+    "--manifest-relpath", $ManifestRelpath,
     "--model-path", "data\models\dinov3-vitb16-pretrain-lvd1689m",
     "--output", $Output,
     "--epochs", $Epochs,
     "--batch-size", $BatchSize,
     "--gradient-accumulation-steps", $GradientAccumulationSteps,
+    "--num-workers", $NumWorkers,
     "--learning-rate", "1e-5",
     "--head-learning-rate", "5e-5",
     "--warmup-ratio", "0.05",
     "--early-stop-patience", "8",
-    "--resume-from", "auto",
-    "--verify-file-hashes"
+    "--min-epochs", $MinEpochs,
+    "--resume-from", "auto"
 )
 
 $startParameters = @{

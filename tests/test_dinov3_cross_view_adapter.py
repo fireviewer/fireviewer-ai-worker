@@ -7,9 +7,9 @@ from pathlib import Path
 import numpy as np
 import torch
 from PIL import Image
-
 from training.dinov3_cross_view_adapter import (
     CrossViewPairDataset,
+    cross_view_loss,
     multi_positive_contrastive_loss,
 )
 from training.train_dinov3_cross_view import MODEL_REVISION, build_preflight_report
@@ -30,6 +30,11 @@ def _row(root: Path, split: str, value: int) -> dict[str, object]:
     map_image = root / f"images/{split}-map.jpg"
     source_sha = _write_image(source, value)
     map_sha = _write_image(map_image, value + 1)
+    source_mask = root / f"masks/{split}-source.png"
+    map_mask = root / f"masks/{split}-map.png"
+    source_mask.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(np.zeros((18, 24), dtype=np.uint8)).save(source_mask)
+    Image.fromarray(np.zeros((18, 24), dtype=np.uint8)).save(map_mask)
     return {
         "sample_id": f"sample-{split}",
         "family": "cross_view_registration",
@@ -39,6 +44,8 @@ def _row(root: Path, split: str, value: int) -> dict[str, object]:
         "license": "CC0-1.0",
         "consent_basis": {"kind": "source_license", "reference": "fixture"},
         "operational_incident": False,
+        "source_transient_mask_relpath": source_mask.relative_to(root).as_posix(),
+        "map_transient_mask_relpath": map_mask.relative_to(root).as_posix(),
         "source_view": {
             "image_relpath": source.relative_to(root).as_posix(),
             "sha256": source_sha,
@@ -64,12 +71,14 @@ def _write_model_fixture(root: Path) -> Path:
 
 def test_dataset_loads_pair_and_neutralises_transient_pixels(tmp_path: Path) -> None:
     row = _row(tmp_path, "train", 30)
-    mask = tmp_path / "masks/transient.png"
-    mask.parent.mkdir()
-    mask_array = np.zeros((18, 24), dtype=np.uint8)
-    mask_array[:, :12] = 255
-    Image.fromarray(mask_array).save(mask)
-    row["transient_mask_relpath"] = mask.relative_to(tmp_path).as_posix()
+    source_mask = tmp_path / str(row["source_transient_mask_relpath"])
+    map_mask = tmp_path / str(row["map_transient_mask_relpath"])
+    source_mask_array = np.zeros((18, 24), dtype=np.uint8)
+    source_mask_array[:, :12] = 255
+    Image.fromarray(source_mask_array).save(source_mask)
+    map_mask_array = np.zeros((18, 24), dtype=np.uint8)
+    map_mask_array[:, 12:] = 255
+    Image.fromarray(map_mask_array).save(map_mask)
     manifest = tmp_path / "manifest.jsonl"
     manifest.write_text(json.dumps(row) + "\n", encoding="utf-8")
 
@@ -78,7 +87,52 @@ def test_dataset_loads_pair_and_neutralises_transient_pixels(tmp_path: Path) -> 
     assert tuple(sample["source_image"].shape) == (3, 32, 32)
     assert tuple(sample["map_image"].shape) == (3, 32, 32)
     assert torch.allclose(sample["source_image"][:, 8, 4], torch.zeros(3), atol=1e-5)
+    assert torch.allclose(sample["map_image"][:, 8, 28], torch.zeros(3), atol=1e-5)
     assert torch.equal(sample["target_xy"], torch.tensor([0.25, 0.75]))
+    assert bool(sample["point_valid"])
+
+
+def test_dataset_groups_synchronised_views_and_disables_unknown_point_target(
+    tmp_path: Path,
+) -> None:
+    rows = [_row(tmp_path, "train", value) for value in (30, 60)]
+    for index, row in enumerate(rows):
+        row["sample_id"] = f"synchronised-{index}"
+        row["retrieval_group"] = "camp-swift:block-1:t-12"
+        row["point_target_valid"] = False
+        row["map_view"].pop("optical_axis_ground_pixel_normalized")
+    manifest = tmp_path / "manifest.jsonl"
+    manifest.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+
+    dataset = CrossViewPairDataset(manifest, tmp_path, "train", 32)
+    first, second = dataset[0], dataset[1]
+
+    assert first["map_label"].item() == second["map_label"].item()
+    assert not bool(first["point_valid"])
+    assert torch.equal(first["target_xy"], torch.tensor([0.5, 0.5]))
+
+
+def test_cross_view_loss_ignores_point_head_when_target_is_unknown() -> None:
+    outputs = {
+        "source_embeddings": torch.nn.functional.normalize(
+            torch.tensor([[1.0, 0.0], [0.0, 1.0]]), dim=-1
+        ),
+        "map_embeddings": torch.nn.functional.normalize(
+            torch.tensor([[1.0, 0.0], [0.0, 1.0]]), dim=-1
+        ),
+        "target_xy": torch.tensor([[0.0, 0.0], [1.0, 1.0]], requires_grad=True),
+        "logit_scale": torch.tensor(10.0),
+    }
+
+    losses = cross_view_loss(
+        outputs,
+        torch.tensor([0, 1]),
+        torch.tensor([[0.5, 0.5], [0.5, 0.5]]),
+        torch.tensor([False, False]),
+    )
+
+    assert losses["point_loss"].item() == 0.0
+    assert torch.isfinite(losses["loss"])
 
 
 def test_multi_positive_loss_accepts_repeated_target_without_false_negative() -> None:
@@ -101,7 +155,10 @@ def test_multi_positive_loss_accepts_repeated_target_without_false_negative() ->
 def test_preflight_accepts_isolated_splits_and_pinned_local_model(tmp_path: Path) -> None:
     manifest = tmp_path / "corpus/cross-view-registration-v0.1.0/manifest.jsonl"
     manifest.parent.mkdir(parents=True)
-    rows = [_row(tmp_path, split, 20 + index * 20) for index, split in enumerate(("train", "validation", "test"))]
+    rows = [
+        _row(tmp_path, split, 20 + index * 20)
+        for index, split in enumerate(("train", "validation", "test"))
+    ]
     manifest.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
     model = _write_model_fixture(tmp_path)
 
@@ -122,7 +179,10 @@ def test_preflight_accepts_isolated_splits_and_pinned_local_model(tmp_path: Path
 def test_preflight_rejects_group_leakage_and_operational_media(tmp_path: Path) -> None:
     manifest = tmp_path / "corpus/cross-view-registration-v0.1.0/manifest.jsonl"
     manifest.parent.mkdir(parents=True)
-    rows = [_row(tmp_path, split, 20 + index * 20) for index, split in enumerate(("train", "validation", "test"))]
+    rows = [
+        _row(tmp_path, split, 20 + index * 20)
+        for index, split in enumerate(("train", "validation", "test"))
+    ]
     rows[1]["split_group"] = rows[0]["split_group"]
     rows[2]["operational_incident"] = True
     manifest.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")

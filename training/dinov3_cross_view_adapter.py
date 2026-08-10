@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import torch
@@ -53,8 +54,10 @@ class CrossViewPairDataset(Dataset[dict[str, Any]]):
         self.rows = list(rows) if rows is not None else _load_manifest_rows(manifest, split)
         if not self.rows:
             raise ValueError(f"cross-view manifest has no {split} rows")
-        map_hashes = sorted({str(row["map_view"]["sha256"]) for row in self.rows})
-        self.map_label_by_hash = {value: index for index, value in enumerate(map_hashes)}
+        retrieval_groups = sorted(
+            {str(row.get("retrieval_group") or row["map_view"]["sha256"]) for row in self.rows}
+        )
+        self.map_label_by_group = {value: index for index, value in enumerate(retrieval_groups)}
 
     def __len__(self) -> int:
         return len(self.rows)
@@ -81,14 +84,21 @@ class CrossViewPairDataset(Dataset[dict[str, Any]]):
     def __getitem__(self, index: int) -> dict[str, Any]:
         row = self.rows[index]
         map_hash = str(row["map_view"]["sha256"])
-        target = row["map_view"]["optical_axis_ground_pixel_normalized"]
+        retrieval_group = str(row.get("retrieval_group") or map_hash)
+        point_valid = bool(row.get("point_target_valid", True))
+        target = row["map_view"].get("optical_axis_ground_pixel_normalized", [0.5, 0.5])
         return {
             "source_image": self._image_tensor(
-                row["source_view"]["image_relpath"], row.get("transient_mask_relpath")
+                row["source_view"]["image_relpath"],
+                row.get("source_transient_mask_relpath") or row.get("transient_mask_relpath"),
             ),
-            "map_image": self._image_tensor(row["map_view"]["image_relpath"]),
-            "map_label": torch.tensor(self.map_label_by_hash[map_hash], dtype=torch.long),
+            "map_image": self._image_tensor(
+                row["map_view"]["image_relpath"],
+                row.get("map_transient_mask_relpath"),
+            ),
+            "map_label": torch.tensor(self.map_label_by_group[retrieval_group], dtype=torch.long),
             "target_xy": torch.tensor(target, dtype=torch.float32),
+            "point_valid": torch.tensor(point_valid, dtype=torch.bool),
             "sample_id": str(row["sample_id"]),
             "map_sha256": map_hash,
             "split_group": str(row["split_group"]),
@@ -107,10 +117,16 @@ class DinoV3CrossViewModel(nn.Module):
         )
         hidden = int(self.backbone.config.hidden_size)
         self.source_projection = nn.Sequential(
-            nn.LayerNorm(hidden), nn.Linear(hidden, hidden), nn.GELU(), nn.Linear(hidden, projection_dimension)
+            nn.LayerNorm(hidden),
+            nn.Linear(hidden, hidden),
+            nn.GELU(),
+            nn.Linear(hidden, projection_dimension),
         )
         self.map_projection = nn.Sequential(
-            nn.LayerNorm(hidden), nn.Linear(hidden, hidden), nn.GELU(), nn.Linear(hidden, projection_dimension)
+            nn.LayerNorm(hidden),
+            nn.Linear(hidden, hidden),
+            nn.GELU(),
+            nn.Linear(hidden, projection_dimension),
         )
         paired_dimension = hidden * 4
         self.point_head = nn.Sequential(
@@ -137,9 +153,7 @@ class DinoV3CrossViewModel(nn.Module):
         # Concatenating both domains keeps one shared-backbone pass and one BN-free graph.
         features = self._class_tokens(torch.cat((source_images, map_images), dim=0))
         source_features, map_features = features.chunk(2, dim=0)
-        source_embeddings = nn.functional.normalize(
-            self.source_projection(source_features), dim=-1
-        )
+        source_embeddings = nn.functional.normalize(self.source_projection(source_features), dim=-1)
         map_embeddings = nn.functional.normalize(self.map_projection(map_features), dim=-1)
         paired = torch.cat(
             (
@@ -182,14 +196,26 @@ def multi_positive_contrastive_loss(
     )
 
 
-def cross_view_loss(outputs: dict[str, Any], map_labels: Any, target_xy: Any) -> dict[str, Any]:
+def cross_view_loss(
+    outputs: dict[str, Any],
+    map_labels: Any,
+    target_xy: Any,
+    point_valid: Any | None = None,
+) -> dict[str, Any]:
     retrieval = multi_positive_contrastive_loss(
         outputs["source_embeddings"],
         outputs["map_embeddings"],
         map_labels,
         outputs["logit_scale"],
     )
-    point = nn.functional.smooth_l1_loss(outputs["target_xy"], target_xy, beta=0.05)
+    point_rows = nn.functional.smooth_l1_loss(
+        outputs["target_xy"], target_xy, beta=0.05, reduction="none"
+    ).mean(dim=1)
+    if point_valid is None:
+        point = point_rows.mean()
+    else:
+        valid = point_valid.to(dtype=torch.bool)
+        point = point_rows[valid].mean() if bool(valid.any()) else point_rows.sum() * 0.0
     total = retrieval + 0.5 * point
     return {"loss": total, "retrieval_loss": retrieval, "point_loss": point}
 
@@ -207,9 +233,12 @@ def finite_loss_probe(
     maps = batch["map_image"].to(device)
     labels = batch["map_label"].to(device)
     targets = batch["target_xy"].to(device)
+    point_valid = batch.get("point_valid")
+    if point_valid is not None:
+        point_valid = point_valid.to(device)
     amp_enabled = device.type == "cuda"
     with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=amp_enabled):
-        losses = cross_view_loss(model(source, maps), labels, targets)
+        losses = cross_view_loss(model(source, maps), labels, targets, point_valid)
     if not all(bool(torch.isfinite(value).item()) for value in losses.values()):
         raise RuntimeError("DINOv3 cross-view finite-loss probe failed")
     losses["loss"].backward()

@@ -35,9 +35,7 @@ DEFAULT_BUNDLE_ROOT = Path(
         "data/datasets/cross-view-registration-v1",
     )
 )
-DEFAULT_MANIFEST_RELPATH = Path(
-    "corpus/cross-view-registration-v0.1.0/manifest.jsonl"
-)
+DEFAULT_MANIFEST_RELPATH = Path("corpus/cross-view-registration-v0.1.0/manifest.jsonl")
 DEFAULT_MODEL_PATH = Path("data/models/dinov3-vitb16-pretrain-lvd1689m")
 DEFAULT_OUTPUT = Path("data/training/dinov3-cross-view-retrieval-v1")
 REQUIRED_SPLITS = {"train", "validation", "test"}
@@ -96,13 +94,14 @@ def build_preflight_report(
     bundle_root: Path,
     model_path: Path,
     *,
+    manifest_relpath: Path = DEFAULT_MANIFEST_RELPATH,
     verify_file_hashes: bool = False,
     expected_manifest_sha256: str | None = EXPECTED_MANIFEST_SHA256,
-    verify_model_hash: bool = True,
+    verify_model_hash: bool = False,
 ) -> dict[str, Any]:
     bundle_root = bundle_root.resolve()
     model_path = model_path.resolve()
-    manifest = bundle_root / DEFAULT_MANIFEST_RELPATH
+    manifest = bundle_root / manifest_relpath
     errors: list[str] = []
     warnings: list[str] = []
     rows: list[dict[str, Any]] = []
@@ -132,8 +131,13 @@ def build_preflight_report(
         try:
             source = row["source_view"]
             map_view = row["map_view"]
-            target = map_view["optical_axis_ground_pixel_normalized"]
-            if len(target) != 2 or not all(0.0 <= float(value) <= 1.0 for value in target):
+            point_target_valid = bool(row.get("point_target_valid", True))
+            target = map_view.get("optical_axis_ground_pixel_normalized")
+            if point_target_valid and (
+                not isinstance(target, list)
+                or len(target) != 2
+                or not all(0.0 <= float(value) <= 1.0 for value in target)
+            ):
                 errors.append(f"target_xy_invalid:{index}")
             source_hash_splits[str(source["sha256"])].add(split)
             map_hash_splits[str(map_view["sha256"])].add(split)
@@ -145,11 +149,18 @@ def build_preflight_report(
                     if _sha256(path) != str(asset["sha256"]):
                         errors.append(f"image_hash_mismatch:{index}:{asset['image_relpath']}")
                     verified_paths.add(path)
-            transient_relpath = row.get("transient_mask_relpath")
-            if transient_relpath:
+            source_transient_relpath = row.get("source_transient_mask_relpath") or row.get(
+                "transient_mask_relpath"
+            )
+            map_transient_relpath = row.get("map_transient_mask_relpath")
+            if source_transient_relpath and map_transient_relpath:
                 transient_rows += 1
-                if not _safe_bundle_path(bundle_root, str(transient_relpath)).is_file():
-                    errors.append(f"transient_mask_missing:{index}")
+                for view, transient_relpath in (
+                    ("source", source_transient_relpath),
+                    ("map", map_transient_relpath),
+                ):
+                    if not _safe_bundle_path(bundle_root, str(transient_relpath)).is_file():
+                        errors.append(f"transient_mask_missing:{index}:{view}")
         except (KeyError, TypeError, ValueError) as exc:
             errors.append(f"schema_invalid:{index}:{exc}")
 
@@ -162,7 +173,9 @@ def build_preflight_report(
     leaking_groups = sorted(group for group, splits in group_owners.items() if len(splits) > 1)
     if leaking_groups:
         errors.append(f"split_group_leakage:{leaking_groups}")
-    leaking_sources = sorted(value for value, splits in source_hash_splits.items() if len(splits) > 1)
+    leaking_sources = sorted(
+        value for value, splits in source_hash_splits.items() if len(splits) > 1
+    )
     leaking_maps = sorted(value for value, splits in map_hash_splits.items() if len(splits) > 1)
     if leaking_sources:
         errors.append(f"source_asset_split_leakage:{len(leaking_sources)}")
@@ -180,14 +193,8 @@ def build_preflight_report(
         errors.append(f"model_revision_mismatch:{cached_revision}")
 
     manifest_sha = _sha256(manifest) if manifest.is_file() else None
-    if (
-        manifest_sha
-        and expected_manifest_sha256
-        and manifest_sha != expected_manifest_sha256
-    ):
-        errors.append(
-            f"manifest_sha_mismatch:{manifest_sha}:expected:{expected_manifest_sha256}"
-        )
+    if manifest_sha and expected_manifest_sha256 and manifest_sha != expected_manifest_sha256:
+        errors.append(f"manifest_sha_mismatch:{manifest_sha}:expected:{expected_manifest_sha256}")
     model_weights_sha = None
     weights_path = model_path / "model.safetensors"
     if verify_model_hash and weights_path.is_file():
@@ -222,7 +229,8 @@ def build_preflight_report(
         "fine_tuning_mode": "full_model_all_parameters_trainable_shared_encoder",
         "errors": errors,
         "warnings": warnings,
-        "training_ready": not errors,
+        "schema_ready": not errors,
+        "training_ready": not errors and bool(rows) and transient_rows == len(rows),
         "promotion_ready": False,
         "promotion_blockers": [
             "independent_double_validated_geographic_test_missing",
@@ -246,6 +254,7 @@ def _collate(batch: list[dict[str, Any]]) -> dict[str, Any]:
         "map_image": torch.stack([row["map_image"] for row in batch]),
         "map_label": torch.stack([row["map_label"] for row in batch]),
         "target_xy": torch.stack([row["target_xy"] for row in batch]),
+        "point_valid": torch.stack([row["point_valid"] for row in batch]),
         "sample_id": [row["sample_id"] for row in batch],
         "map_sha256": [row["map_sha256"] for row in batch],
     }
@@ -266,13 +275,21 @@ def _evaluate(
         source = batch["source_image"].to(device)
         maps = batch["map_image"].to(device)
         targets = batch["target_xy"].to(device)
+        point_valid = batch["point_valid"].to(device)
         with torch.autocast(
             device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"
         ):
             outputs = model(source, maps)
         source_embeddings.append(outputs["source_embeddings"].float().cpu())
-        point_errors.append(torch.linalg.vector_norm(outputs["target_xy"].float() - targets, dim=1).cpu())
-        for map_hash, embedding in zip(batch["map_sha256"], outputs["map_embeddings"].float().cpu(), strict=True):
+        if bool(point_valid.any()):
+            point_errors.append(
+                torch.linalg.vector_norm(
+                    outputs["target_xy"].float()[point_valid] - targets[point_valid], dim=1
+                ).cpu()
+            )
+        for map_hash, embedding in zip(
+            batch["map_sha256"], outputs["map_embeddings"].float().cpu(), strict=True
+        ):
             map_by_hash.setdefault(map_hash, embedding)
         target_hashes.extend(batch["map_sha256"])
     source_matrix = torch.cat(source_embeddings)
@@ -282,7 +299,7 @@ def _evaluate(
     target_indices = torch.tensor([map_hashes.index(value) for value in target_hashes])
     order = similarities.argsort(dim=1, descending=True)
     ranks = (order == target_indices[:, None]).nonzero(as_tuple=False)[:, 1] + 1
-    errors = torch.cat(point_errors)
+    errors = torch.cat(point_errors) if point_errors else torch.tensor([math.inf])
     return {
         "recall_at_1": float((ranks <= 1).float().mean()),
         "recall_at_5": float((ranks <= min(5, len(map_hashes))).float().mean()),
@@ -335,7 +352,9 @@ def run_training(args: argparse.Namespace, report: dict[str, Any]) -> dict[str, 
     rows = _load_rows(manifest)
     by_split = {split: [row for row in rows if row["split"] == split] for split in REQUIRED_SPLITS}
     datasets = {
-        split: CrossViewPairDataset(manifest, args.bundle_root, split, args.image_size, rows=by_split[split])
+        split: CrossViewPairDataset(
+            manifest, args.bundle_root, split, args.image_size, rows=by_split[split]
+        )
         for split in REQUIRED_SPLITS
     }
     loaders = {
@@ -371,15 +390,23 @@ def run_training(args: argparse.Namespace, report: dict[str, Any]) -> dict[str, 
         if warmup_steps and step < warmup_steps:
             return (step + 1) / warmup_steps
         progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
-        return args.min_lr_ratio + 0.5 * (1 - args.min_lr_ratio) * (1 + math.cos(math.pi * progress))
+        return args.min_lr_ratio + 0.5 * (1 - args.min_lr_ratio) * (
+            1 + math.cos(math.pi * progress)
+        )
 
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
     args.output.mkdir(parents=True, exist_ok=True)
     start_epoch = 1
     global_step = 0
-    best: dict[str, Any] = {"epoch": 0, "recall_at_1": -1.0, "point_error_normalized_median": math.inf}
-    resume_path = args.output / "checkpoints/last.pt" if args.resume_from == "auto" else (
-        Path(args.resume_from).resolve() if args.resume_from else None
+    best: dict[str, Any] = {
+        "epoch": 0,
+        "recall_at_1": -1.0,
+        "point_error_normalized_median": math.inf,
+    }
+    resume_path = (
+        args.output / "checkpoints/last.pt"
+        if args.resume_from == "auto"
+        else (Path(args.resume_from).resolve() if args.resume_from else None)
     )
     if resume_path is not None and resume_path.is_file():
         checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
@@ -398,8 +425,15 @@ def run_training(args: argparse.Namespace, report: dict[str, Any]) -> dict[str, 
     writer = csv.DictWriter(
         metrics_handle,
         fieldnames=(
-            "epoch", "train_loss", "retrieval_loss", "point_loss", "recall_at_1",
-            "recall_at_5", "median_rank", "point_error_normalized_median", "elapsed_seconds",
+            "epoch",
+            "train_loss",
+            "retrieval_loss",
+            "point_loss",
+            "recall_at_1",
+            "recall_at_5",
+            "median_rank",
+            "point_error_normalized_median",
+            "elapsed_seconds",
         ),
     )
     if new_metrics:
@@ -418,14 +452,17 @@ def run_training(args: argparse.Namespace, report: dict[str, Any]) -> dict[str, 
                 maps = batch["map_image"].to(device, non_blocking=True)
                 labels = batch["map_label"].to(device, non_blocking=True)
                 targets = batch["target_xy"].to(device, non_blocking=True)
+                point_valid = batch["point_valid"].to(device, non_blocking=True)
                 with torch.autocast(
                     device_type=device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"
                 ):
-                    losses = cross_view_loss(model(source, maps), labels, targets)
+                    losses = cross_view_loss(model(source, maps), labels, targets, point_valid)
                 if not all(bool(torch.isfinite(value).item()) for value in losses.values()):
                     raise RuntimeError(f"non-finite loss at epoch {epoch} batch {batch_index}")
                 (losses["loss"] / args.gradient_accumulation_steps).backward()
-                if batch_index % args.gradient_accumulation_steps == 0 or batch_index == len(loaders["train"]):
+                if batch_index % args.gradient_accumulation_steps == 0 or batch_index == len(
+                    loaders["train"]
+                ):
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                     optimizer.step()
                     optimizer.zero_grad(set_to_none=True)
@@ -467,7 +504,11 @@ def run_training(args: argparse.Namespace, report: dict[str, Any]) -> dict[str, 
             if improved:
                 _atomic_torch_save(state, args.output / "checkpoints/best.pt")
             print(json.dumps(epoch_metrics, sort_keys=True), flush=True)
-            if args.early_stop_patience and epochs_without_improvement >= args.early_stop_patience:
+            if (
+                args.early_stop_patience
+                and epoch >= args.min_epochs
+                and epochs_without_improvement >= args.early_stop_patience
+            ):
                 break
     finally:
         metrics_handle.close()
@@ -508,9 +549,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("preflight", "plan", "smoke", "train"))
     parser.add_argument("--bundle-root", type=Path, default=DEFAULT_BUNDLE_ROOT)
+    parser.add_argument(
+        "--manifest-relpath",
+        type=Path,
+        default=DEFAULT_MANIFEST_RELPATH,
+        help="Manifest path relative to --bundle-root.",
+    )
     parser.add_argument("--model-path", type=Path, default=DEFAULT_MODEL_PATH)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--verify-file-hashes", action="store_true")
+    parser.add_argument("--verify-model-hash", action="store_true")
     parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=8)
@@ -521,9 +569,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-lr-ratio", type=float, default=0.05)
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
     parser.add_argument("--early-stop-patience", type=int, default=8)
+    parser.add_argument(
+        "--min-epochs",
+        type=int,
+        default=20,
+        help="Do not apply early stopping before this epoch.",
+    )
     parser.add_argument("--projection-dimension", type=int, default=256)
     parser.add_argument("--image-size", type=int, default=224)
-    parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--num-workers", type=int, default=8)
+    parser.add_argument(
+        "--expected-manifest-sha256",
+        help="Optional immutable manifest SHA-256. Omit for a newly prepared corpus.",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--resume-from")
     parser.add_argument("--allow-cpu", action="store_true")
@@ -532,19 +590,36 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    for name in ("epochs", "batch_size", "gradient_accumulation_steps", "projection_dimension", "image_size"):
+    for name in (
+        "epochs",
+        "batch_size",
+        "gradient_accumulation_steps",
+        "projection_dimension",
+        "image_size",
+    ):
         if getattr(args, name) <= 0:
             raise ValueError(f"{name.replace('_', '-')} must be positive")
+    if args.min_epochs < 0 or args.min_epochs > args.epochs:
+        raise ValueError("min-epochs must be between zero and epochs")
     if not 0 <= args.warmup_ratio < 1:
         raise ValueError("warmup-ratio must be in [0, 1)")
     report = build_preflight_report(
-        args.bundle_root, args.model_path, verify_file_hashes=args.verify_file_hashes
+        args.bundle_root,
+        args.model_path,
+        manifest_relpath=args.manifest_relpath,
+        verify_file_hashes=args.verify_file_hashes,
+        expected_manifest_sha256=args.expected_manifest_sha256,
+        verify_model_hash=args.verify_model_hash,
     )
     args.output.mkdir(parents=True, exist_ok=True)
     _write_json(args.output / "preflight-report.json", report)
     print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
-    if not report["training_ready"]:
+    if not report["schema_ready"]:
         raise SystemExit(2)
+    if args.command == "train" and not report["training_ready"]:
+        raise RuntimeError(
+            "full cross-view training requires a transient fire/smoke mask for every row"
+        )
     plan = {
         "schema_version": 1,
         "model_id": MODEL_ID,
@@ -562,9 +637,20 @@ def main() -> None:
         "hyperparameters": {
             name: getattr(args, name)
             for name in (
-                "epochs", "batch_size", "gradient_accumulation_steps", "learning_rate",
-                "head_learning_rate", "weight_decay", "warmup_ratio", "min_lr_ratio",
-                "max_grad_norm", "early_stop_patience", "projection_dimension", "image_size", "seed",
+                "epochs",
+                "batch_size",
+                "gradient_accumulation_steps",
+                "learning_rate",
+                "head_learning_rate",
+                "weight_decay",
+                "warmup_ratio",
+                "min_lr_ratio",
+                "max_grad_norm",
+                "early_stop_patience",
+                "min_epochs",
+                "projection_dimension",
+                "image_size",
+                "seed",
             )
         },
         "selection_metric": "validation recall_at_1 then normalized point error",
@@ -593,7 +679,9 @@ def main() -> None:
         dataset = CrossViewPairDataset(
             Path(report["manifest"]), args.bundle_root, "train", args.image_size, rows=smoke_rows
         )
-        loader = DataLoader(dataset, batch_size=min(args.batch_size, len(dataset)), collate_fn=_collate)
+        loader = DataLoader(
+            dataset, batch_size=min(args.batch_size, len(dataset)), collate_fn=_collate
+        )
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if device.type != "cuda" and not args.allow_cpu:
             raise RuntimeError("CUDA is required for the DINOv3 smoke")
