@@ -71,9 +71,7 @@ def build_observed_perimeter(
     minimum_confidence: float = 0.75,
 ) -> PerimeterProposal:
     eligible = [
-        point
-        for point in points
-        if _valid(point) and point.confidence >= minimum_confidence
+        point for point in points if _valid(point) and point.confidence >= minimum_confidence
     ]
     evidence_ids = tuple(sorted({point.evidence_id for point in eligible}))
     if len(eligible) < 3:

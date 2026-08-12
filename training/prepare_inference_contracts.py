@@ -16,9 +16,7 @@ _IMMUTABLE_REVISION = re.compile(r"^(?:[0-9a-f]{40}|sha256:[0-9a-f]{64})$")
 
 def _validate_revision(name: str, revision: str) -> None:
     if not _IMMUTABLE_REVISION.fullmatch(revision):
-        raise ValueError(
-            f"{name} revision must be a 40-character commit SHA or sha256 digest"
-        )
+        raise ValueError(f"{name} revision must be a 40-character commit SHA or sha256 digest")
 
 
 def build_contract(*, ppocr_revision: str, ministral_revision: str) -> dict[str, object]:

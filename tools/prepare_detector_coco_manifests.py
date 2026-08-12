@@ -29,9 +29,7 @@ SPLITS = (
     ("validation", "valid"),
     ("test", "test"),
 )
-ROW_FILE_PATTERN = re.compile(
-    r"^(?P<index>\d+)_row-(?P<row>\d+)_(?P<digest>[0-9a-f]{12})\.[^.]+$"
-)
+ROW_FILE_PATTERN = re.compile(r"^(?P<index>\d+)_row-(?P<row>\d+)_(?P<digest>[0-9a-f]{12})\.[^.]+$")
 
 
 def _sha256(path: Path) -> str:
@@ -126,9 +124,7 @@ def _validate_join(
         raise ValueError(f"COCO row ordering drift at index {row_index}: {file_name}")
     if int(image.get("id", -1)) != row_index + 1:
         raise ValueError(f"COCO image id drift at index {row_index}: {image.get('id')}")
-    identity = (
-        f"{split}|{parquet_row['_source_shard']}|{row_index}|row-{row_index}".encode()
-    )
+    identity = f"{split}|{parquet_row['_source_shard']}|{row_index}|row-{row_index}".encode()
     expected_digest = hashlib.sha1(identity, usedforsecurity=False).hexdigest()[:12]
     if match.group("digest") != expected_digest:
         raise ValueError(f"COCO shard/row identity drift at index {row_index}: {file_name}")

@@ -98,21 +98,13 @@ def test_pointing_parser_accepts_only_normalized_closed_predictions() -> None:
         ("smoke_origin", 0.5, 0.6),
     ]
     with pytest.raises(ValueError, match="exactly"):
-        parse_pointing_response(
-            '{"points":[],"latitude":44.75,"longitude":5.37}'
-        )
+        parse_pointing_response('{"points":[],"latitude":44.75,"longitude":5.37}')
     with pytest.raises(ValueError, match="normalized"):
-        parse_pointing_response(
-            '{"points":[{"kind":"flame_point","x":1.5,"y":0.5}]}'
-        )
+        parse_pointing_response('{"points":[{"kind":"flame_point","x":1.5,"y":0.5}]}')
 
 
 def test_deprecated_prithvi_checkpoint_is_blocked_before_loading() -> None:
     with pytest.raises(DeprecatedBurnScarModelError, match="deprecated"):
-        require_promotable_burnscar_model(
-            "fireviewer/prithvi-burnscars-firewarning-v1-deprecated"
-        )
+        require_promotable_burnscar_model("fireviewer/prithvi-burnscars-firewarning-v1-deprecated")
 
-    require_promotable_burnscar_model(
-        "ibm-nasa-geospatial/Prithvi-EO-2.0-300M-BurnScars"
-    )
+    require_promotable_burnscar_model("ibm-nasa-geospatial/Prithvi-EO-2.0-300M-BurnScars")

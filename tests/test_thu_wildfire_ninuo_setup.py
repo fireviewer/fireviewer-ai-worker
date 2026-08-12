@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 from PIL import Image, TiffImagePlugin
-
 from training.thu_wildfire_ninuo_setup import _parse_dji_xmp, prepare
 
 

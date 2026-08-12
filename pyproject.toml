@@ -37,6 +37,7 @@ roma-registration = [
   "numpy==2.4.6",
   "opencv-python-headless==4.13.0.92",
   "psutil==7.2.2",
+  "pycolmap==4.1.1",
   "pyproj==3.7.2",
 ]
 corpus = [

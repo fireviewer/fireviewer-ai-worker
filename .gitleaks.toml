@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Non-secret private upstream availability marker in the locked DINO source registry"
+regexTarget = "match"
+paths = ['''^training/registries/dino-complements-v1\.json$''']
+regexes = ['''private_s3_403''']

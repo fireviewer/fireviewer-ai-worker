@@ -43,11 +43,7 @@ def _mask_anchor(path: Path) -> tuple[float, float] | None:
 
 
 def adapt(bundle_root: Path, output: Path) -> dict[str, Any]:
-    source_root = (
-        bundle_root
-        / "sources"
-        / "boreal-forest-fire-segmentation-v1"
-    )
+    source_root = bundle_root / "sources" / "boreal-forest-fire-segmentation-v1"
     source_manifest = source_root / "manifest.jsonl"
     if not source_manifest.is_file():
         raise FileNotFoundError(source_manifest)
@@ -90,9 +86,7 @@ def adapt(bundle_root: Path, output: Path) -> dict[str, Any]:
                     if anchor is not None
                     else []
                 ),
-                "visual_abstention_reason": (
-                    None if anchor is not None else "empty_smoke_mask"
-                ),
+                "visual_abstention_reason": (None if anchor is not None else "empty_smoke_mask"),
                 "is_operational_incident": False,
                 "source_line": line_number,
             }

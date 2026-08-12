@@ -20,7 +20,7 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-from PIL import ExifTags, Image
+from PIL import Image
 
 from training.spatial_training_setup import SetupError, _sha256_file, _write_json
 

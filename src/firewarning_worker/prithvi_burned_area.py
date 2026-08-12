@@ -121,40 +121,37 @@ class PrithviBurnedAreaAdapter:
         if satellite is None or item.working_file_url is None or reference is None:
             return (), ()
         max_cloud = float(os.getenv("FW_PRITHVI_MAX_CLOUD_PERCENT", "80"))
-        if (
-            satellite.cloud_cover_percent is not None
-            and satellite.cloud_cover_percent > max_cloud
-        ):
+        if satellite.cloud_cover_percent is not None and satellite.cloud_cover_percent > max_cloud:
             return (), ()
 
         with (
             self.fetcher.download(str(item.working_file_url)) as raster_path,
             rasterio.open(raster_path) as dataset,
         ):
-                if dataset.count != len(CANONICAL_BURNED_AREA_BANDS):
-                    raise ValueError("Prithvi input must contain exactly six raster bands")
-                if dataset.crs is None:
-                    raise ValueError("Prithvi input GeoTIFF has no CRS")
-                if (
-                    dataset.width != satellite.raster_width_px
-                    or dataset.height != satellite.raster_height_px
-                ):
-                    raise ValueError("Prithvi raster dimensions differ from signed metadata")
-                declared_transform = tuple(float(value) for value in satellite.geotransform)
-                actual_transform = tuple(float(value) for value in dataset.transform.to_gdal())
-                if any(
-                    abs(actual - declared) > 1e-9
-                    for actual, declared in zip(actual_transform, declared_transform, strict=True)
-                ):
-                    raise ValueError("Prithvi GeoTIFF transform differs from signed metadata")
-                descriptions = tuple(value for value in dataset.descriptions if value)
-                if descriptions and descriptions != CANONICAL_BURNED_AREA_BANDS:
-                    raise ValueError("Prithvi GeoTIFF band descriptions are not canonical")
-                reflectance = dataset.read(out_dtype="float32")
-                transform = dataset.transform
-                crs = dataset.crs
-                width = dataset.width
-                height = dataset.height
+            if dataset.count != len(CANONICAL_BURNED_AREA_BANDS):
+                raise ValueError("Prithvi input must contain exactly six raster bands")
+            if dataset.crs is None:
+                raise ValueError("Prithvi input GeoTIFF has no CRS")
+            if (
+                dataset.width != satellite.raster_width_px
+                or dataset.height != satellite.raster_height_px
+            ):
+                raise ValueError("Prithvi raster dimensions differ from signed metadata")
+            declared_transform = tuple(float(value) for value in satellite.geotransform)
+            actual_transform = tuple(float(value) for value in dataset.transform.to_gdal())
+            if any(
+                abs(actual - declared) > 1e-9
+                for actual, declared in zip(actual_transform, declared_transform, strict=True)
+            ):
+                raise ValueError("Prithvi GeoTIFF transform differs from signed metadata")
+            descriptions = tuple(value for value in dataset.descriptions if value)
+            if descriptions and descriptions != CANONICAL_BURNED_AREA_BANDS:
+                raise ValueError("Prithvi GeoTIFF band descriptions are not canonical")
+            reflectance = dataset.read(out_dtype="float32")
+            transform = dataset.transform
+            crs = dataset.crs
+            width = dataset.width
+            height = dataset.height
 
         if float(np.nanmean(reflectance)) > 1:
             reflectance = reflectance / 10_000.0
@@ -272,9 +269,7 @@ class PrithviBurnedAreaAdapter:
         for y in range(0, padded.shape[1], tile_size):
             for x in range(0, padded.shape[2], tile_size):
                 patch = padded[:, y : y + tile_size, x : x + tile_size]
-                transformed = datamodule.test_transform(
-                    image=patch.transpose(1, 2, 0)
-                )
+                transformed = datamodule.test_transform(image=patch.transpose(1, 2, 0))
                 transformed["image"] = transformed["image"].unsqueeze(0)
                 tiles.append((y, x, datamodule.aug(transformed)["image"]))
 
@@ -286,10 +281,13 @@ class PrithviBurnedAreaAdapter:
             group = tiles[offset : offset + batch_size]
             tensor = torch.cat([tile[2] for tile in group], dim=0).to(device)
             autocast_enabled = device.type == "cuda"
-            with torch.inference_mode(), torch.autocast(
-                device_type=device.type,
-                dtype=torch.bfloat16,
-                enabled=autocast_enabled,
+            with (
+                torch.inference_mode(),
+                torch.autocast(
+                    device_type=device.type,
+                    dtype=torch.bfloat16,
+                    enabled=autocast_enabled,
+                ),
             ):
                 raw_output = model(tensor)
                 logits = raw_output.output
@@ -307,7 +305,5 @@ class PrithviBurnedAreaAdapter:
                 positive = probabilities[index, 1][predicted[index] == 1]
                 if positive.numel():
                     positive_confidences.append(float(positive.mean().detach().cpu()))
-        confidence = (
-            float(np.mean(positive_confidences)) if positive_confidences else 0.0
-        )
+        confidence = float(np.mean(positive_confidences)) if positive_confidences else 0.0
         return mask[:height, :width], min(1.0, max(0.0, confidence))

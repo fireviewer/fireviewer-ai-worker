@@ -124,9 +124,7 @@ def to_legacy_input(batch: WorkerInputV2) -> WorkerInput:
                 {
                     "input_id": item.input_id,
                     "media_type": (
-                        "article"
-                        if item.media_type.value == "satellite_data"
-                        else item.media_type
+                        "article" if item.media_type.value == "satellite_data" else item.media_type
                     ),
                     "working_file_url": item.working_file_url,
                     "metadata": _legacy_metadata(item).model_dump(mode="json", exclude_none=True),
@@ -644,7 +642,8 @@ def from_legacy_output(
         spatial_proposals = (
             _hotspot_spatial_proposals(batch, source)
             if source.media_type.value == "satellite_data"
-            else burned_area_proposals or (
+            else burned_area_proposals
+            or (
                 spatial_execution.proposals_by_input.get(source.input_id)
                 if spatial_execution is not None
                 else None

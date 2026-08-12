@@ -22,7 +22,6 @@ from firewarning_worker.contracts import (
     FactualObservation,
     PixelRegion,
     SourceAnnotationV2,
-    SourceSemanticAnchorV2,
     Transcript,
     TranscriptSegment,
     VisualEvidenceSelection,
@@ -40,7 +39,7 @@ from firewarning_worker.model_workers.detection import (
 )
 
 if TYPE_CHECKING:
-    from firewarning_worker.event_perception import EventPerceptionPoint
+    from firewarning_worker.event_perception import EventPerceptionPoint, EventPointSemantic
 
 
 def _torch_runtime() -> tuple[Any, Any]:
@@ -410,7 +409,7 @@ class FlorenceAdapter(_BaseAdapter):
 class MolmoPointAdapter(_BaseAdapter):
     """Dedicated pixel-point worker; geographic projection remains downstream."""
 
-    QUERIES: tuple[tuple[SourceSemanticAnchorV2, str], ...] = (
+    QUERIES: tuple[tuple[EventPointSemantic, str], ...] = (
         (
             "active_fire_point",
             "Point to every directly visible active flame. Do not point to smoke alone.",

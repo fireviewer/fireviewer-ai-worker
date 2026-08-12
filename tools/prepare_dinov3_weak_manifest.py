@@ -126,8 +126,7 @@ def materialize(coco_root: Path, output_root: Path) -> dict[str, Any]:
     manifest = output_root / "manifest.jsonl"
     manifest.write_text(
         "".join(
-            json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n"
-            for record in records
+            json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n" for record in records
         ),
         encoding="utf-8",
         newline="\n",

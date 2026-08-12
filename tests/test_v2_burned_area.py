@@ -51,8 +51,7 @@ def _satellite_batch(
                 "crs": "EPSG:4326",
                 "raster_width_px": raster_width_px,
                 "raster_height_px": raster_height_px,
-                "geotransform": geotransform
-                or [2.46, 0.00025, 0.0, 48.44, 0.0, -0.00025],
+                "geotransform": geotransform or [2.46, 0.00025, 0.0, 48.44, 0.0, -0.00025],
                 "bbox_wgs84": bbox_wgs84 or [2.46, 48.34, 2.72, 48.44],
                 "resolution_m": 20,
                 "bands": bands,
@@ -104,9 +103,7 @@ def test_burned_area_skips_rgb_without_requesting_a_model() -> None:
 
     assert execution.stage_trace.status == "skipped"
     assert execution.stage_trace.preflight.decision == "not_applicable"
-    assert execution.stage_trace.preflight.reason_codes == (
-        "no_compatible_multispectral_product",
-    )
+    assert execution.stage_trace.preflight.reason_codes == ("no_compatible_multispectral_product",)
     assert execution.stage_trace.preflight.downstream_possible is True
     assert execution.model_run is None
 
@@ -129,9 +126,7 @@ def test_burned_area_requires_the_runtime_for_a_compatible_product() -> None:
 
     assert execution.stage_trace.status == "skipped"
     assert execution.stage_trace.preflight.decision == "human_review"
-    assert execution.stage_trace.preflight.reason_codes == (
-        "burned_area_model_unavailable",
-    )
+    assert execution.stage_trace.preflight.reason_codes == ("burned_area_model_unavailable",)
 
 
 def test_burned_area_records_an_explicit_model_abstention() -> None:
@@ -155,9 +150,7 @@ def test_burned_area_records_an_explicit_model_abstention() -> None:
     assert adapter.unloaded is True
     assert execution.stage_trace.status == "succeeded"
     assert execution.stage_trace.postflight is not None
-    assert execution.stage_trace.postflight.reason_codes == (
-        "burned_area_model_abstained",
-    )
+    assert execution.stage_trace.postflight.reason_codes == ("burned_area_model_abstained",)
     assert execution.model_run is not None
     assert execution.model_run.status == "succeeded"
 
