@@ -96,6 +96,14 @@ qualité des abstentions.
 
 ## Publication
 
-Le dépôt source est publié sous AGPL-3.0-or-later. La documentation est proposée
+Le code source est placé sous AGPL-3.0-or-later. La documentation est proposée
 sous CC BY 4.0. Les licences des modèles et datasets externes restent celles de
 leurs producteurs et doivent être vérifiées avant toute utilisation.
+
+## Identité et contact
+
+FireViewer est un projet distinct de recherche et développement maintenu par **Unicorn Who Dev**.
+
+> FireViewer n’est ni un service d’alerte, ni une source officielle, ni un outil de conduite des secours. Les sorties et artefacts de ce dépôt exigent leur provenance, leurs gates propres et, lorsqu’ils concernent un incident, une validation humaine.
+
+Contact public, provenance, droits, sécurité et demandes de retrait : [unicornwhodev@gmail.com](mailto:unicornwhodev@gmail.com).
