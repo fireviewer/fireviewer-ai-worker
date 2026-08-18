@@ -1,66 +1,149 @@
-# FireViewer AI worker
+# FireViewer AI Worker
 
-Worker agentique privé pour l’analyse factuelle de médias FireViewer. Le dépôt
-contient le runtime, les contrats, l’orchestration et les outils génériques de
-préparation. Il ne contient aucun corpus, média, poids, checkpoint, sortie
-d’inférence, secret ou cas d’incident réel.
+**Private multimodal analysis, visual anchoring, localisation attempts and explicit abstention for FireViewer evidence.**
 
-## Position dans l’architecture événementielle v2
+This repository contains the AI-analysis runtime, contracts, orchestration helpers and evaluation tooling used by FireViewer. It does not contain production media, private incident evidence, model weights, checkpoints, secrets or incident-specific inference outputs.
 
-L’unité d’analyse n’est plus un média isolé. Le worker reçoit un bundle privé
-`event-2.0` qui réunit le candidat d’événement, le point de prise de vue, le
-moment observé, le message, les médias autorisés, la provenance et les
-observations externes déjà collectées par le backend.
+The canonical project architecture is maintained in [`fireviewer/Fireviewer_doc`](https://github.com/fireviewer/Fireviewer_doc).
 
-La sortie `event-result-2.0` conserve séparément :
+> The worker produces proposals and derived evidence. It does not confirm a wildfire, publish an incident, invent an authoritative coordinate or forecast propagation.
 
-- le profil de prise de vue ;
-- les ancrages visuels issus des preuves privées ;
-- les preuves et tentatives de localisation ;
-- les contradictions entre sources indépendantes ;
-- les propositions d’activité en état `DRAFT` ;
-- les motifs d’abstention ou d’échec.
+## Role in FireViewer
 
-Toute sortie exige une revue humaine. Le worker ne crée pas un événement
-publié, ne transforme pas le point de prise de vue en point actif et ne ferme
-pas un périmètre à partir d’une fumée, d’un hotspot ou d’une simulation.
+```text
+private event/evidence bundle
+        ↓
+media + context analysis
+        ↓
+visual anchors / structured facts
+        ↓
+spatial localisation attempt
+        ↓
+geometry + uncertainty
+        OR
+explicit abstention
+        ↓
+backend + human review
+```
 
-Le contrat événementiel est protégé par
-`FV_AGENT_EVENT_PIPELINE_ENABLED`. Les contrats historiques restent lisibles
-pendant la migration, sans devenir la source canonique du produit v2.
+The worker is one analysis layer inside a broader provenance/replay system. A model result is never the canonical incident state by itself.
 
-## Principes
+## Event-oriented input
 
-- Chaque sortie reste privée jusqu’à une décision humaine.
-- Un fait, un ancrage visuel, une géométrie et un rapport sont des propositions
-  indépendantes et traçables.
-- Une abstention explicite est préférable à une géométrie non démontrée.
-- Un modèle de langage peut structurer les faits, mais ne peut pas inventer une
-  coordonnée, un périmètre ou une chronologie.
-- La branche cross-view reste en `SHADOW` jusqu’à un benchmark événementiel
-  indépendant et ne peut pas alimenter un événement publiable.
-- Les modèles et leurs révisions sont configurés et chargés depuis un volume
-  externe au dépôt.
-- Les téléchargements sont limités aux hôtes HTTPS autorisés.
-- Le runtime n’effectue aucune publication publique.
+The preferred input is a private `event-2.0` bundle rather than an isolated image.
 
-Le contrat producteur se trouve sous `contracts/agent-worker`. Les consommateurs
-doivent verrouiller le tag, le chemin et le SHA-256 dans leur
-`contracts.lock.json`.
+It can include:
 
-## Documentation de référence
+- event candidate identity;
+- private viewpoint when authorised;
+- observation time/interval;
+- message/text;
+- authorised media;
+- evidence provenance;
+- external observations already collected by the backend.
 
-- `docs/PIPELINE_V2.md` : graphe de stages et règles de promotion ;
-- `docs/SPATIAL_REGISTRATION.md` : recalage, raycast et abstentions ;
-- `docs/REPLAY_AND_PROVENANCE.md` : éléments nécessaires au replay ;
-- `docs/MODEL_REGISTRY.md` : rôles et statuts documentaires des modèles ;
-- `docs/BENCHMARK_GATES.md` : métriques et gates avant promotion ;
-- `docs/BACKEND_INTEGRATION.md` : frontière de confiance avec le backend.
+The viewpoint represents the observer/camera and is never automatically converted into a fire location.
 
-La doctrine produit, les contrats transverses et la matrice d’acceptation sont
-maintenus dans le dépôt canonique `fireviewer/Fireviewer_doc`.
+## Output
 
-## Installation et contrôles
+`event-result-2.0` keeps separate fields for:
+
+- capture/view profile;
+- visual anchors;
+- structured evidence/facts;
+- localisation attempts;
+- spatial evidence and uncertainty;
+- contradictions;
+- draft activity proposals;
+- abstention/failure reasons;
+- model/tool revision information.
+
+Human review remains the publication boundary.
+
+## Abstention is a first-class result
+
+FireViewer deliberately allows the worker to stop when evidence is insufficient.
+
+Examples include:
+
+```text
+insufficient_visual_anchor
+ambiguous_anchor
+no_visible_ground_origin
+insufficient_geometry
+unstable_camera_pose
+invalid_raycast
+uncertainty_above_limit
+```
+
+A visually plausible guess is not preferred over a defensible abstention.
+
+## Model roles
+
+FireViewer can combine several specialised model/tool families. Their exact promotion status belongs in the canonical [Status Matrix](https://github.com/fireviewer/Fireviewer_doc/blob/main/docs/STATUS_MATRIX.md), not in marketing copy.
+
+Current/experimental roles include:
+
+- image detection;
+- video triage;
+- visual pointing/anchoring;
+- OCR/speech extraction where applicable;
+- structured fact extraction;
+- spatial matching and registration;
+- deterministic pose/raycast stages;
+- segmentation/pointing challengers;
+- annotation tooling.
+
+A component may be integrated, benchmark-only, shadow, blocked or historical.
+
+## Spatial localisation boundary
+
+A language model is not authorised to invent latitude/longitude.
+
+The target spatial path is evidence/geometric:
+
+```text
+FireViewer map package
+→ local references / retrieval
+→ geometric filters
+→ dense matching
+→ 2D–3D correspondences
+→ robust camera pose
+→ terrain raycast
+→ uncertainty propagation
+```
+
+The worker can structure the evidence around this process and report why it failed, but it cannot replace the geometric chain with generated coordinates.
+
+## Provenance and replay
+
+Every accepted analysis should preserve enough information to identify:
+
+- parent evidence;
+- model identifier and revision;
+- inference/processing profile;
+- contract revision;
+- producing stage;
+- parameters required for replay where applicable;
+- output hash/reference;
+- abstention or failure state.
+
+A future replay can therefore compare a newer model against archived evidence without rewriting the historical FireViewer result.
+
+See [Provenance and Reproducibility](https://github.com/fireviewer/Fireviewer_doc/blob/main/docs/PROVENANCE_AND_REPRODUCIBILITY.md) and [Replay and Post-Event Studies](https://github.com/fireviewer/Fireviewer_doc/blob/main/docs/REPLAY_AND_POST_EVENT_STUDIES.md).
+
+## Documentation in this repository
+
+- [`docs/PIPELINE_V2.md`](docs/PIPELINE_V2.md) — stage graph and promotion rules;
+- [`docs/SPATIAL_REGISTRATION.md`](docs/SPATIAL_REGISTRATION.md) — registration, raycast and spatial abstention;
+- [`docs/REPLAY_AND_PROVENANCE.md`](docs/REPLAY_AND_PROVENANCE.md) — worker-level replay requirements;
+- [`docs/MODEL_REGISTRY.md`](docs/MODEL_REGISTRY.md) — model roles and revisions;
+- [`docs/BENCHMARK_GATES.md`](docs/BENCHMARK_GATES.md) — evaluation gates;
+- [`docs/BACKEND_INTEGRATION.md`](docs/BACKEND_INTEGRATION.md) — trust boundary with the backend.
+
+Cross-project meaning, safety, architecture and status remain canonical in `Fireviewer_doc`.
+
+## Installation and checks
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -71,39 +154,53 @@ pytest -q
 docker build -t fireviewer-ai-worker:local .
 ```
 
-Les tests locaux emploient uniquement des cas synthétiques. Ils ne prouvent ni
-le fonctionnement CUDA, ni la présence des poids, ni la qualité des modèles sur
-un endpoint RunPod. Ces validations sont réalisées séparément avec des artefacts
-privés.
+Local tests use controlled/synthetic fixtures. They do not prove CUDA availability, current model weights, deployed provider behaviour or field accuracy.
 
-## Configuration
+## Runtime configuration
 
-Les valeurs sensibles sont injectées à l’exécution. Les noms de variables et
-leurs contraintes sont documentés dans `.env.example`; ce fichier ne contient
-aucune valeur secrète. Les caches Hugging Face, poids privés, corpus et bundles
-de validation doivent rester sur un volume externe.
+Secrets and model/data roots are supplied at runtime.
 
-## Données et modèles
+The repository must not contain:
 
-Les scripts de `training/` préparent des manifestes génériques. Les racines de
-données sont fournies explicitement par l’opérateur et doivent rester hors du
-checkout. Aucun téléchargement, rendu ou résultat généré n’est destiné à Git.
+- model-provider tokens;
+- private evidence URLs;
+- Hugging Face tokens;
+- production incident bundles;
+- model caches/weights;
+- generated inference outputs.
 
-Les nouveaux entraînements longs et les promotions de challengers restent
-suspendus tant qu’un benchmark événementiel, groupé par incident, ne mesure pas
-la localisation en mètres, la cohérence temporelle, la calibration et la
-qualité des abstentions.
+The contract producer lives under `contracts/agent-worker`. Consumers should lock compatible contract revisions rather than relying on undocumented output shape.
 
-## Publication
+## Benchmarks before promotion
 
-Le code source est placé sous AGPL-3.0-or-later. La documentation est proposée
-sous CC BY 4.0. Les licences des modèles et datasets externes restent celles de
-leurs producteurs et doivent être vérifiées avant toute utilisation.
+Long training or challenger promotion should follow a fixed event-level benchmark.
 
-## Identité et contact
+The evaluation should distinguish:
 
-FireViewer est un projet distinct de recherche et développement maintenu par **Unicorn Who Dev**.
+- localisation error on valid targets;
+- accepted-localisation failure severity;
+- abstention behaviour;
+- calibration/uncertainty where defensible;
+- incident/source leakage;
+- hard negatives and ambiguous views;
+- runtime cost/latency when measured reproducibly.
 
-> FireViewer n’est ni un service d’alerte, ni une source officielle, ni un outil de conduite des secours. Les sorties et artefacts de ce dépôt exigent leur provenance, leurs gates propres et, lorsqu’ils concernent un incident, une validation humaine.
+No model is promoted on one headline metric.
 
-Contact public, provenance, droits, sécurité et demandes de retrait : [unicornwhodev@gmail.com](mailto:unicornwhodev@gmail.com).
+## Data and licences
+
+Training/evaluation scripts accept explicit external data roots. Data and generated outputs stay outside the Git checkout.
+
+The code is licensed under AGPL-3.0-or-later and the repository documentation under CC BY 4.0. External models and datasets retain their own licences and usage conditions.
+
+## Support and collaboration
+
+This workstream benefits from GPU credits, held-out evaluation cases, computer-vision/geospatial expertise and independent benchmark review.
+
+See the FireViewer [Funding Brief](https://github.com/fireviewer/Fireviewer_doc/blob/main/docs/FUNDING_BRIEF.md) and [Support & Partnerships](https://github.com/fireviewer/Fireviewer_doc/blob/main/docs/SUPPORT_AND_PARTNERSHIPS.md).
+
+## Contact
+
+FireViewer is maintained by **Unicorn Who Dev**.
+
+Research collaboration, infrastructure support, provenance, security and data-removal requests: **unicornwhodev@gmail.com**.
