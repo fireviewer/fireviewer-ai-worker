@@ -25,7 +25,7 @@ from training.corpus_pipeline import (
     validate_manifest,
 )
 
-USER_AGENT = "FireWarningCorpusBuilder/0.1 (https://github.com/charli-dev420/fireviewer)"
+USER_AGENT = "FireWarningCorpusBuilder/0.1 (https://github.com/unicornwhodev/fireviewer)"
 REPORT_INTERVAL_BYTES = 256 * 1024 * 1024
 CHUNK_BYTES = 8 * 1024 * 1024
 FASDD_LICENSE_REFERENCE = "https://creativecommons.org/licenses/by-sa/4.0/"
@@ -914,3 +914,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -24,7 +24,7 @@ from training.corpus_pipeline import (
     validate_manifest,
 )
 
-USER_AGENT = "FireWarningCorpusBuilder/0.1 (https://github.com/charli-dev420/fireviewer)"
+USER_AGENT = "FireWarningCorpusBuilder/0.1 (https://github.com/unicornwhodev/fireviewer)"
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 25 * 1024 * 1024
 DOWNLOAD_DELAY_SECONDS = 1.0
@@ -575,3 +575,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
