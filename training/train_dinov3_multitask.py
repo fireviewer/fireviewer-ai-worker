@@ -27,7 +27,7 @@ TRAINABLE_SAMPLE_STATUSES = APPROVED_SAMPLE_STATUSES | frozenset(
 DEFAULT_POINTING_ROOT = Path(
     os.environ.get(
         "FIREVIEWER_POINTING_DATASET_ROOT",
-        "data/datasets/fire-smoke-pointing-ground-v1",
+        "data/datasets/pointing-rebuild-required",
     )
 )
 DEFAULT_OUTPUT = Path("data/training/dinov3-multitask-v1")

@@ -185,8 +185,8 @@ def test_molmopoint_decodes_only_generated_point_tokens(monkeypatch, tmp_path: P
     adapter = MolmoPointAdapter(
         ModelSpec(
             role="fire_pointing",
-            model_id="fireviewer/molmopoint-8b-fire-smoke-pointing",
-            revision="67829947ac3aa55632ef752ed9c8f486dba60ae2",
+            model_id="tests/fire-pointing-fixture",
+            revision="0000000000000000000000000000000000000000",
         ),
         cache_root=tmp_path,
         fetcher=object(),  # type: ignore[arg-type]
@@ -239,8 +239,8 @@ def test_molmopoint_event_bridge_reuses_pixel_queries_without_geographic_output(
     adapter = MolmoPointAdapter(
         ModelSpec(
             role="fire_pointing",
-            model_id="fireviewer/molmopoint-8b-fire-smoke-pointing",
-            revision="67829947ac3aa55632ef752ed9c8f486dba60ae2",
+            model_id="tests/fire-pointing-fixture",
+            revision="0000000000000000000000000000000000000000",
         ),
         cache_root=tmp_path,
         fetcher=fetcher,  # type: ignore[arg-type]

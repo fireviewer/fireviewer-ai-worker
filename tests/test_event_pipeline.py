@@ -22,11 +22,15 @@ from firewarning_worker.event_pipeline import (
     validate_activity_envelope_supports,
 )
 from firewarning_worker.handler import _GPU_SESSION_LOCK, handle_job
-from firewarning_worker.model_registry import build_registry
+from firewarning_worker.model_registry import ModelSpec
 
 
 class _EventPointingAdapter:
-    spec = build_registry()["fire_pointing"]
+    spec = ModelSpec(
+        role="fire_pointing",
+        model_id="tests/fire-pointing-fixture",
+        revision="0000000000000000000000000000000000000000",
+    )
 
     def __init__(
         self,

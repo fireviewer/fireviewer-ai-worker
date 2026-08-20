@@ -130,7 +130,9 @@ def _runtime_fire_pointing_adapter(
 
     if not isinstance(factory, TransformersAdapterFactory):
         return None
-    spec = build_registry()["fire_pointing"]
+    spec = build_registry().get("fire_pointing")
+    if spec is None:
+        return None
     return factory.create_fire_pointing(spec)
 
 
@@ -152,7 +154,9 @@ def _runtime_event_perception_adapter(
 
     if not isinstance(factory, TransformersAdapterFactory):
         return None
-    spec = build_registry()["fire_pointing"]
+    spec = build_registry().get("fire_pointing")
+    if spec is None:
+        return None
     return cast("EventPerceptionAdapter", factory.create_fire_pointing(spec))
 
 

@@ -611,8 +611,9 @@ def from_legacy_output(
             if burned_area_execution is not None
             else ()
         )
-        # MolmoPoint is authoritative for its dedicated pixel contract. Florence
-        # remains a per-item fallback when Molmo explicitly abstains or fails.
+        # A qualified pointing adapter is authoritative for its dedicated pixel
+        # contract. Legacy grounding remains the per-item fallback when the
+        # pointing stage is unavailable or abstains.
         annotations = burned_area_annotations + (pointed_annotations or legacy_annotations)
         prepared.append((legacy_result, source, annotations))
         annotations_by_input[source.input_id] = annotations

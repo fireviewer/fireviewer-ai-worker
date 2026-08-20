@@ -1,7 +1,7 @@
 """Native V2 fire/smoke pointing stage.
 
 The legacy media stages still select and ground useful views.  This module adds
-the dedicated MolmoPoint contract after those stages without changing the
+the dedicated pointing contract after those stages without changing the
 public-contribution or admin-review workflows.
 """
 
@@ -76,7 +76,7 @@ def run_fire_pointing_stage(
     adapter: FirePointingAdapter | None,
     sequence: int,
 ) -> FirePointingExecution:
-    """Run MolmoPoint once, or record an explicit degraded fallback."""
+    """Run the active pointing adapter once, or record an explicit degraded fallback."""
 
     contract = load_stage_contract_registry()[StageRole.FIRE_POINTING]
     applicable = any(

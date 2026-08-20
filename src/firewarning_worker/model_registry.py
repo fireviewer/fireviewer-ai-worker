@@ -145,11 +145,6 @@ PUBLIC_MODELS: tuple[ModelSpec, ...] = (
         revision="4a12a2b54b7016a48a22037fbd62da90cd566f2a",
     ),
     ModelSpec(
-        role="fire_pointing",
-        model_id="fireviewer/molmopoint-8b-fire-smoke-pointing",
-        revision="67829947ac3aa55632ef752ed9c8f486dba60ae2",
-    ),
-    ModelSpec(
         role="multimodal_extraction",
         model_id="Qwen/Qwen3.5-9B",
         revision="c202236235762e1c871ad0ccb60c8ee5ba337b9a",

@@ -111,36 +111,25 @@
     },
     {
       "stage_id": "fire_pointing",
-      "activation": "open",
+      "activation": "closed",
       "policy": "cascade",
       "candidates": [
-        {
-          "candidate_id": "pointing.molmopoint_8b_firewarning",
-          "model_id": "fireviewer/molmopoint-8b-fire-smoke-pointing",
-          "source": "huggingface",
-          "revision": "67829947ac3aa55632ef752ed9c8f486dba60ae2",
-          "rank": 1,
-          "status": "integrated",
-          "provisioned_by_mvp": true,
-          "current_candidate": true,
-          "notes": ["Native point-token decoding; geographic projection remains camera/ray/MNT only."]
-        },
         {
           "candidate_id": "pointing.florence_2_large_ft",
           "model_id": "microsoft/Florence-2-large-ft",
           "source": "huggingface",
           "revision": "4a12a2b54b7016a48a22037fbd62da90cd566f2a",
-          "rank": 2,
+          "rank": 1,
           "status": "baseline_only",
           "provisioned_by_mvp": true,
-          "notes": ["Per-item visual fallback when the primary pointing model abstains or fails."]
+          "notes": ["Offline comparison only; it is not an active pointing runtime fallback."]
         },
         {
           "candidate_id": "pointing.qwen3_5_9b_verifier",
           "model_id": "Qwen/Qwen3.5-9B",
           "source": "huggingface",
           "revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a",
-          "rank": 3,
+          "rank": 2,
           "status": "integration_required",
           "notes": ["Verifier only; it must never emit geographic coordinates from pixels."]
         }
@@ -148,7 +137,7 @@
       "outputs": ["fire_point_pixel"],
       "judge_on_contradiction": true,
       "activation_requirements": [
-        "The FireViewer checkpoint remains pinned to its frozen pointing benchmark revision.",
+        "A replacement FireViewer checkpoint passes the external support-grade pointing benchmark.",
         "Geographic coordinates require confirmed camera/ray/MNT projection."
       ]
     },

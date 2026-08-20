@@ -62,7 +62,7 @@ vidéo
 → RT-DETRv2 triage
 → keyframes
 → D-FINE
-→ MolmoPoint
+→ pointage désactivé / revue humaine
 → DINOv3 shadow
 → Ministral
 ```
@@ -73,7 +73,7 @@ vidéo
 image
 → D-FINE
 → OCR conditionnel
-→ MolmoPoint
+→ pointage désactivé / revue humaine
 → DINOv3 shadow
 → Ministral
 ```
@@ -90,7 +90,9 @@ D-FINE reste principal. RT-DETRv2 est utilisé pour le triage et la contre-déte
 
 ## Pointage
 
-MolmoPoint reste primaire.
+Il n’existe actuellement aucun checkpoint primaire qualifié. L’étape reste
+fermée et produit une abstention typée jusqu’à validation d’un nouveau modèle
+sur le corpus externe support-grade.
 
 Le challenger DINOv3 produit des masques, heatmaps et abstentions visuelles. Il ne produit pas `insufficient_geometry`, qui appartient à la branche spatiale.
 

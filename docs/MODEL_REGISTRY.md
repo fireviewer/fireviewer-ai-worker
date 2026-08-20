@@ -7,7 +7,7 @@ La table opérationnelle doit être générée depuis les manifestes du runtime.
 | ASR | Whisper Large V3 Turbo | Transcription locale | intégré, qualification suivie séparément |
 | Détection principale | D-FINE XLarge FireViewer | Images et keyframes | intégré |
 | Triage / second détecteur | RT-DETRv2-R50 FireViewer | Vidéo et contre-détection | intégré |
-| Pointage primaire | MolmoPoint-8B FireViewer | Ancrages visuels | intégré |
+| Pointage primaire | aucun checkpoint actif | Ancrages visuels | fermé après benchmark externe insuffisant ; reconstruction requise |
 | Analyse structurée actuelle | Qwen | Ancien rôle | migration en cours |
 | Analyse structurée cible | Ministral 3 8B Instruct | Extraction, recherche et rapport privé | bloqué jusqu’à intégration |
 | OCR | PP-OCRv6 Small | Indices textuels CPU | à intégrer |

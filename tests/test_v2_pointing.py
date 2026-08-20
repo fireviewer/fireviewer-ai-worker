@@ -18,8 +18,8 @@ EXAMPLES = Path(__file__).resolve().parents[1] / "contracts" / "agent-worker" / 
 class _PointingAdapter:
     spec = ModelSpec(
         role="fire_pointing",
-        model_id="fireviewer/molmopoint-8b-fire-smoke-pointing",
-        revision="67829947ac3aa55632ef752ed9c8f486dba60ae2",
+        model_id="tests/fire-pointing-fixture",
+        revision="0000000000000000000000000000000000000000",
     )
 
     def __init__(self) -> None:

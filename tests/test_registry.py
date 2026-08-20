@@ -81,8 +81,7 @@ def test_runtime_models_use_full_strength_pinned_variants(monkeypatch) -> None:
         "c202236235762e1c871ad0ccb60c8ee5ba337b9a"
     )
     assert registry["asr"].model_id == "openai/whisper-large-v3-turbo"
-    assert registry["fire_pointing"].model_id == ("fireviewer/molmopoint-8b-fire-smoke-pointing")
-    assert registry["fire_pointing"].revision == ("67829947ac3aa55632ef752ed9c8f486dba60ae2")
+    assert "fire_pointing" not in registry
 
 
 def test_private_detector_overrides_enabled_public_baseline(monkeypatch, tmp_path) -> None:
