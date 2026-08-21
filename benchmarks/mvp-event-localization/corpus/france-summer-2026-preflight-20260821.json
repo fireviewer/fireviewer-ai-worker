@@ -1,0 +1,258 @@
+{
+  "schema": "fireviewer.mvp-summer-2026-preflight.v1",
+  "retrieved_at": "2026-08-20T23:35:58.187248+00:00",
+  "corpus_sha256": "4bb2ea0ebdeb701e70edfbe4455f86433ee2d5ef876d9b07436f56a1954cd039",
+  "ground_truth": [
+    {
+      "case_id": "FR-2026-06-DIE-JUSTIN",
+      "status": "available",
+      "declared_summary_matches": true,
+      "summary": {
+        "source_url": "https://rapidmapping-viewer.s3.eu-west-1.amazonaws.com/EMSR890/AOI01/DEL_MONIT03/EMSR890_AOI01_DEL_MONIT03_observedEventA_v1.json",
+        "retrieved_at": "2026-08-20T23:35:58.187248Z",
+        "content_sha256": "c1a4602474942bbadc63137f5278dce47769f0421a1617870c7ab188a6c09c3f",
+        "payload_size_bytes": 14058289,
+        "feature_count": 151,
+        "bbox_wgs84": [
+          5.29250292,
+          44.67352157,
+          5.39067081,
+          44.76757373
+        ],
+        "center_wgs84": [
+          5.341586865,
+          44.72054765
+        ],
+        "radius_m": 6511.141737738038,
+        "source_area_sum": 2320.8097359999983
+      }
+    },
+    {
+      "case_id": "FR-2026-06-BOUSSES",
+      "status": "not_probed",
+      "reason": "not_identified"
+    },
+    {
+      "case_id": "FR-2026-06-BENONCES-SERRIERES",
+      "status": "not_probed",
+      "reason": "not_identified"
+    },
+    {
+      "case_id": "FR-2026-07-TREVILLACH",
+      "status": "available",
+      "declared_summary_matches": true,
+      "summary": {
+        "source_url": "https://rapidmapping-viewer.s3.eu-west-1.amazonaws.com/EMSR889/AOI01/GRA_PRODUCT/EMSR889_AOI01_GRA_PRODUCT_observedEventA_v1.json",
+        "retrieved_at": "2026-08-20T23:35:58.187248Z",
+        "content_sha256": "af7920826ed034e3b1ffd3655a906618e1d28abf7c180f985f967ece11aafff0",
+        "payload_size_bytes": 20866094,
+        "feature_count": 760,
+        "bbox_wgs84": [
+          2.51241196,
+          42.62508065,
+          2.62635246,
+          42.71135465
+        ],
+        "center_wgs84": [
+          2.56938221,
+          42.66821765
+        ],
+        "radius_m": 6687.221161290904,
+        "source_area_sum": 3262.7436959999977
+      }
+    },
+    {
+      "case_id": "FR-2026-07-FONTAINEBLEAU",
+      "status": "available",
+      "declared_summary_matches": true,
+      "summary": {
+        "source_url": "https://rapidmapping-viewer.s3.eu-west-1.amazonaws.com/EMSR894/AOI01/GRA_PRODUCT/EMSR894_AOI01_GRA_PRODUCT_observedEventA_v2.json",
+        "retrieved_at": "2026-08-20T23:35:58.187248Z",
+        "content_sha256": "61a9347b86f28beeba8fbc100c7ef168a32f39201d67c0417bafe551def2cb88",
+        "payload_size_bytes": 603972,
+        "feature_count": 96,
+        "bbox_wgs84": [
+          2.50830368,
+          48.35489815,
+          2.67605645,
+          48.40651024
+        ],
+        "center_wgs84": [
+          2.592180065,
+          48.380704195
+        ],
+        "radius_m": 6828.320327253421,
+        "source_area_sum": 919.6309249999999
+      }
+    },
+    {
+      "case_id": "FR-2026-07-SAUMOS",
+      "status": "available",
+      "declared_summary_matches": true,
+      "summary": {
+        "source_url": "https://rapidmapping-viewer.s3.eu-west-1.amazonaws.com/EMSR899/AOI01/DEL_MONIT01/EMSR899_AOI01_DEL_MONIT01_observedEventA_v2.json",
+        "retrieved_at": "2026-08-20T23:35:58.187248Z",
+        "content_sha256": "15b25840eebfcd8e4b7d46bee32a688a50ea3d1936884f43d5c3bbbf94137aa0",
+        "payload_size_bytes": 42971930,
+        "feature_count": 3428,
+        "bbox_wgs84": [
+          -1.23423578,
+          44.71711494,
+          -0.80898899,
+          44.99230911
+        ],
+        "center_wgs84": [
+          -1.021612385,
+          44.854712025
+        ],
+        "radius_m": 22708.359637928,
+        "source_area_sum": 24852.048202000064
+      }
+    },
+    {
+      "case_id": "FR-2026-07-BISCARROSSE",
+      "status": "available",
+      "declared_summary_matches": true,
+      "summary": {
+        "source_url": "https://rapidmapping-viewer.s3.eu-west-1.amazonaws.com/EMSR902/AOI01/GRA_PRODUCT/EMSR902_AOI01_GRA_PRODUCT_observedEventA_v1.json",
+        "retrieved_at": "2026-08-20T23:35:58.187248Z",
+        "content_sha256": "3aea970d940351de685792430cdf1dc06cdc738dfc45fac39f8b488b7ad03aed",
+        "payload_size_bytes": 61683994,
+        "feature_count": 1607,
+        "bbox_wgs84": [
+          -1.17333449,
+          44.36394121,
+          -1.07391606,
+          44.45190656
+        ],
+        "center_wgs84": [
+          -1.123625275,
+          44.407923885
+        ],
+        "radius_m": 6286.6628585038325,
+        "source_area_sum": 2681.4992930000003
+      }
+    },
+    {
+      "case_id": "FR-2026-08-BELLEGARDE-DIOIS",
+      "status": "not_probed",
+      "reason": "not_identified"
+    },
+    {
+      "case_id": "FR-2026-08-LUGLON",
+      "status": "not_probed",
+      "reason": "not_identified"
+    }
+  ],
+  "panoramax": {
+    "schema": "fireviewer.panoramax-coverage-receipt.v1",
+    "api_url": "https://panoramax.ign.fr/api",
+    "retrieved_at": "2026-08-20T23:35:58.187248Z",
+    "corpus_sha256": "4bb2ea0ebdeb701e70edfbe4455f86433ee2d5ef876d9b07436f56a1954cd039",
+    "query_limit_per_case": 25,
+    "downloaded_media_count": 0,
+    "cases": [
+      {
+        "case_id": "FR-2026-06-DIE-JUSTIN",
+        "query_sha256": "c8976a335fcc24734fb44a5219e8069b45b0f5bc50330602d99cffa8ac9caf97",
+        "reference_count": 25,
+        "distinct_sequence_count": 10,
+        "licensed_reference_count": 25,
+        "downloadable_reference_count": 25,
+        "nearest_reference_distance_m": 6134.513987707779,
+        "oldest_capture_at": "2024-11-04T15:22:09.094500Z",
+        "newest_capture_at": "2024-11-04T15:45:20.041900Z"
+      },
+      {
+        "case_id": "FR-2026-06-BOUSSES",
+        "query_sha256": "23f030ed153d12a5f95d0c5c56feecf91d0dbdd8c1de074807a6c477087528a3",
+        "reference_count": 25,
+        "distinct_sequence_count": 2,
+        "licensed_reference_count": 25,
+        "downloadable_reference_count": 25,
+        "nearest_reference_distance_m": 5595.551409168344,
+        "oldest_capture_at": "2021-01-19T11:08:36Z",
+        "newest_capture_at": "2021-01-19T11:10:06Z"
+      },
+      {
+        "case_id": "FR-2026-06-BENONCES-SERRIERES",
+        "query_sha256": "8f3244a00124a5ed522692c165db02d22b985cd075e2cdb92de0633068aa3c49",
+        "reference_count": 25,
+        "distinct_sequence_count": 1,
+        "licensed_reference_count": 25,
+        "downloadable_reference_count": 25,
+        "nearest_reference_distance_m": 2250.9690912415704,
+        "oldest_capture_at": "2018-08-11T10:39:08Z",
+        "newest_capture_at": "2018-08-11T10:40:00Z"
+      },
+      {
+        "case_id": "FR-2026-07-TREVILLACH",
+        "query_sha256": "d1d550b7c70b430adf575746b8d9fda57ab227abc30d776cd4f13fe08d00956e",
+        "reference_count": 25,
+        "distinct_sequence_count": 3,
+        "licensed_reference_count": 25,
+        "downloadable_reference_count": 25,
+        "nearest_reference_distance_m": 946.7401139676712,
+        "oldest_capture_at": "2025-09-23T10:36:55.885000Z",
+        "newest_capture_at": "2025-09-26T07:18:44.411000Z"
+      },
+      {
+        "case_id": "FR-2026-07-FONTAINEBLEAU",
+        "query_sha256": "f500513f77eb10eca14d93040f34cdd012ce9da5157a392c6da73e48006c499f",
+        "reference_count": 25,
+        "distinct_sequence_count": 10,
+        "licensed_reference_count": 25,
+        "downloadable_reference_count": 25,
+        "nearest_reference_distance_m": 2518.9185778835235,
+        "oldest_capture_at": "2018-01-11T12:34:46Z",
+        "newest_capture_at": "2024-01-13T14:11:40.692653Z"
+      },
+      {
+        "case_id": "FR-2026-07-SAUMOS",
+        "query_sha256": "e8f5f2c2945865a0a2bf11f777d9e4c5b2efe570ffb99e9c9670834033a96588",
+        "reference_count": 25,
+        "distinct_sequence_count": 2,
+        "licensed_reference_count": 25,
+        "downloadable_reference_count": 25,
+        "nearest_reference_distance_m": 14614.247775836413,
+        "oldest_capture_at": "2021-04-02T08:49:08Z",
+        "newest_capture_at": "2025-07-23T07:14:29Z"
+      },
+      {
+        "case_id": "FR-2026-07-BISCARROSSE",
+        "query_sha256": "763208428f3e0689b3f4dce8ce7311c99128b35a36304b61b30f965e32fa436c",
+        "reference_count": 25,
+        "distinct_sequence_count": 1,
+        "licensed_reference_count": 25,
+        "downloadable_reference_count": 25,
+        "nearest_reference_distance_m": 2064.9698459476976,
+        "oldest_capture_at": "2025-02-26T11:34:15.035200Z",
+        "newest_capture_at": "2025-02-26T11:35:38.095300Z"
+      },
+      {
+        "case_id": "FR-2026-08-BELLEGARDE-DIOIS",
+        "query_sha256": "c3ecf94fff2d9c0d504eb833351088d8420e019472a320663f7530ecf353a042",
+        "reference_count": 1,
+        "distinct_sequence_count": 1,
+        "licensed_reference_count": 1,
+        "downloadable_reference_count": 1,
+        "nearest_reference_distance_m": 6999.895170443487,
+        "oldest_capture_at": "2023-06-23T19:51:30Z",
+        "newest_capture_at": "2023-06-23T19:51:30Z"
+      },
+      {
+        "case_id": "FR-2026-08-LUGLON",
+        "query_sha256": "0e793ff53a137975c7889279047bfa82ef8a5164b7fdbc05d5b0f967b7c843aa",
+        "reference_count": 0,
+        "distinct_sequence_count": 0,
+        "licensed_reference_count": 0,
+        "downloadable_reference_count": 0,
+        "nearest_reference_distance_m": null,
+        "oldest_capture_at": null,
+        "newest_capture_at": null
+      }
+    ]
+  },
+  "quality_verdict": null,
+  "quality_verdict_reason": "No event media were downloaded or localized during preflight."
+}

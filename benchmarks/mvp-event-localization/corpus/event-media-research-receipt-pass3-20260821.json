@@ -1,0 +1,1265 @@
+{
+  "schema": "fireviewer.event-media-research-receipt.v1",
+  "generated_at": "2026-08-21T00:04:44.772162+00:00",
+  "seeds_sha256": "2f8982e26506f59042da10f05bfce66443e4661d98b47a2da76276bb21c174fb",
+  "media_per_case_cap": 20,
+  "cases": [
+    {
+      "case_id": "FR-2026-06-BOUSSES",
+      "source_count": 2,
+      "media_count": 15,
+      "sources": [
+        {
+          "source_id": "source-7434ad35a098fa91",
+          "requested_url": "https://www.europesays.com/fr/1020533/",
+          "final_url": "https://www.europesays.com/fr/1020533/",
+          "content_sha256": "023bb6f0ade845a0789d89052d311a153acfc810ad788dcf0f112552e5792efd",
+          "title": "Vidéo. En Lot-et-Garonne, un incendie qui a emporté 87 hectares de pinède a été massivement attaqué - France | République française",
+          "description": "Les pompiers ont déployé d’importants moyens humains et matériels.",
+          "published_at": "2026-06-24T05:06:38+00:00"
+        },
+        {
+          "source_id": "source-4f3fb371befa6eea",
+          "requested_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "final_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "content_sha256": "39f036466aedf2a7f1074351df1677958bf112fb96e9a0c3d2c063a3a090f7e3",
+          "title": "Canicule : le feu progresse en Lot-et-Garonne, 87 hectares détruits",
+          "description": "Les fortes chaleurs se sont installées et la tendance n’est pas encore à un retour à la normale, ce mardi. Et quatre départements vont s'ajo",
+          "published_at": "2026-06-23T06:14:20+02:00"
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-5d00f2917161369fec83",
+          "source_id": "source-7434ad35a098fa91",
+          "source_page_url": "https://www.europesays.com/fr/1020533/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/06/1000097669.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/01-5d00f2917161369f.jpg",
+          "sha256": "5d00f2917161369fec83442648f0d0fb1ac3c2d14329286228d8133884d66688",
+          "size_bytes": 167714,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 900,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-8ad54d7f73a12cd876c5",
+          "source_id": "source-7434ad35a098fa91",
+          "source_page_url": "https://www.europesays.com/fr/1020533/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/06/1000097678.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/02-8ad54d7f73a12cd8.jpg",
+          "sha256": "8ad54d7f73a12cd876c509a8c04955800aeacbd7577c5c882af2d7c7eb93454e",
+          "size_bytes": 210779,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 900,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-e9e1760c4f7df788b2c2",
+          "source_id": "source-7434ad35a098fa91",
+          "source_page_url": "https://www.europesays.com/fr/1020533/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/06/1000097693.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/03-e9e1760c4f7df788.jpg",
+          "sha256": "e9e1760c4f7df788b2c23dd10643be07dafc763a1ff8d1dc992f9581b2fae011",
+          "size_bytes": 207574,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 900,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-7b1c9c042cb787251ac8",
+          "source_id": "source-7434ad35a098fa91",
+          "source_page_url": "https://www.europesays.com/fr/1020533/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/06/1000097637.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/04-7b1c9c042cb78725.jpg",
+          "sha256": "7b1c9c042cb787251ac8fff9448575de01b6625ffe49ffe2dc73ecc03235e816",
+          "size_bytes": 98317,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 801,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-985c1ee35adfb78683a3",
+          "source_id": "source-7434ad35a098fa91",
+          "source_page_url": "https://www.europesays.com/fr/1020533/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/06/1000097687.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/05-985c1ee35adfb786.jpg",
+          "sha256": "985c1ee35adfb78683a354be73e4bf225060b25c0046e3ea04017196e9282784",
+          "size_bytes": 136418,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 900,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-d591644b21ed5de832ca",
+          "source_id": "source-7434ad35a098fa91",
+          "source_page_url": "https://www.europesays.com/fr/1020533/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/06/1000097657.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/06-d591644b21ed5de8.jpg",
+          "sha256": "d591644b21ed5de832cac37576afeba215fb66e18421aee533bb273ff90b5e22",
+          "size_bytes": 137260,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 801,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-d50ad13d1c7b071a5c4c",
+          "source_id": "source-7434ad35a098fa91",
+          "source_page_url": "https://www.europesays.com/fr/1020533/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/06/1000097661.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/07-d50ad13d1c7b071a.jpg",
+          "sha256": "d50ad13d1c7b071a5c4c29deb3a98466a6278e3d1edba8236388f95870e98945",
+          "size_bytes": 183762,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 900,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-bd3a97e443ae51ef0c3f",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://www.leparisien.fr/resizer/2mEQcydxD14xs6z-KQrwNTDc9Ns=/1600x900/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/PHEEWHBKWBFH7MKNRUXWFJ6OBE.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/08-bd3a97e443ae51ef.jpg",
+          "sha256": "bd3a97e443ae51ef0c3f3469cff38ffd10a91ac6041f01e601e0e73bd56420b5",
+          "size_bytes": 181906,
+          "content_type": "image/jpeg",
+          "width": 1600,
+          "height": 900,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-ca06843df9e382e9454e",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://www.leparisien.fr/resizer/sk4r5yE06sMadwZfIyZMdhsGlPo=/622x777/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/X7NRJ2FVDRAWLDFKNEJGW4O52Q.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/09-ca06843df9e382e9.jpg",
+          "sha256": "ca06843df9e382e9454e9e34cc96321cc12dc3d6f56f7c89927506ce3ab3692a",
+          "size_bytes": 92612,
+          "content_type": "image/jpeg",
+          "width": 622,
+          "height": 777,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-7e9a46064bdb9ef64ea3",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://www.leparisien.fr/resizer/d5kKO1z_powHWlihln5Ll_ALQrg=/622x777/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/EB4IT4WQFVGBLLU2OJCBRG6VPA.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/10-7e9a46064bdb9ef6.jpg",
+          "sha256": "7e9a46064bdb9ef64ea3a6950cafa33afb9a81d40b552a77d7fd2cdc51037ef2",
+          "size_bytes": 81574,
+          "content_type": "image/jpeg",
+          "width": 622,
+          "height": 777,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-b2e7bf69e09089352dfc",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://www.leparisien.fr/resizer/DsI0EvEk3eV2S--XKDnnhKOlw1A=/622x466/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/BGGK4D4CP5D4PGUT4TYTC265KY.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/11-b2e7bf69e0908935.jpg",
+          "sha256": "b2e7bf69e09089352dfc561c335148a9c07a3b1234238103b6ff438226b59c3e",
+          "size_bytes": 72576,
+          "content_type": "image/jpeg",
+          "width": 622,
+          "height": 466,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-39d7d84bc870d319751c",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://www.leparisien.fr/resizer/WRYJsOnrgqQ3vx-SwN5EOubxXWI=/622x777/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/A7ZTFPWPABFFVCXKU42AHA57VU.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/12-39d7d84bc870d319.jpg",
+          "sha256": "39d7d84bc870d319751c9bdf6464454cb1c9912957c96fede1eedca995ba6096",
+          "size_bytes": 113377,
+          "content_type": "image/jpeg",
+          "width": 622,
+          "height": 777,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-01ea655fec18fe40c79c",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://assets.leparisien.fr/app/preview/lp75_vignette_une.jpeg",
+          "relative_path": "FR-2026-06-BOUSSES/13-01ea655fec18fe40.jpg",
+          "sha256": "01ea655fec18fe40c79c1664b1568ac79be993cb7628d24f70ffa99e968402dd",
+          "size_bytes": 111854,
+          "content_type": "image/jpeg",
+          "width": 597,
+          "height": 768,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-dd4ce2aac2c6856094f0",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://www.leparisien.fr/resizer/PTCV1eBdIIbGdFH6CIl4UDMmiU4=/360x225/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/WQBXESJBXJFNNDZ522YBIV42UI.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/14-dd4ce2aac2c68560.jpg",
+          "sha256": "dd4ce2aac2c6856094f0b2857cba8932b1435641bf494cd7679afafe5e88a03c",
+          "size_bytes": 29214,
+          "content_type": "image/jpeg",
+          "width": 360,
+          "height": 225,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-811944b991a821fbc092",
+          "source_id": "source-4f3fb371befa6eea",
+          "source_page_url": "https://www.leparisien.fr/meteo/direct-canicule-27c-a-rennes-25c-a-bordeaux-24c-a-paris-a-laube-54-departements-en-vigilance-rouge-23-06-2026-QFSDGSGXIRFZFOCME6WLK2U2TI.php",
+          "media_url": "https://www.leparisien.fr/resizer/R5ER_uu-wi3-7ekx8TzQD9tWNAk=/360x225/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/UMR7LI6NI5DQNIATTLXKWAC4UA.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/15-811944b991a821fb.jpg",
+          "sha256": "811944b991a821fbc092bf32ff6399fad4ce99ef8d37d5d9f09cbc5c8a7121df",
+          "size_bytes": 36884,
+          "content_type": "image/jpeg",
+          "width": 360,
+          "height": 225,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://fr.headtopics.com/news/incendie-de-for-t-majeure-a-bousses-lot-et-garonne-60-84841259",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 502: Bad Gateway"
+        },
+        {
+          "url": "https://www.europesays.com/fr/wp-content/uploads/2025/03/europesays-750x150-1.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.europesays.com/fr/wp-content/uploads/2025/03/europesays-750x150-1.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.actuniort.fr/societe/18836",
+          "stage": "page",
+          "error": "URLError: <urlopen error [WinError 10060] Une tentative de connexion a échoué car le parti connecté n’a pas répondu convenablement au-delà d’une certaine durée ou une connexion établie a échoué car l’hôte de connexion n’a pas répondu>"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-06-BENONCES-SERRIERES",
+      "source_count": 5,
+      "media_count": 20,
+      "sources": [
+        {
+          "source_id": "source-40f9cf0667430fa2",
+          "requested_url": "https://feuxdeforet.fr/en/ain-01/benonces-23-06-2026-485/",
+          "final_url": "https://feuxdeforet.fr/en/ain-01/benonces-23-06-2026-485/",
+          "content_sha256": "7ed6c74deec8eb742b985055a1e5b8eec513f22d0d8d71548685410b7d43c9f9",
+          "title": "Wildfire in Bénonces (01) : the fire is extinguished",
+          "description": "Feu éteint à Bénonces (Ain). Un feu de forêt a parcouru 11 hectares avant d’être éteint après engagement de 100 pompiers et de 4 avions bombardiers d’eau. Plusieurs centaines d’hectares étaient…",
+          "published_at": null
+        },
+        {
+          "source_id": "source-0cfb0b55be49037e",
+          "requested_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "final_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "content_sha256": "3102c941ed515e97035c0c6cec5fc713f5d3810c2c2e46d320e7ee1f773e7735",
+          "title": "Ain. Un important feu de forêt dans le bas Bugey : une dizaine d'hectares partis en fumée",
+          "description": "Mardi 23 juin, en début d’après-midi, un feu s’est déclaré sur la commune de Bénonces, dans le bas Bugey. Aucune victime n'est à déplorer.",
+          "published_at": "2026-06-23T12:36:00Z"
+        },
+        {
+          "source_id": "source-5c6d48e5faa24e99",
+          "requested_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/25/on-n-est-pas-a-l-abri-d-une-reprise-de-feu-la-foret-sous-haute-surveillance-apres-l-incendie",
+          "final_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/25/on-n-est-pas-a-l-abri-d-une-reprise-de-feu-la-foret-sous-haute-surveillance-apres-l-incendie",
+          "content_sha256": "372e02a62d12f974cc2fb18c237f21cef129bdce352828af65137726c494cb23",
+          "title": "Ain. «On n’est pas à l’abri d’une reprise de feu» : la forêt du Bugey sous haute surveillance après l’incendie",
+          "description": "Fixé dès mardi soir, l’incendie qui a ravagé onze hectares de forêt du Bugey mobilisait encore deux Groupes feux de forêt et des soutiens mercredi...",
+          "published_at": "2026-06-25T04:00:00Z"
+        },
+        {
+          "source_id": "source-246f4d35d890b016",
+          "requested_url": "https://www.radioscoop.com/infos/ain-isere-l-important-feu-de-foret-se-poursuit-les-canadairs-continuent-les-largages_358579",
+          "final_url": "https://www.radioscoop.com/infos/ain-isere-l-important-feu-de-foret-se-poursuit-les-canadairs-continuent-les-largages_358579",
+          "content_sha256": "316c1a4061bd31c2b0e577ecb76bf0d7a639783ddba9db5861b0dac19c2bc192",
+          "title": "[MAJ] Ain/Isère: 11 hectares détruits par un feu de forêt ",
+          "description": "Un feu de forêt s'est déclaré dans le secteur de Bénonces (Ain) ce mardi 23 juin. Quatre Canadairs ont été mobiliés. ",
+          "published_at": null
+        },
+        {
+          "source_id": "source-35467e00b186a8de",
+          "requested_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "final_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "content_sha256": "a7bf48ec914a3f8ec4f183bc66be372164e04ec56a8e49da11ddd66fd3585f9a",
+          "title": "Ain, Allier, Aveyron… Plusieurs incendies en cours ce mardi partout en France",
+          "description": "Les foyers se multiplient ce mardi dans plusieurs départements, alors que plus de la moitié du pays restera placée en vigilance rouge mercre",
+          "published_at": "2026-06-23T18:00:12+02:00"
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-979808ef9a14e3a0ad73",
+          "source_id": "source-40f9cf0667430fa2",
+          "source_page_url": "https://feuxdeforet.fr/en/ain-01/benonces-23-06-2026-485/",
+          "media_url": "https://feuxdeforet.fr/medias/485/hero.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/01-979808ef9a14e3a0.jpg",
+          "sha256": "979808ef9a14e3a0ad73a6fc9df3ad6158ef2197c9e005be13e95ebfea43b2cc",
+          "size_bytes": 176408,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 700,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-3a8e1542dcfd6d898e53",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/385B3C74-9662-4D00-AF4F-D0FA9037AA86/FB1200/photo-1782229515.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/02-3a8e1542dcfd6d89.jpg",
+          "sha256": "3a8e1542dcfd6d898e5369d14ddac85c4c7ee6e0fde58b82f56bcfe29a7ee280",
+          "size_bytes": 30209,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 630,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-d15b59b74aa166530b85",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/31900a5e-4b89-4b93-a4da-b351635fdf36/NW_listA/le-feu-a-pris-dans-un-champ-sur-les-hauteurs-de-benonces-et-s-est-propage-a-la-foret-photo-catherine-aulaz-1782221417.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/03-d15b59b74aa16653.jpg",
+          "sha256": "d15b59b74aa166530b857b79202643ef6da183d6aa24c6df2e42c98fac446e23",
+          "size_bytes": 30120,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-698fbe09ad0841320d54",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/99150eec-fef3-4155-b8c3-9a545f91756b/NW_listA/le-panache-de-fumee-se-voit-a-plusieurs-kilometres-ici-depuis-sault-brenaz-photo-catherine-aulaz-1782220006.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/04-698fbe09ad084132.jpg",
+          "sha256": "698fbe09ad0841320d544a34ce7ee6619dec0e840d11391ee43cb25c17072cd1",
+          "size_bytes": 27201,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-cf8cf7473cb6d5fb3b12",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/7d1b8a06-3e64-4197-8715-7ddb600782e7/NW_listA/une-centaine-de-sapeurs-pompiers-12-camions-feux-de-foret-et-4-canadairs-sont-engages-sur-place-afin-de-maitriser-la-situation-photo-catherine-aulaz-1782223431.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/05-cf8cf7473cb6d5fb.jpg",
+          "sha256": "cf8cf7473cb6d5fb3b12fd81c5e10b279eb27dd89d8e290cd5ad225aacbb1ba8",
+          "size_bytes": 19775,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-b68883281a8fe21c4e87",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/b2ff71ac-6ea8-4d4f-9f3e-22ac7a744e9d/NW_listA/aucune-habitation-n-est-a-proximite-directe-avec-l-incendie-photo-catherine-aulaz-1782223643.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/06-b68883281a8fe21c.jpg",
+          "sha256": "b68883281a8fe21c4e873aedc0f8af900a2479ba3d64c4a290694d3d488214fa",
+          "size_bytes": 36371,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-e601ddc28149e3ab4e7f",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/ff2e8fd4-760c-43fd-aacc-63258bf0e437/NW_listA/quatre-bombardiers-d-eau-arrosent-la-zone-photo-catherine-aulaz-1782222681.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/07-e601ddc28149e3ab.jpg",
+          "sha256": "e601ddc28149e3ab4e7fee8975688da6eda59b2709290bf2fca3c102743985e3",
+          "size_bytes": 8589,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-21b809f65abad8af19ff",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/761292bb-7547-4325-be90-42e5dc766f03/NW_listA/plusieurs-habitants-filment-la-scene-photo-catherine-aulaz-1782222681.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/08-21b809f65abad8af.jpg",
+          "sha256": "21b809f65abad8af19ff357aefbe7788c9a66d2bb3df236ffb72ec113ee78fb1",
+          "size_bytes": 48321,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-f9f31f83ed82022e2a90",
+          "source_id": "source-0cfb0b55be49037e",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/un-important-feu-de-foret-en-cours-dans-le-bas-bugey-un-helicoptere-bombardier-d-eau-attendu-sur-place",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/0934b542-727d-4ccf-9f78-895fb467ae4c/NW_listA/vue-depuis-le-point-vert-a-serrieres-de-briord-vers-14-heures-photo-roger-robin-1782219864.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/09-f9f31f83ed82022e.jpg",
+          "sha256": "f9f31f83ed82022e2a90dab67dad51912636bbd3678a5d7c3553b6eb94067e58",
+          "size_bytes": 18023,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-b498df3f18ff5a2240f9",
+          "source_id": "source-5c6d48e5faa24e99",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/25/on-n-est-pas-a-l-abri-d-une-reprise-de-feu-la-foret-sous-haute-surveillance-apres-l-incendie",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/EBA0804F-D4AD-4C70-BF9A-5533871B4DBC/FB1200/photo-1782334559.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/10-b498df3f18ff5a22.jpg",
+          "sha256": "b498df3f18ff5a2240f93a2c6bab6d852e99f10b890d103ff3e8e5e9fdefa2de",
+          "size_bytes": 105953,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 630,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-5fa4d3939636ca3894a5",
+          "source_id": "source-5c6d48e5faa24e99",
+          "source_page_url": "https://www.leprogres.fr/faits-divers-justice/2026/06/25/on-n-est-pas-a-l-abri-d-une-reprise-de-feu-la-foret-sous-haute-surveillance-apres-l-incendie",
+          "media_url": "https://cdn-s-www.leprogres.fr/images/eba0804f-d4ad-4c70-bf9a-5533871b4dbc/NW_listA/un-important-feu-de-foret-s-est-declare-le-23-juin-sur-le-coup-de-12-h-30-dans-le-bas-bugey-sur-la-commune-de-benonces-en-zone-rocheuse-et-montagneuse-photo-catherine-aulaz-1782334559.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/11-5fa4d3939636ca38.jpg",
+          "sha256": "5fa4d3939636ca3894a5505c960da9caa4342d4fc324e2237556fa4987901b1a",
+          "size_bytes": 59381,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-0879f26def86b71d4c8d",
+          "source_id": "source-246f4d35d890b016",
+          "source_page_url": "https://www.radioscoop.com/infos/ain-isere-l-important-feu-de-foret-se-poursuit-les-canadairs-continuent-les-largages_358579",
+          "media_url": "https://www.radioscoop.com/imgs/743988_952_475.png",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/12-0879f26def86b71d.png",
+          "sha256": "0879f26def86b71d4c8d3b9cd1ccd61e958c3334bae53c68ce6469f80143243f",
+          "size_bytes": 601247,
+          "content_type": "image/png",
+          "width": 952,
+          "height": 475,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-16db78e1839aac8da849",
+          "source_id": "source-246f4d35d890b016",
+          "source_page_url": "https://www.radioscoop.com/infos/ain-isere-l-important-feu-de-foret-se-poursuit-les-canadairs-continuent-les-largages_358579",
+          "media_url": "https://www.radioscoop.com/img/str/cross-sign.png",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/13-16db78e1839aac8d.png",
+          "sha256": "16db78e1839aac8da849d0d68701d8a4e761a9ae0b25be727cf7389fa5b8a007",
+          "size_bytes": 8998,
+          "content_type": "image/png",
+          "width": 400,
+          "height": 400,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-d45a04eb48ded708442c",
+          "source_id": "source-246f4d35d890b016",
+          "source_page_url": "https://www.radioscoop.com/infos/ain-isere-l-important-feu-de-foret-se-poursuit-les-canadairs-continuent-les-largages_358579",
+          "media_url": "https://www.radioscoop.com/dyn/img.php?id=743988.png&w=1300&h=649&cx=0&cy=0",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/14-d45a04eb48ded708.png",
+          "sha256": "d45a04eb48ded708442cc8cc092869a68c2ff38565e8ea0e55f6da36c0837ea9",
+          "size_bytes": 1022172,
+          "content_type": "image/png",
+          "width": 1300,
+          "height": 649,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-d4b4cc059b85893a9a73",
+          "source_id": "source-35467e00b186a8de",
+          "source_page_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "media_url": "https://www.leparisien.fr/resizer/PvKE_-3-jZpJxRlA_u4qznLdqhE=/1600x900/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/3IQLJY5TIBEVNB4IR4XMEFLKEE.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/15-d4b4cc059b85893a.jpg",
+          "sha256": "d4b4cc059b85893a9a730d7035f8109d15ea494f14faaa6e2cda41a1a4efd0a0",
+          "size_bytes": 414304,
+          "content_type": "image/jpeg",
+          "width": 1600,
+          "height": 900,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-927dd08e6668dfe24ace",
+          "source_id": "source-35467e00b186a8de",
+          "source_page_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "media_url": "https://www.leparisien.fr/resizer/UyHjSRN4jrpE6_2XcVvwv1iaq9s=/932x582/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/3IQLJY5TIBEVNB4IR4XMEFLKEE.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/16-927dd08e6668dfe2.jpg",
+          "sha256": "927dd08e6668dfe24ace5ae3acef0dd1b5407dd826b1185075fed2b766ad17eb",
+          "size_bytes": 203973,
+          "content_type": "image/jpeg",
+          "width": 932,
+          "height": 582,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-01ea655fec18fe40c79c",
+          "source_id": "source-35467e00b186a8de",
+          "source_page_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "media_url": "https://assets.leparisien.fr/app/preview/lp75_vignette_une.jpeg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/17-01ea655fec18fe40.jpg",
+          "sha256": "01ea655fec18fe40c79c1664b1568ac79be993cb7628d24f70ffa99e968402dd",
+          "size_bytes": 111854,
+          "content_type": "image/jpeg",
+          "width": 597,
+          "height": 768,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-42a3de351a5b36390aa5",
+          "source_id": "source-35467e00b186a8de",
+          "source_page_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "media_url": "https://www.leparisien.fr/resizer/TOdspwblHGWia_pxFuLreGsHj-E=/360x225/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/ZDBRWJ2WG5GJVJ4YHQXWEIXZCY.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/18-42a3de351a5b3639.jpg",
+          "sha256": "42a3de351a5b36390aa5ade25c2d36a237edde915206999bc5c84ec37d257afd",
+          "size_bytes": 19200,
+          "content_type": "image/jpeg",
+          "width": 360,
+          "height": 225,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-79d7cf011c7bde31bb05",
+          "source_id": "source-35467e00b186a8de",
+          "source_page_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "media_url": "https://www.leparisien.fr/resizer/b2lvrCdYDlb8vff-N0ts1MxTEqg=/360x225/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/IZAKL7FL2NB7JJOODQDMB2YI54.png",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/19-79d7cf011c7bde31.png",
+          "sha256": "79d7cf011c7bde31bb05cda12044553554c5ec1f7ffc7716e705074c6dc4eff3",
+          "size_bytes": 125152,
+          "content_type": "image/png",
+          "width": 360,
+          "height": 225,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-1b504bb8c58279f44a82",
+          "source_id": "source-35467e00b186a8de",
+          "source_page_url": "https://www.leparisien.fr/faits-divers/ain-allier-aveyron-plusieurs-incendies-en-cours-ce-mardi-partout-en-france-23-06-2026-USUBFZDRP5CNHLHYJFO64ACDAQ.php",
+          "media_url": "https://www.leparisien.fr/resizer/XL7ehvBOIGAmxfd7rq9GAcQpRic=/360x225/cloudfront-eu-central-1.images.arcpublishing.com/leparisien/KJQBPJRZVZHLBGPWYHTE5JZMRE.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/20-1b504bb8c58279f4.jpg",
+          "sha256": "1b504bb8c58279f44a824a90a9f395bd07e096a783e1e21626a0d39947d05efa",
+          "size_bytes": 24853,
+          "content_type": "image/jpeg",
+          "width": 360,
+          "height": 225,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://www.facebook.com/tr?id=1064442748968944&ev=PageView&noscript=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type text/plain"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://stats.dycast.pro/js/index.php?idsite=4&rec=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/gif"
+        },
+        {
+          "url": "https://cdn-s-www.leprogres.fr/images/b9007ace-9695-4bfc-88e7-a969a1bc04e6/JNU_04/edition-du-soir-rhone-1787252609.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.leprogres.fr/images/b9007ace-9695-4bfc-88e7-a969a1bc04e6/JNU_04/edition-du-soir-rhone-1787252609.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-files.prsmedia.fr/files/REDAC/images/svg/placeholders/digiteka.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "https://cdn-s-www.leprogres.fr/images/b9007ace-9695-4bfc-88e7-a969a1bc04e6/JNU_04/edition-du-soir-rhone-1787252609.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.leprogres.fr/images/b9007ace-9695-4bfc-88e7-a969a1bc04e6/JNU_04/edition-du-soir-rhone-1787252609.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-files.prsmedia.fr/files/REDAC/images/svg/placeholders/digiteka.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/ico/copy_white.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750452.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=671831.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=680408.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=422334.jpg&w=300&h=140&cx=66&cy=-81",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=749022.jpg&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=749694.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750378.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=748271.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=653328.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=739295.jpg&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750347.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=681464.jpg&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750321.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=608456.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750299.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750285.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750288.jpg&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=750273.jpg&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=746418.jpg&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/dyn/img.php?id=680397.png&w=300&h=140&cx=0&cy=0",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/static/facebook_circle_gray_50.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/static/x_circle_gray_50.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/static/linkedin_circle_gray_50.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/static/instagram_circle_gray_50.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/static/youtube_circle_gray_50.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/static/tiktok_circle_gray_50.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.radioscoop.com/img/static/snapchat_circle_gray_50.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://assets.leparisien.fr/website/images/design-system/crime-story.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-SAUMOS",
+      "source_count": 4,
+      "media_count": 20,
+      "sources": [
+        {
+          "source_id": "source-ac20721deb32554b",
+          "requested_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "final_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "content_sha256": "e669c020e42fb812f17c3f6b0d7e863c9dfe97b1180baa0ab58b25d6300a0800",
+          "title": "Incendie à Saumos : le feu est sous contrôle",
+          "description": "Incendie à Saumos. Le feu est sous contrôle.",
+          "published_at": null
+        },
+        {
+          "source_id": "source-33f91a7adb184c4c",
+          "requested_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendie-de-saumos-suivi-de-la-qualite-de-lair-en-gironde",
+          "final_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "content_sha256": "e645a58f8d3b25fec074348b34e025a89ac4273b26f266a032d7f5ac163e5c0b",
+          "title": null,
+          "description": null,
+          "published_at": null
+        },
+        {
+          "source_id": "source-bd10b6d6c413d483",
+          "requested_url": "https://www.collectif-dr.com/reportages/feux-gironde-2026-fm",
+          "final_url": "https://www.collectif-dr.com/reportages/feux-gironde-2026-fm",
+          "content_sha256": "3afaba4764f08e18cb8e1eda42798d3af2eb6cad838bc3afdde04c5086998b8f",
+          "title": "Sur le front des incendies en Gironde — COLLECTIF DR",
+          "description": "En juillet 2026, la Gironde fait face à l’un des épisodes d’incendies les plus graves de son histoire récente. Au 27 juillet, le feu parti de Saumos a parcouru environ  42 000 hectares . Stabilisé mais toujours pas fixé, il a entraîné l’évacuation de  220 000 personnes  et détruit  240 habitations .",
+          "published_at": null
+        },
+        {
+          "source_id": "source-7f9776384b41faa7",
+          "requested_url": "https://www.boursorama.com/actualite-economique/actualites/les-proprietaires-de-la-parcelle-d-ou-est-parti-le-megafeu-de-gironde-reclament-justice-45f400e77b14a05577609da214f1ce96",
+          "final_url": "https://www.boursorama.com/actualite-economique/actualites/les-proprietaires-de-la-parcelle-d-ou-est-parti-le-megafeu-de-gironde-reclament-justice-45f400e77b14a05577609da214f1ce96",
+          "content_sha256": "bcf69712a97b42f151e857e2e4e852e5b3342f926ba63b79ae3a52c4c7c7eb9e",
+          "title": "Les propriétaires de la parcelle d'où est parti le mégafeu de Gironde réclament justice",
+          "description": "Les propriétaires de la parcelle forestière d'où est parti le mégafeu de Gironde portent plainte contre l'entreprise soupçonnée de l'avoir accidentellement déclenché, déplorant leur perte financière tandis que la sylviculture pèse lourd dans l'économie locale.",
+          "published_at": "2026-07-31T12:12:01+0200"
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-f2ad1882e5cff65e207f",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://feuxdeforet.fr/medias/4367/hero.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/01-f2ad1882e5cff65e.jpg",
+          "sha256": "f2ad1882e5cff65e207f7e8c24c65cd519f6de3830ae6eb78eb3c73d2249c13c",
+          "size_bytes": 101227,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 700,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-3a4b7c5a8247d7383c90",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://fdfdata.fr/storage/signalements/4367/mc/74739/9f2bd8e7-0bee-44b0-8b3f-0ac4f93996b2.webp?v=1786891046",
+          "relative_path": "FR-2026-07-SAUMOS/02-3a4b7c5a8247d738.webp",
+          "sha256": "3a4b7c5a8247d7383c9057c9b5b9c2995088f84b77d87b86e41b1effb3594ceb",
+          "size_bytes": 212874,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 933,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-5a8c60a7349eebf3d084",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://fdfdata.fr/storage/signalements/4367/mc/74739/34a145ec-1123-49e7-a143-ee44cf8fc141.webp?v=1786891047",
+          "relative_path": "FR-2026-07-SAUMOS/03-5a8c60a7349eebf3.webp",
+          "sha256": "5a8c60a7349eebf3d08431f2348c90f01e526da3bbc5e78f4f8234e8089197cb",
+          "size_bytes": 222976,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 933,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-62b759a22b17671f61b8",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://fdfdata.fr/storage/signalements/4367/mc/74739/211701e6-fadf-4488-a5a5-92d79cfc73c5.webp?v=1786891048",
+          "relative_path": "FR-2026-07-SAUMOS/04-62b759a22b17671f.webp",
+          "sha256": "62b759a22b17671f61b80f5df0e0ffcabe3a8db90a391d82faf371af98ef9e73",
+          "size_bytes": 99744,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 933,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-80c5b553a856ec0c3c0a",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://fdfdata.fr/storage/signalements/4367/mc/73654/1abd4f06-b548-4c7e-ad79-0353a1fba8e3.webp?v=1786791350",
+          "relative_path": "FR-2026-07-SAUMOS/05-80c5b553a856ec0c.webp",
+          "sha256": "80c5b553a856ec0c3c0a3e6f8fcf6af7d8f3b679fd92f801dc6ebb75f4510e43",
+          "size_bytes": 113934,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 933,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-84d6df615388f3cf8fb9",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://fdfdata.fr/storage/signalements/4367/mc/73654/3cde45e1-e5b1-4b59-b79b-1910565508d2.webp?v=1786791350",
+          "relative_path": "FR-2026-07-SAUMOS/06-84d6df615388f3cf.webp",
+          "sha256": "84d6df615388f3cf8fb9d8a3f8f1b0a92c256d9f77c64349ae73fdc118d96956",
+          "size_bytes": 251564,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 933,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-4cbda41a50669df2472a",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://fdfdata.fr/storage/signalements/4367/mc/73654/599d8cc7-15e8-4b84-a7d7-1dacb2bb5101.webp?v=1786791350",
+          "relative_path": "FR-2026-07-SAUMOS/07-4cbda41a50669df2.webp",
+          "sha256": "4cbda41a50669df2472af1480c0b3a0e8c94fb53409c545c32ee6b447f0bd865",
+          "size_bytes": 87494,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 525,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-e0d1e540e82df02975d1",
+          "source_id": "source-ac20721deb32554b",
+          "source_page_url": "https://feuxdeforet.fr/gironde-33/saumos-22-07-2026-4367/",
+          "media_url": "https://fdfdata.fr/storage/signalements/4367/mc/72989/83790c59-f69e-4386-82d1-fb7e460f19c8.webp?v=1786718890",
+          "relative_path": "FR-2026-07-SAUMOS/08-e0d1e540e82df029.webp",
+          "sha256": "e0d1e540e82df02975d18e9e2dde3d32a36c41ee8cd20309f9e7b02d92f085e4",
+          "size_bytes": 47758,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 323,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-9f80ff6b726cd739af8c",
+          "source_id": "source-33f91a7adb184c4c",
+          "source_page_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "media_url": "https://www.atmo-nouvelleaquitaine.org/sites/nouvelleaquitaine/files/styles/top_page_banner/public/medias/images/2026-07/Incendie-Saumos.jpg?itok=eW72ZG7e",
+          "relative_path": "FR-2026-07-SAUMOS/09-9f80ff6b726cd739.jpg",
+          "sha256": "9f80ff6b726cd739af8c61af45f92c031cfb29fade29b9310e7028044c8329fe",
+          "size_bytes": 70387,
+          "content_type": "image/jpeg",
+          "width": 800,
+          "height": 550,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-ad5122fdac76e32b2066",
+          "source_id": "source-33f91a7adb184c4c",
+          "source_page_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "media_url": "https://www.atmo-nouvelleaquitaine.org/sites/nouvelleaquitaine/files/styles/card_vignette/public/medias/images/2026-07/header%20fumee%20incendie.png?h=8975185d&itok=EpFZmQ9T",
+          "relative_path": "FR-2026-07-SAUMOS/10-ad5122fdac76e32b.png",
+          "sha256": "ad5122fdac76e32b20660f57a63abbd631295fd753c6f4337edb8b9763c7eb66",
+          "size_bytes": 491670,
+          "content_type": "image/png",
+          "width": 560,
+          "height": 380,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-a7802d380a45ae28703a",
+          "source_id": "source-33f91a7adb184c4c",
+          "source_page_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "media_url": "https://www.atmo-nouvelleaquitaine.org/sites/nouvelleaquitaine/files/medias/images/2026-08/infographie-DRAAF-NA.png",
+          "relative_path": "FR-2026-07-SAUMOS/11-a7802d380a45ae28.png",
+          "sha256": "a7802d380a45ae28703a199ac9e359e8fcee2eca85f17471055cf70b17798f63",
+          "size_bytes": 1896883,
+          "content_type": "image/png",
+          "width": 1654,
+          "height": 1170,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-6c07d134c4b34a3082b8",
+          "source_id": "source-33f91a7adb184c4c",
+          "source_page_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "media_url": "https://www.atmo-nouvelleaquitaine.org/sites/nouvelleaquitaine/files/medias/images/2026-07/Champs%20code%20postal.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/12-6c07d134c4b34a30.jpg",
+          "sha256": "6c07d134c4b34a3082b8b3e62000e2eb4ad8a107d91daca0a85f519379d11275",
+          "size_bytes": 179870,
+          "content_type": "image/jpeg",
+          "width": 1442,
+          "height": 633,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-67a5bcd53494025fa59d",
+          "source_id": "source-33f91a7adb184c4c",
+          "source_page_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "media_url": "https://www.atmo-nouvelleaquitaine.org/sites/nouvelleaquitaine/files/medias/images/2026-07/barometre%20de%20la%20commune.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/13-67a5bcd53494025f.jpg",
+          "sha256": "67a5bcd53494025fa59db47de5f949b27d77e427942f42a1776abac322cb265d",
+          "size_bytes": 52790,
+          "content_type": "image/jpeg",
+          "width": 1386,
+          "height": 598,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-f003b0b18a9a9d2746e1",
+          "source_id": "source-33f91a7adb184c4c",
+          "source_page_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "media_url": "https://www.atmo-nouvelleaquitaine.org/sites/nouvelleaquitaine/files/styles/card_vignette/public/medias/images/2026-07/Bordeaux-juillet-2026.jpg?h=8975185d&itok=-YvccKdw",
+          "relative_path": "FR-2026-07-SAUMOS/14-f003b0b18a9a9d27.jpg",
+          "sha256": "f003b0b18a9a9d2746e192a7c6b31b024a70d1f505491f9140941768eb2a4273",
+          "size_bytes": 19719,
+          "content_type": "image/jpeg",
+          "width": 560,
+          "height": 380,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-95649a4b7db0878f83ba",
+          "source_id": "source-33f91a7adb184c4c",
+          "source_page_url": "https://www.atmo-nouvelleaquitaine.org/actualite/incendies-en-gironde-et-dans-les-landes-suivi-de-la-qualite-de-lair",
+          "media_url": "https://www.atmo-nouvelleaquitaine.org/sites/nouvelleaquitaine/files/styles/card_vignette/public/medias/images/2026-02/mesures%20particules%20header%20%282%29.png?h=8975185d&itok=I4nsRNgP",
+          "relative_path": "FR-2026-07-SAUMOS/15-95649a4b7db0878f.png",
+          "sha256": "95649a4b7db0878f83ba1c0a7085098b8b59de7241f09c6711086c6b322803f9",
+          "size_bytes": 307281,
+          "content_type": "image/png",
+          "width": 560,
+          "height": 380,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-28bc45bc4b104b8c05ab",
+          "source_id": "source-bd10b6d6c413d483",
+          "source_page_url": "https://www.collectif-dr.com/reportages/feux-gironde-2026-fm",
+          "media_url": "https://images.squarespace-cdn.com/content/v1/63562a452d6f8562938b7ce2/1785167502287-WF7DYGAZPUFGPZNXNOZX/FRANCE+-+POMPIERS+-+INCENDIE+GIRONDE+-+26+JUILLET+2026-1.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/16-28bc45bc4b104b8c.webp",
+          "sha256": "28bc45bc4b104b8c05ab9e9bd3be7febf914f7597bf617e57c184b7350bee0e9",
+          "size_bytes": 1190078,
+          "content_type": "image/webp",
+          "width": 2500,
+          "height": 1667,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-e148c2730b08005edee4",
+          "source_id": "source-bd10b6d6c413d483",
+          "source_page_url": "https://www.collectif-dr.com/reportages/feux-gironde-2026-fm",
+          "media_url": "https://images.squarespace-cdn.com/content/v1/63562a452d6f8562938b7ce2/1785167502302-9ST4LHUVPKK65VQDBIDQ/FRANCE+-+POMPIERS+-+INCENDIE+GIRONDE+-+26+JUILLET+2026-2.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/17-e148c2730b08005e.webp",
+          "sha256": "e148c2730b08005edee44e4f39cf94036d21ff0bdca32f4be4a3504bf2dd31c7",
+          "size_bytes": 1317354,
+          "content_type": "image/webp",
+          "width": 2500,
+          "height": 1667,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-378d537bd73493fd2803",
+          "source_id": "source-bd10b6d6c413d483",
+          "source_page_url": "https://www.collectif-dr.com/reportages/feux-gironde-2026-fm",
+          "media_url": "https://images.squarespace-cdn.com/content/v1/63562a452d6f8562938b7ce2/1785167503519-NE2TX4YSCXV0DOR979FM/FRANCE+-+POMPIERS+-+INCENDIE+GIRONDE+-+26+JUILLET+2026-3.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/18-378d537bd73493fd.webp",
+          "sha256": "378d537bd73493fd28033989eb74dd8ba73651d049144b274c3771eb02c5b20c",
+          "size_bytes": 368416,
+          "content_type": "image/webp",
+          "width": 2500,
+          "height": 1667,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-103652c35907e8bbfe4f",
+          "source_id": "source-bd10b6d6c413d483",
+          "source_page_url": "https://www.collectif-dr.com/reportages/feux-gironde-2026-fm",
+          "media_url": "https://images.squarespace-cdn.com/content/v1/63562a452d6f8562938b7ce2/1785167503716-N4Q9QOHSZMW0LBRY0A38/FRANCE+-+POMPIERS+-+INCENDIE+GIRONDE+-+26+JUILLET+2026-4.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/19-103652c35907e8bb.webp",
+          "sha256": "103652c35907e8bbfe4f68dff4009f15644cf924231281f785e0d9806ea5cebc",
+          "size_bytes": 660956,
+          "content_type": "image/webp",
+          "width": 2500,
+          "height": 1667,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-cbfa60b643bbfa4be173",
+          "source_id": "source-bd10b6d6c413d483",
+          "source_page_url": "https://www.collectif-dr.com/reportages/feux-gironde-2026-fm",
+          "media_url": "https://images.squarespace-cdn.com/content/v1/63562a452d6f8562938b7ce2/1785167504741-JCD13B51FSNJ47U86HV9/FRANCE+-+POMPIERS+-+INCENDIE+GIRONDE+-+26+JUILLET+2026-5.jpg",
+          "relative_path": "FR-2026-07-SAUMOS/20-cbfa60b643bbfa4b.webp",
+          "sha256": "cbfa60b643bbfa4be1730743ebd47c84110217ffc9266a44e7116069047a6c09",
+          "size_bytes": 506182,
+          "content_type": "image/webp",
+          "width": 2500,
+          "height": 1667,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "http://static1.squarespace.com/static/63562a452d6f8562938b7ce2/636400fad4a14c4f770899b3/6a677e545ad2fb2ac33d00c0/1785320269444/FRANCE+-+POMPIERS+-+INCENDIE+GIRONDE+-+26+JUILLET+2026-15.jpg?format=1500w",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "http://static1.squarespace.com/static/63562a452d6f8562938b7ce2/636400fad4a14c4f770899b3/6a677e545ad2fb2ac33d00c0/1785320269444/FRANCE+-+POMPIERS+-+INCENDIE+GIRONDE+-+26+JUILLET+2026-15.jpg?format=1500w",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "https://www.police-nationale.interieur.gouv.fr/actualite/feux-de-gironde-police-nationale-engagee",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        }
+      ]
+    }
+  ]
+}

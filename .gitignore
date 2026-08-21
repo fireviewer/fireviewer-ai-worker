@@ -19,6 +19,12 @@ outputs/
 runs/
 weights/
 wandb/
+media/
+uploads/
+captures/
+caches/
+benchmarks/**/media/
+benchmarks/**/materialized/
 **/dataset/
 **/datasets/
 **/checkpoints/
@@ -34,6 +40,8 @@ training/reference_cases_data/
 *.zip
 *.tar
 *.7z
+*.mp4
+*.mov
 *.log
 **/run.pid
 **/launcher.pid

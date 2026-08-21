@@ -1,0 +1,46 @@
+{
+  "schema": "fireviewer.panoramax-probe.v1",
+  "status": "metadata_only",
+  "zone_id": "die-justin-live-probe",
+  "api_url": "https://panoramax.ign.fr/api",
+  "bbox_wgs84": [
+    5.36,
+    44.74,
+    5.38,
+    44.76
+  ],
+  "limit": 5,
+  "query_sha256": "a6da443f5c3eb607875dab1c9b1555cf38a82756b44850af8960bab9d66cbd9a",
+  "retrieved_at": "2026-08-20T22:57:29.318780Z",
+  "assets_downloaded": false,
+  "images": [
+    {
+      "image_id": "7a4ce0ba-cbd6-4b73-a175-dfb973f41653",
+      "sequence_id": "38976412-14b0-4d97-916e-bc4ee3acbd33",
+      "longitude": 5.373055556,
+      "latitude": 44.751388889,
+      "heading_deg": 234.0,
+      "field_of_view_deg": 80.0,
+      "focal_length_mm": 4.2,
+      "gps_accuracy_m": 5.0,
+      "captured_at": "2024-11-04T15:45:20.041900Z",
+      "item_url": "https://panoramax.ign.fr/api/collections/38976412-14b0-4d97-916e-bc4ee3acbd33/items/7a4ce0ba-cbd6-4b73-a175-dfb973f41653",
+      "license_url": "https://alliance.numerique.gouv.fr/licence-ouverte-open-licence/",
+      "item_sha256": "5dd8e5f8e8fcc0456b4a8ebbdefe7746ac72ca4a1b816f5ee28d9a7fe8798c95"
+    },
+    {
+      "image_id": "8a4975fd-757f-4651-9bd7-885b209e6f29",
+      "sequence_id": "05ad7165-dd90-4008-b296-507f8924b893",
+      "longitude": 5.372777778,
+      "latitude": 44.751388889,
+      "heading_deg": 219.0,
+      "field_of_view_deg": 80.0,
+      "focal_length_mm": 4.2,
+      "gps_accuracy_m": 5.0,
+      "captured_at": "2024-11-04T15:42:12.048800Z",
+      "item_url": "https://panoramax.ign.fr/api/collections/05ad7165-dd90-4008-b296-507f8924b893/items/8a4975fd-757f-4651-9bd7-885b209e6f29",
+      "license_url": "https://alliance.numerique.gouv.fr/licence-ouverte-open-licence/",
+      "item_sha256": "3c8f7c054567a000f8a59936dea652135b22327870dad78c2bb95283f38cd016"
+    }
+  ]
+}

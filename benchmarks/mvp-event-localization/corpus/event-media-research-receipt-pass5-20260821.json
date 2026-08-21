@@ -1,0 +1,175 @@
+{
+  "schema": "fireviewer.event-media-research-receipt.v1",
+  "generated_at": "2026-08-21T00:12:05.522429+00:00",
+  "seeds_sha256": "7f9c87d0190dc5dd9d9db58e1e0ab51e81793166d9935926ce21782879fb4555",
+  "media_per_case_cap": 40,
+  "media_per_source_cap": 20,
+  "cases": [
+    {
+      "case_id": "FR-2026-07-TREVILLACH",
+      "source_count": 2,
+      "media_count": 8,
+      "sources": [
+        {
+          "source_id": "source-c30e716bf36a5b5e",
+          "requested_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "final_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "content_sha256": "78f10aa93c0098447b7dd30e1f03c506e3e1773dd3ae3694bd100e7c8757ffc3",
+          "title": "EN IMAGES - Incendie dans les Pyrénées-Orientales : les flammes laissent place à des paysages de désolation | TF1 Info",
+          "description": "[VIDÉO] L'incendie dans les Pyrénées-Orientales a parcouru 4.900 hectares près de Perpignan et provoqué l'évacuation de 12.000 personnes. Le feu n'a pas progressé pendant la nuit grâce notamment à des contrefeux allumés par les pompiers. Voici une sélection de clichés montrant l'ampleur de la dévastation. - EN IMAGES - Incendie dans les Pyrénées-Orientales : les flammes laissent place à des paysages de désolation (Sujets de société).",
+          "published_at": "2026-07-07T15:15:02.509+02:00"
+        },
+        {
+          "source_id": "source-a1f20570afe8c532",
+          "requested_url": "https://www.europesays.com/fr/1050275/",
+          "final_url": "https://www.europesays.com/fr/1050275/",
+          "content_sha256": "94e6767b7094957603b41a127b4a550bd0b21d6f4ff790ad0ea1c44c68fdb69e",
+          "title": "IMAGES. Incendie dans les Pyrénées-Orientales : vallons calcinés, cendres éparses, maisons ravagées… Rodès, un village devenu fantomatique - France | République française",
+          "description": "Des coteaux cramoisis, des arbres couleur charbon, des cendres éparses, des voitures calcinées, des maisons léchées par les flammes voire carbonisées… À perte",
+          "published_at": "2026-07-08T00:20:17+00:00"
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-bc692d24e8b2c69db04e",
+          "source_id": "source-c30e716bf36a5b5e",
+          "source_page_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "media_url": "https://photos.tf1info.fr/images/1280/720/incendie-pyrenees-orientales-7-juillet-1-f7777d-0@1x.jpeg?overlayImage=bG9nby10ZjFpbmZvLWRlZmF1bHQucG5n&overlayWidth=18&overlayGravity=northwest&s=78c802",
+          "relative_path": "FR-2026-07-TREVILLACH/01-bc692d24e8b2c69d.jpg",
+          "sha256": "bc692d24e8b2c69db04ed75edc76cddae97e1eb826aea66ff7910d063151b5f9",
+          "size_bytes": 239211,
+          "content_type": "image/jpeg",
+          "width": 1280,
+          "height": 720,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-55096485d14442805fb2",
+          "source_id": "source-c30e716bf36a5b5e",
+          "source_page_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "media_url": "https://photos.tf1info.fr/images/767/510/incendie-pyrenees-orientales-7-juillet-4c797b-0@1x.jpeg",
+          "relative_path": "FR-2026-07-TREVILLACH/02-55096485d1444280.jpg",
+          "sha256": "55096485d14442805fb25a81dde2d0c36c609eca25f62668d00c41493f92b77c",
+          "size_bytes": 65310,
+          "content_type": "image/jpeg",
+          "width": 767,
+          "height": 510,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-29bbf683bbc3d36157b8",
+          "source_id": "source-c30e716bf36a5b5e",
+          "source_page_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "media_url": "https://photos.tf1info.fr/images/767/574/incendie-pyrenees-orientales-7-juillet-1-9db342-0@1x.jpeg",
+          "relative_path": "FR-2026-07-TREVILLACH/03-29bbf683bbc3d361.jpg",
+          "sha256": "29bbf683bbc3d36157b84284f2209a89a1303be4906a92a08172aec65024703a",
+          "size_bytes": 120030,
+          "content_type": "image/jpeg",
+          "width": 767,
+          "height": 574,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-21da5b8d49774138b5c4",
+          "source_id": "source-c30e716bf36a5b5e",
+          "source_page_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "media_url": "https://photos.tf1info.fr/images/767/510/incendie-vinca-pyrenees-orientales-618dc3-0@1x.jpeg",
+          "relative_path": "FR-2026-07-TREVILLACH/04-21da5b8d49774138.jpg",
+          "sha256": "21da5b8d49774138b5c44ce00d53ac0a18035785264c1bd8bb583b55ea8f4938",
+          "size_bytes": 83502,
+          "content_type": "image/jpeg",
+          "width": 767,
+          "height": 510,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-e87d1fa0f9d1b5e16b97",
+          "source_id": "source-c30e716bf36a5b5e",
+          "source_page_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "media_url": "https://photos.tf1info.fr/images/767/510/maison-rodes-incendie-pyrenees-orientales-460376-0@1x.jpeg",
+          "relative_path": "FR-2026-07-TREVILLACH/05-e87d1fa0f9d1b5e1.jpg",
+          "sha256": "e87d1fa0f9d1b5e16b970a40ac43774e520ecc90f0360718489821929bae7518",
+          "size_bytes": 123001,
+          "content_type": "image/jpeg",
+          "width": 767,
+          "height": 510,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-a9c2e498b6177ec26677",
+          "source_id": "source-c30e716bf36a5b5e",
+          "source_page_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "media_url": "https://photos.tf1info.fr/images/767/510/feu-foret-ille-sur-tet-d0d67d-0@1x.jpeg",
+          "relative_path": "FR-2026-07-TREVILLACH/06-a9c2e498b6177ec2.jpg",
+          "sha256": "a9c2e498b6177ec266777a744bf6852af5bb7053f526cdf38d1e43a3043a0d4c",
+          "size_bytes": 55846,
+          "content_type": "image/jpeg",
+          "width": 767,
+          "height": 510,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-a4c0095cf7944095f8e2",
+          "source_id": "source-c30e716bf36a5b5e",
+          "source_page_url": "https://www.tf1info.fr/societe/en-images-incendie-dans-les-pyrenees-orientales-les-flammes-laissent-place-a-des-paysages-de-desolation-2451821.html",
+          "media_url": "https://vidpreviews.tf1.fr/image//0542b491210a0b73b5bc86a671136220af49a955ca03fc555c53bb89747b8a91.jpg",
+          "relative_path": "FR-2026-07-TREVILLACH/07-a4c0095cf7944095.jpg",
+          "sha256": "a4c0095cf7944095f8e229cbe9aadd984219eb67a84808c38341296d28d764e7",
+          "size_bytes": 119510,
+          "content_type": "image/jpeg",
+          "width": 1920,
+          "height": 1080,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-99c8c7e5d4eed6bf98ff",
+          "source_id": "source-a1f20570afe8c532",
+          "source_page_url": "https://www.europesays.com/fr/1050275/",
+          "media_url": "https://www.europesays.com/fr/wp-content/uploads/2026/07/1783470028_image.jpg",
+          "relative_path": "FR-2026-07-TREVILLACH/08-99c8c7e5d4eed6bf.jpg",
+          "sha256": "99c8c7e5d4eed6bf98ff6c39bd76d43768062b4af9e3f5b31055b9c3225115dd",
+          "size_bytes": 272872,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://photos.tf1info.fr/images/230/230/sd-sdvsss-7a0382-0@1x.jpeg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.gendarmerie.interieur.gouv.fr/gendinfo/terrain/immersion/2026/incendie-dans-les-pyrenees-orientales-temoignage-d-un-gendarme-au-caeur-des-evacuations",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        },
+        {
+          "url": "https://www.europesays.com/fr/wp-content/uploads/2025/03/europesays-750x150-1.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.europesays.com/fr/wp-content/uploads/2025/03/europesays-750x150-1.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.imago-images.de/st/0860783107",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        }
+      ]
+    }
+  ]
+}

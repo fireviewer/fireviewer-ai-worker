@@ -1,0 +1,86 @@
+{
+  "schema": "fireviewer.event-media-research-seeds.v1",
+  "cases": [
+    {
+      "case_id": "FR-2026-06-DIE-JUSTIN",
+      "pages": [
+        "https://www.ledauphine.com/faits-divers-justice/2026/07/10/les-images-impressionnantes-de-l-incendie-de-die-la-nuit-c-est-un-spectacle-de-desolation",
+        "https://gailphoto.fr/recits-randonnee/incendie-die-drome-2026-reportage-photo/",
+        "https://www.atmo-auvergnerhonealpes.fr/actualite/incendie-dans-le-diois-26-mobilisation-pour-suivre-limpact-des-fumees",
+        "https://www.humida.fr/incendie-diois-2026-drome-die/"
+      ]
+    },
+    {
+      "case_id": "FR-2026-06-BOUSSES",
+      "pages": [
+        "https://www.lot-et-garonne.gouv.fr/Publications/Salle-de-presse/Communiques-de-presse/2026/Feux-de-forets-a-Durance-et-Bousses-point-de-situation-a-18h00",
+        "https://www.prefectures-regions.gouv.fr/nouvelle-aquitaine/Actualites/Feu-de-foret-a-Bousses-Lot-et-Garonne-l-anticipation-et-le-pre-positionnement-des-moyens-zonaux",
+        "https://www.ladepeche.fr/2026/06/23/65-hectares-brules-170-sapeurs-pompiers-mobilises-une-maison-evacuee-un-incendie-dampleur-ravage-une-partie-de-la-foret-dans-le-lot-et-garonne-13433998.php",
+        "https://www.francebleu.fr/infos/faits-divers-justice/deux-feux-de-foret-en-lot-et-garonne-a-bousses-et-durance-700-hectares-menaces-9734106"
+      ]
+    },
+    {
+      "case_id": "FR-2026-06-BENONCES-SERRIERES",
+      "pages": [
+        "https://www.ain.gouv.fr/index.php/Actualites/Actualites/Feu-de-foret-Secteur-de-Serrieres-de-Briord",
+        "https://www.ledauphine.com/faits-divers-justice/2026/06/23/incendie-en-cours-dans-le-bas-bugey-une-centaine-de-pompiers-et-quatre-bombardiers-d-eau-sur-place",
+        "https://www.francebleu.fr/infos/faits-divers-justice/un-incendie-parcourt-70-hectares-a-benonces-dans-l-ain-une-centaine-de-pompiers-mobilises-5845929",
+        "https://www.fr-alert.gouv.fr/les-alertes/FR-ALERT.1782293602.90000.0"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-TREVILLACH",
+      "pages": [
+        "https://www.pyrenees-orientales.gouv.fr/layout/set/print/Actualites/Communique-de-presse/Annee-2026/Juillet-2026/Incendie-de-Trevillach-Point-de-situation-n-8-le-06.07.26.-a-13h00",
+        "https://www.centrepresseaveyron.fr/2026/07/05/videos-un-samedi-soir-de-feu-pres-de-2000-hectares-brules-apres-une-nuit-de-flammes-entre-pyrenees-orientales-aude-et-drome-13454184.php",
+        "https://www.rtl.fr/actu/justice-faits-divers/plus-de-900-hectares-touches-par-un-incendie-dans-les-pyrenees-orientales-au-moins-500-pompiers-mobilises-7900652613",
+        "https://www.lapresse.it/video/2026/07/05/francia-incendio-sui-pirenei-600-ettari-in-fiamme-a-trevillach/"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-FONTAINEBLEAU",
+      "pages": [
+        "https://www.seine-et-marne.gouv.fr/Actualites/Incendies-dans-le-massif-forestier-de-Fontainebleau",
+        "https://www.tf1info.fr/meteo/en-images-incendie-tres-virulent-dans-la-foret-de-fontainebleau-seine-et-marne-des-avions-dash-utilises-pour-la-premiere-fois-en-ile-de-france-2452800.html",
+        "https://www.lemonde.fr/planete/video/2026/07/13/l-incendie-en-foret-de-fontainebleau-qui-a-parcouru-800-hectares-en-images_6723061_3244.html",
+        "https://commons.wikimedia.org/wiki/Category:2026_fires_in_the_forest_of_Fontainebleau"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-SAUMOS",
+      "pages": [
+        "https://www.gironde.gouv.fr/Actualites/Communiques-de-presse/Communiques-de-presse-2026/Aout-2026/Incendie-de-Saumos-point-de-situation-ce-mardi-4-aout-a-20h",
+        "https://www.centrepresseaveyron.fr/2026/07/23/videos-plus-de-3-000-hectares-brules-20-000-evacuations-des-habitations-menacees-en-gironde-un-incendie-toujours-hors-de-controle-13480995.php",
+        "https://tvcapferret.com/incendie-saumos-origine-image-satellite/",
+        "https://commons.wikimedia.org/wiki/Category:2026_Landes_forest_wildfires"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-BISCARROSSE",
+      "pages": [
+        "https://www.landes.gouv.fr/Actualites/Actualites/Incendie-en-cours-retour-des-habitants-dans-les-secteurs-mis-en-securite-de-Biscarrosse",
+        "https://www.gendarmerie.interieur.gouv.fr/gendinfo/temoignages/incendies-les-gendarmes-de-biscarrosse-ont-fait-front",
+        "https://www.tf1.fr/tf1/jt-20h/videos/un-fourgon-prend-feu-50-hectares-brules-a-biscarrosse-77591510.html",
+        "https://www.lemonde.fr/planete/video/2026/07/28/incendies-les-proprietaires-des-chevaux-echappes-des-flammes-de-biscarrosse-racontent_6734875_3244.html"
+      ]
+    },
+    {
+      "case_id": "FR-2026-08-BELLEGARDE-DIOIS",
+      "pages": [
+        "https://www.ledauphine.com/faits-divers-justice/2026/08/05/le-feu-ravage-la-foret-dans-le-diois-retour-sur-une-journee-de-combat-pour-les-sapeurs-pompiers",
+        "https://www.ledauphine.com/videos/le-feu-ravage-les-hauteurs-de-bellegarde-en-diois-le-maire-temoigne-3vfsp3k?playlist=qlsvu5",
+        "https://mediascitoyens-diois.info/2026/08/incendie-du-massif-du-claps-bellegarde-en-diois/",
+        "https://www.leparisien.fr/drome-26/drome-un-feu-de-foret-menace-plusieurs-centaines-dhectares-300-pompiers-mobilises-04-08-2026-7W3VYDPIZBD57LQXNH2DB3JNZI.php"
+      ]
+    },
+    {
+      "case_id": "FR-2026-08-LUGLON",
+      "pages": [
+        "https://www.tf1info.fr/environnement-ecologie/video-incendie-dans-les-landes-je-m-apprete-a-tout-perdre-l-inquietude-des-habitants-de-luglon-evacues-en-raison-du-feu-2458500.html",
+        "https://fr.euronews.com/my-europe/2026/08/14/nouveau-depart-de-feu-dans-les-landes-1100-hectares-brules-plus-de-500-personnes-evacuees",
+        "https://www.boursorama.com/actualite-economique/actualites-amp/incendie-dans-les-landes-les-moyens-se-concentrent-sur-la-reprise-de-feu-nocturne-f9df0213b32564f7adf0e4972bfde726",
+        "https://www.alerte-rdv-prefecture.fr/actualites/prefet-des-landes/2088902490754257074"
+      ]
+    }
+  ]
+}

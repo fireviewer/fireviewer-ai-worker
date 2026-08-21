@@ -1,0 +1,78 @@
+{
+  "schema": "fireviewer.event-media-research-seeds.v1",
+  "cases": [
+    {
+      "case_id": "FR-2026-06-BOUSSES",
+      "pages": [
+        "https://feuxdeforet.fr/en/lot-et-garonne-47/durance-23-06-2026-507/",
+        "https://www.ladepeche.fr/2026/06/24/jai-un-cheval-un-ane-et-des-chevres-que-jai-du-evacuer-un-retour-au-calme-pour-les-41-habitants-du-petit-village-de-bousses-dans-le-lot-et-garonne-13433841.php",
+        "https://www.prefectures-regions.gouv.fr/nouvelle-aquitaine/layout/set/print/Actualites/Feu-de-foret-a-Bousses-Lot-et-Garonne-l-anticipation-et-le-pre-positionnement-des-moyens-zonaux",
+        "https://www.asatunews.co.id/fr/incendies-vegetation-pompiers-lot-et-garonne"
+      ]
+    },
+    {
+      "case_id": "FR-2026-06-BENONCES-SERRIERES",
+      "pages": [
+        "https://www.leprogres.fr/faits-divers-justice/2026/06/23/incendie-en-cours-dans-le-bas-bugey-une-centaine-de-pompiers-et-quatre-bombardiers-d-eau-sur-place",
+        "https://www.mairieserrieresdebriord.fr/bulletin-annuel-information",
+        "https://www.ledauphine.com/faits-divers-justice/2026/06/24/le-feu-de-foret-est-fixe-apres-avoir-parcouru-70-hectares",
+        "https://www.ain.gouv.fr/index.php/Actualites/Actualites/Feu-de-foret-Secteur-de-Serrieres-de-Briord"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-TREVILLACH",
+      "pages": [
+        "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+        "https://www.gendarmerie.interieur.gouv.fr/gendinfo/terrain/immersion/2026/incendie-dans-les-pyrenees-orientales-temoignage-d-un-gendarme-au-caeur-des-evacuations",
+        "https://feuxdeforet.fr/pyrenees-orientales/incendie-de-trevillach-4-700-hectares-parcourus-750-pompiers-mobilises-dans-des-conditions-extremes-06-07-2026-7138/",
+        "https://feuxdeforet.fr/alerte-info/incendie-majeur-dans-les-pyrenees-orientales-220-hectares-deja-brules-a-trevillach-04-07-2026-7128/"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-FONTAINEBLEAU",
+      "pages": [
+        "https://www.nurphoto.com/gallery/640224",
+        "https://www.gendarmerie.interieur.gouv.fr/gendinfo/actualites/2026/incendie-de-fontainebleau-une-reponse-globale-de-la-gendarmerie",
+        "https://www.lemonde.fr/planete/article/2026/07/14/a-fontainebleau-plus-les-heures-passent-plus-ca-devient-irreel-de-se-dire-que-la-foret-est-en-flammes_6723244_3244.html",
+        "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-SAUMOS",
+      "pages": [
+        "https://www.rtl.fr/actu/meteo/en-images-d-immenses-flammes-une-fumee-epaisse-les-photos-spectaculaires-des-incendies-qui-ravagent-le-sud-ouest-7900657099",
+        "https://french.ahram.org.eg/NewsContentMulti/91336/Multimedia.aspx",
+        "https://www.gettyimages.dk/detail/news-photo/le-temple-july-24-2026-fire-in-the-temple-and-saumos-area-news-photo/2288151837",
+        "https://www.imago-images.com/st/0862769758"
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-BISCARROSSE",
+      "pages": [
+        "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+        "https://www-pp.afp.com/en/node/3843954",
+        "https://www.tf1info.fr/societe/les-degats-sont-colossaux-5000-m-d-entrepot-brules-les-images-impressionnantes-d-une-zone-commerciale-ravagee-par-l-incendie-dans-les-landes-2454990.html",
+        "https://www.amicale-parentissoise-de-loisirs.com/photos",
+        "https://www.ladepeche.fr/2026/07/24/video-incendie-des-dizaines-de-chevaux-liberes-en-urgence-de-leurs-centres-equestres-pour-echapper-aux-flammes-a-biscarrosse-13482528.php"
+      ]
+    },
+    {
+      "case_id": "FR-2026-08-BELLEGARDE-DIOIS",
+      "pages": [
+        "https://www.ledauphine.com/faits-divers-justice/2026/08/10/incendie-dans-le-diois-apres-une-semaine-de-combat-le-feu-est-toujours-actif",
+        "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+        "https://www.drome.gouv.fr/Publications/Communiques-de-presse/Communiques-de-presse-2026/Aout-2026",
+        "https://www.alerte-rdv-prefecture.fr/actualites/prefete-de-la-drome/2086121483357638809"
+      ]
+    },
+    {
+      "case_id": "FR-2026-08-LUGLON",
+      "pages": [
+        "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+        "https://www.boursorama.com/actualite-economique/actualites-amp/incendie-dans-les-landes-le-vent-s-est-leve-la-situation-redevient-defavorable-514641f61e7a088c1454a755677dc9ff",
+        "https://www.reutersconnect.com/item/wildfires-in-france/dGFnOnJldXRlcnMuY29tLDIwMjY6bmV3c21sX1JDMjBZTUFEMlVLSw",
+        "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises"
+      ]
+    }
+  ]
+}

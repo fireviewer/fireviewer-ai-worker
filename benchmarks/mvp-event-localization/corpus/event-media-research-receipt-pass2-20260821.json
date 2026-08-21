@@ -1,0 +1,2880 @@
+{
+  "schema": "fireviewer.event-media-research-receipt.v1",
+  "generated_at": "2026-08-21T00:02:20.099164+00:00",
+  "seeds_sha256": "7bdc6d478cd7067d91a64c44d269c0017017df5d3e834ab1ca3e7d7ed470a132",
+  "media_per_case_cap": 20,
+  "cases": [
+    {
+      "case_id": "FR-2026-06-BOUSSES",
+      "source_count": 2,
+      "media_count": 7,
+      "sources": [
+        {
+          "source_id": "source-3f06652400ac86f2",
+          "requested_url": "https://feuxdeforet.fr/en/lot-et-garonne-47/durance-23-06-2026-507/",
+          "final_url": "https://feuxdeforet.fr/en/lot-et-garonne-47/durance-23-06-2026-507/",
+          "content_sha256": "d8a91e0e0970ad8a7836d9b622441a8bc73b39afaed5c1193721ddb60f07c2dd",
+          "title": "Wildfire in Boussès (47) : the fire is extinguished",
+          "description": "Feu éteint à Boussès (Lot-et-Garonne). Un feu de forêt a parcouru 87 hectares avant d'être maîtrisé, mobilisant jusqu'à 180 sapeurs-pompiers et 7 avions bombardiers d'eau. Un véhicule du SDIS a été…",
+          "published_at": null
+        },
+        {
+          "source_id": "source-8d0f34ece39f8f80",
+          "requested_url": "https://www.ladepeche.fr/2026/06/24/jai-un-cheval-un-ane-et-des-chevres-que-jai-du-evacuer-un-retour-au-calme-pour-les-41-habitants-du-petit-village-de-bousses-dans-le-lot-et-garonne-13433841.php",
+          "final_url": "https://www.ladepeche.fr/2026/06/24/jai-un-cheval-un-ane-et-des-chevres-que-jai-du-evacuer-un-retour-au-calme-pour-les-41-habitants-du-petit-village-de-bousses-dans-le-lot-et-garonne-13433841.php",
+          "content_sha256": "204c7b3ee339db10f18a3a1a93a24fde0841a5152ef54813b1b7c44173f92e83",
+          "title": "\"J’ai un cheval, un âne et des chèvres que j’ai dû évacuer\" : un retour au calme pour les 41 habitants du petit village de Boussès, dans le Lot-et-Garonne, après les menaçants feux de forêt",
+          "description": "Ce mardi 23 juin, deux feux de forêt se sont déclarés près du petit village de Boussès, près de Houeillès, dans le Lot-et-Garonne. Au lendemain des faits, le village de 41 habitants se réveille avec un feu éteint et...",
+          "published_at": null
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-b3dd36e7c919adf02468",
+          "source_id": "source-3f06652400ac86f2",
+          "source_page_url": "https://feuxdeforet.fr/en/lot-et-garonne-47/durance-23-06-2026-507/",
+          "media_url": "https://feuxdeforet.fr/medias/507/hero.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/01-b3dd36e7c919adf0.jpg",
+          "sha256": "b3dd36e7c919adf024684088611f50ca6cde0e985be80ad4cc24c897d7ef152a",
+          "size_bytes": 95211,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 700,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-5376ec8b9b7933fc3c7e",
+          "source_id": "source-3f06652400ac86f2",
+          "source_page_url": "https://feuxdeforet.fr/en/lot-et-garonne-47/durance-23-06-2026-507/",
+          "media_url": "https://fdfdata.fr/storage/signalements/507/mc/3478/dae05048-7f94-4901-93a3-b2c8ae3a06de.webp?v=1782238357",
+          "relative_path": "FR-2026-06-BOUSSES/02-5376ec8b9b7933fc.webp",
+          "sha256": "5376ec8b9b7933fc3c7e6097147045491a647f8b48c41c04679ac9e9d221c6d2",
+          "size_bytes": 290510,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 1241,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-f1852c376b353ac3d5ac",
+          "source_id": "source-3f06652400ac86f2",
+          "source_page_url": "https://feuxdeforet.fr/en/lot-et-garonne-47/durance-23-06-2026-507/",
+          "media_url": "https://fdfdata.fr/storage/signalements/507/mc/3445/fc65bc4b-1924-41f0-8e35-5a00777dd2f0.webp?v=1782234036",
+          "relative_path": "FR-2026-06-BOUSSES/03-f1852c376b353ac3.webp",
+          "sha256": "f1852c376b353ac3d5ac7fb9772877855f4398ef7734a5b2075f1a4bc9b4b83e",
+          "size_bytes": 191598,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 1244,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-11d511c8630a87d01f6a",
+          "source_id": "source-8d0f34ece39f8f80",
+          "source_page_url": "https://www.ladepeche.fr/2026/06/24/jai-un-cheval-un-ane-et-des-chevres-que-jai-du-evacuer-un-retour-au-calme-pour-les-41-habitants-du-petit-village-de-bousses-dans-le-lot-et-garonne-13433841.php",
+          "media_url": "https://images.ladepeche.fr/api/v1/images/view/6a3be780161a68dd4b000a15/hd/image.jpg?v=1",
+          "relative_path": "FR-2026-06-BOUSSES/04-11d511c8630a87d0.jpg",
+          "sha256": "11d511c8630a87d01f6a17537218293e2015032a8ba157cc9d6613c66b364b40",
+          "size_bytes": 112037,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-15df873a6f6ed1d82000",
+          "source_id": "source-8d0f34ece39f8f80",
+          "source_page_url": "https://www.ladepeche.fr/2026/06/24/jai-un-cheval-un-ane-et-des-chevres-que-jai-du-evacuer-un-retour-au-calme-pour-les-41-habitants-du-petit-village-de-bousses-dans-le-lot-et-garonne-13433841.php",
+          "media_url": "https://images.ladepeche.fr/api/v1/images/view/6a3be780161a68dd4b000a15/large/image.jpg?v=1",
+          "relative_path": "FR-2026-06-BOUSSES/05-15df873a6f6ed1d8.jpg",
+          "sha256": "15df873a6f6ed1d82000ca8f7667b77dfe8cac4a2a426e02a55cfcef61fdb400",
+          "size_bytes": 72235,
+          "content_type": "image/jpeg",
+          "width": 885,
+          "height": 500,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-c757fb43c5bebfe9e36a",
+          "source_id": "source-8d0f34ece39f8f80",
+          "source_page_url": "https://www.ladepeche.fr/2026/06/24/jai-un-cheval-un-ane-et-des-chevres-que-jai-du-evacuer-un-retour-au-calme-pour-les-41-habitants-du-petit-village-de-bousses-dans-le-lot-et-garonne-13433841.php",
+          "media_url": "https://medialb.ultimedia.com/multi/sxk88/3vvzpvr-O.jpg",
+          "relative_path": "FR-2026-06-BOUSSES/06-c757fb43c5bebfe9.jpg",
+          "sha256": "c757fb43c5bebfe9e36a9b9025eb56f5f8e8b1cb5255059c5e0bf4b8d9eadf12",
+          "size_bytes": 492639,
+          "content_type": "image/jpeg",
+          "width": 480,
+          "height": 854,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-cec722b6f513182e87e0",
+          "source_id": "source-8d0f34ece39f8f80",
+          "source_page_url": "https://www.ladepeche.fr/2026/06/24/jai-un-cheval-un-ane-et-des-chevres-que-jai-du-evacuer-un-retour-au-calme-pour-les-41-habitants-du-petit-village-de-bousses-dans-le-lot-et-garonne-13433841.php",
+          "media_url": "https://images.ladepeche.fr/api/v1/images/view/6a3be780161a68dd4b000a15/full/image.jpg?v=1",
+          "relative_path": "FR-2026-06-BOUSSES/07-cec722b6f513182e.jpg",
+          "sha256": "cec722b6f513182e87e0fc0c52e6fa121ea4fadba920071578c3272ca662c556",
+          "size_bytes": 56654,
+          "content_type": "image/jpeg",
+          "width": 780,
+          "height": 520,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://fdfdata.fr/storage/signalements/507/mc/3478/54bf4ec3-309a-489a-aac6-f727850491ea_thumb.jpg?v=1782238349",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.facebook.com/tr?id=1064442748968944&ev=PageView&noscript=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type text/plain"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://stats.dycast.pro/js/index.php?idsite=4&rec=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/gif"
+        },
+        {
+          "url": "https://logs4.xiti.com/hit.xiti?s=111841&s2=&p=::::::13433841&di=&x1=web-noscript",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/gif"
+        },
+        {
+          "url": "https://assets.ladepeche.fr/img/meteo/temps/",
+          "stage": "media",
+          "error": "HTTPError: HTTP Error 404: Not Found"
+        },
+        {
+          "url": "https://assets.ladepeche.fr/img/lazy_standard.jpg?9931565c",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.ladepeche.fr/img/paywall/illustration-gauche.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.ladepeche.fr/img/paywall/illustration-droite.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://assets.ladepeche.fr/img/img_abo.png?d9f949de",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.milibris.com/thumbnail/title/3db3b795-5d91-4f89-8a02-68bdb46f61e2/front/catalog-cover.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.prefectures-regions.gouv.fr/nouvelle-aquitaine/layout/set/print/Actualites/Feu-de-foret-a-Bousses-Lot-et-Garonne-l-anticipation-et-le-pre-positionnement-des-moyens-zonaux",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        },
+        {
+          "url": "https://www.asatunews.co.id/fr/incendies-vegetation-pompiers-lot-et-garonne",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-06-BENONCES-SERRIERES",
+      "source_count": 2,
+      "media_count": 3,
+      "sources": [
+        {
+          "source_id": "source-74835436f15bcca5",
+          "requested_url": "https://www.mairieserrieresdebriord.fr/bulletin-annuel-information",
+          "final_url": "https://www.mairieserrieresdebriord.fr/bulletin-annuel-information",
+          "content_sha256": "f90b78da0551440a3856a4bf7cdec7b5ceebaeeae1895f1ca769eba77a855527",
+          "title": "Editions d'information | Serrières de Briord",
+          "description": "Téléchargement de toutes les éditions communales :\n- Bulletins annuels\n- Petit serriérois",
+          "published_at": null
+        },
+        {
+          "source_id": "source-54ba36c99c0cb02c",
+          "requested_url": "https://www.ain.gouv.fr/index.php/Actualites/Actualites/Feu-de-foret-Secteur-de-Serrieres-de-Briord",
+          "final_url": "https://www.ain.gouv.fr/index.php/Actualites/Actualites/Feu-de-foret-Secteur-de-Serrieres-de-Briord",
+          "content_sha256": "34d0012c1c4b8cd77d888013fc49e694e9bc1a8a50c2bc7b3ef3ebadf2ba8761",
+          "title": "Feu de forêt - Secteur de Serrières-de-Briord",
+          "description": "Portail de l'Etat en Les services de l'État dans l'Ain",
+          "published_at": null
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-d13be5ce1c255a6cc5b7",
+          "source_id": "source-74835436f15bcca5",
+          "source_page_url": "https://www.mairieserrieresdebriord.fr/bulletin-annuel-information",
+          "media_url": "https://static.wixstatic.com/media/d95d74_5aa21ff0925f42f798b6c676f058e893%7Emv2.jpg/v1/fit/w_2500,h_1330,al_c/d95d74_5aa21ff0925f42f798b6c676f058e893%7Emv2.jpg",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/01-d13be5ce1c255a6c.jpg",
+          "sha256": "d13be5ce1c255a6cc5b71b5e36c52585ad77fd65fb7ef7cad7596f6367340ab8",
+          "size_bytes": 646196,
+          "content_type": "image/jpeg",
+          "width": 1773,
+          "height": 1330,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-602cfb9548c432d6199e",
+          "source_id": "source-54ba36c99c0cb02c",
+          "source_page_url": "https://www.ain.gouv.fr/index.php/Actualites/Actualites/Feu-de-foret-Secteur-de-Serrieres-de-Briord",
+          "media_url": "https://www.ain.gouv.fr/index.php/var/ide_site/storage/images/actualites/actualites/feu-de-foret-secteur-de-serrieres-de-briord/253077-5-fre-FR/Feu-de-foret-Secteur-de-Serrieres-de-Briord.png",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/02-602cfb9548c432d6.png",
+          "sha256": "602cfb9548c432d6199ebb85d58a3825da6580d1022d83d98e0b74923cab0857",
+          "size_bytes": 38265,
+          "content_type": "image/png",
+          "width": 1024,
+          "height": 576,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-247a525d1eb5d2fbc5ec",
+          "source_id": "source-54ba36c99c0cb02c",
+          "source_page_url": "https://www.ain.gouv.fr/index.php/Actualites/Actualites/Feu-de-foret-Secteur-de-Serrieres-de-Briord",
+          "media_url": "https://www.ain.gouv.fr/var/ide_site/storage/images/actualites/actualites/feu-de-foret-secteur-de-serrieres-de-briord/253077-5-fre-FR/Feu-de-foret-Secteur-de-Serrieres-de-Briord_large.png",
+          "relative_path": "FR-2026-06-BENONCES-SERRIERES/03-247a525d1eb5d2fb.png",
+          "sha256": "247a525d1eb5d2fbc5eccf4e623d6d8d17e527dac85038485c8b05156fe56403",
+          "size_bytes": 17642,
+          "content_type": "image/png",
+          "width": 334,
+          "height": 188,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://www.leprogres.fr/faits-divers-justice/2026/06/23/incendie-en-cours-dans-le-bas-bugey-une-centaine-de-pompiers-et-quatre-bombardiers-d-eau-sur-place",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 404: Not Found"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_6228ee36513b46ff8e1d4dc9ed1e6f88~mv2.jpg/v1/fill/w_288,h_136,al_c,q_80,usm_0.66_1.00_0.01,blur_2,enc_avif,quality_auto/d95d74_6228ee36513b46ff8e1d4dc9ed1e6f88~mv2.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_91835420992545a18808db7becf089c1~mv2.png/v1/fill/w_222,h_149,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/unnamed.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_a8590f2a814c465f9af357c0cac7d54c~mv2.png/v1/fill/w_49,h_49,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Bouton%20Illywap.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_e72c862a1c65469d80ff1cd6c286a354~mv2.jpg/v1/fill/w_123,h_76,al_c,q_80,usm_0.66_1.00_0.01,blur_2,enc_avif,quality_auto/d95d74_e72c862a1c65469d80ff1cd6c286a354~mv2.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_efbc57ac170547d3a71893c1156f6a8b~mv2.png/v1/fill/w_89,h_46,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/t%C3%A9l%C3%A9chargement.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/d95d74_c0abefcbb6b642d0ac889e0172e0a4d5~mv2.png/v1/fill/w_62,h_12,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/LONG_NOIR.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.wixstatic.com/media/4057345bcf57474b96976284050c00df.png/v1/fill/w_23,h_23,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/4057345bcf57474b96976284050c00df.png",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.ledauphine.com/faits-divers-justice/2026/06/24/le-feu-de-foret-est-fixe-apres-avoir-parcouru-70-hectares",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 404: Not Found"
+        },
+        {
+          "url": "https://www.ain.gouv.fr/extension/ide/design/ide_dsfr_design/images/light.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www.ain.gouv.fr/extension/ide/design/ide_dsfr_design/images/dark.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www.ain.gouv.fr/extension/ide/design/ide_dsfr_design/images/system.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-TREVILLACH",
+      "source_count": 3,
+      "media_count": 8,
+      "sources": [
+        {
+          "source_id": "source-cecbf09c4975854d",
+          "requested_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "final_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "content_sha256": "6886146d3ce5d25a8321895ad0bad010d68b91f4a40250276f471d6197ccc349",
+          "title": "Incendie à Trévillach (66) : le feu est éteint",
+          "description": "Incendie à Trévillach (66). Le feu est éteint.",
+          "published_at": null
+        },
+        {
+          "source_id": "source-bcaa2d747b3a9ebb",
+          "requested_url": "https://feuxdeforet.fr/pyrenees-orientales/incendie-de-trevillach-4-700-hectares-parcourus-750-pompiers-mobilises-dans-des-conditions-extremes-06-07-2026-7138/",
+          "final_url": "https://feuxdeforet.fr/pyrenees-orientales/incendie-de-trevillach-4-700-hectares-parcourus-750-pompiers-mobilises-dans-des-conditions-extremes-06-07-2026-7138/",
+          "content_sha256": "20ac2051d9f1bf6b4d8296ac3a45218b39d24dd9d4b3000d78fb5915ae6bdc54",
+          "title": "Incendie de Trévillach : plus de 4 600 hectares détruits, les pompiers en première ligne",
+          "description": "Découvrez la situation en direct : 750 sapeurs-pompiers luttent contre les flammes dans les Pyrénées-Orientales. Évacuations, réseaux perturbés et consignes de sécurité.",
+          "published_at": null
+        },
+        {
+          "source_id": "source-54deede75ebfcc88",
+          "requested_url": "https://feuxdeforet.fr/alerte-info/incendie-majeur-dans-les-pyrenees-orientales-220-hectares-deja-brules-a-trevillach-04-07-2026-7128/",
+          "final_url": "https://feuxdeforet.fr/alerte-info/incendie-majeur-dans-les-pyrenees-orientales-220-hectares-deja-brules-a-trevillach-04-07-2026-7128/",
+          "content_sha256": "ccaa790a13d12f13111d150bdce5ad97b0fc3226ccbbd003d9146cf7accff91c",
+          "title": "Incendie dans les Pyrénées-Orientales : 220 hectares déjà détruits par les flammes",
+          "description": "Un feu de forêt s’étend près de Trévillach. Découvrez les dernières infos et les consignes des autorités pour les habitants.",
+          "published_at": null
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-3bef192956c50d567bbb",
+          "source_id": "source-cecbf09c4975854d",
+          "source_page_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "media_url": "https://feuxdeforet.fr/medias/1387/hero.jpg",
+          "relative_path": "FR-2026-07-TREVILLACH/01-3bef192956c50d56.jpg",
+          "sha256": "3bef192956c50d567bbb5ef9a99a4a5bd15ac2392d22bd89eacc3e77f8d0a820",
+          "size_bytes": 73176,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 700,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-984fa9137fe98d96bb8e",
+          "source_id": "source-cecbf09c4975854d",
+          "source_page_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "media_url": "https://fdfdata.fr/storage/signalements/1387/mc/18610/486de966-4d95-47ca-a194-3afa35818121.webp?v=1783536217",
+          "relative_path": "FR-2026-07-TREVILLACH/02-984fa9137fe98d96.webp",
+          "sha256": "984fa9137fe98d96bb8e76d19241fd691397bb4e03e3a55eb736e71e275212f9",
+          "size_bytes": 88072,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 611,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-de7271e5a79791680680",
+          "source_id": "source-cecbf09c4975854d",
+          "source_page_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "media_url": "https://fdfdata.fr/storage/signalements/1387/mc/18523/d3a5fef3-a1bf-43c8-936c-50a6647154b7.webp?v=1783533885",
+          "relative_path": "FR-2026-07-TREVILLACH/03-de7271e5a7979168.webp",
+          "sha256": "de7271e5a7979168068090207c9c2b58e41fb199953b0f41e8ed548b56629c80",
+          "size_bytes": 57458,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 787,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-28a42ab0581e1184e4a4",
+          "source_id": "source-cecbf09c4975854d",
+          "source_page_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "media_url": "https://fdfdata.fr/storage/signalements/1387/mc/14627/b2be160f-acdf-46b6-9aad-f566d271c7bf.webp?v=1783402803",
+          "relative_path": "FR-2026-07-TREVILLACH/04-28a42ab0581e1184.webp",
+          "sha256": "28a42ab0581e1184e4a4124237fcf994c130605cc2fa7f78f8d8be880346297d",
+          "size_bytes": 40416,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 835,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-299a2db6441a2c629326",
+          "source_id": "source-cecbf09c4975854d",
+          "source_page_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "media_url": "https://fdfdata.fr/storage/signalements/1387/mc/14627/e996a980-65dd-43d9-996e-a048918e8202.webp?v=1783402803",
+          "relative_path": "FR-2026-07-TREVILLACH/05-299a2db6441a2c62.webp",
+          "sha256": "299a2db6441a2c629326b867719aaecb79d7290d7f580a363d24a918cdc71a78",
+          "size_bytes": 114876,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 935,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-691a8f4f3934e1b67b14",
+          "source_id": "source-cecbf09c4975854d",
+          "source_page_url": "https://feuxdeforet.fr/pyrenees-orientales-66/tarerach-04-07-2026-1387/",
+          "media_url": "https://fdfdata.fr/storage/signalements/1387/mc/14627/c858c255-d484-4b41-8403-5f256e41f88b.webp?v=1783402803",
+          "relative_path": "FR-2026-07-TREVILLACH/06-691a8f4f3934e1b6.webp",
+          "sha256": "691a8f4f3934e1b67b1497f5417d4a8b71a2b16765b20e6639cfa55b5d598f73",
+          "size_bytes": 46642,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 941,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-5e3722100d32f85e1454",
+          "source_id": "source-bcaa2d747b3a9ebb",
+          "source_page_url": "https://feuxdeforet.fr/pyrenees-orientales/incendie-de-trevillach-4-700-hectares-parcourus-750-pompiers-mobilises-dans-des-conditions-extremes-06-07-2026-7138/",
+          "media_url": "https://feuxdeforet.fr/medias/2026/07/pourquoi-les-canadair-ne-volent-ils-pas-la-nuit-pour-lutter-contre-les-feux-de-foret-11-07-2026-7156-16x9.jpg",
+          "relative_path": "FR-2026-07-TREVILLACH/07-5e3722100d32f85e.jpg",
+          "sha256": "5e3722100d32f85e1454ba105e68138a607c8351600751f97ceb847cc45634cd",
+          "size_bytes": 60071,
+          "content_type": "image/jpeg",
+          "width": 1280,
+          "height": 720,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-f9b70e723b51bb2c76f9",
+          "source_id": "source-54deede75ebfcc88",
+          "source_page_url": "https://feuxdeforet.fr/alerte-info/incendie-majeur-dans-les-pyrenees-orientales-220-hectares-deja-brules-a-trevillach-04-07-2026-7128/",
+          "media_url": "https://feuxdeforet.fr/medias/2026/07/debut-de-saison-2026-historique-25-000-hectares-deja-brules-en-france-10-07-2026-7154-16x9.jpg",
+          "relative_path": "FR-2026-07-TREVILLACH/08-f9b70e723b51bb2c.jpg",
+          "sha256": "f9b70e723b51bb2c76f9240403f1c4d3231ca2915aaf95003fa549ed60ba13e2",
+          "size_bytes": 86778,
+          "content_type": "image/jpeg",
+          "width": 1280,
+          "height": 720,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://fdfdata.fr/storage/signalements/1387/mc/17696/6aa30fd8-48e4-45ce-a46f-6c3c632d47d2_thumb.jpg?v=1783518097",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.facebook.com/tr?id=1064442748968944&ev=PageView&noscript=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type text/plain"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://stats.dycast.pro/js/index.php?idsite=4&rec=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/gif"
+        },
+        {
+          "url": "https://www.gendarmerie.interieur.gouv.fr/gendinfo/terrain/immersion/2026/incendie-dans-les-pyrenees-orientales-temoignage-d-un-gendarme-au-caeur-des-evacuations",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        },
+        {
+          "url": "https://www.facebook.com/tr?id=1064442748968944&ev=PageView&noscript=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type text/plain"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://stats.dycast.pro/js/index.php?idsite=4&rec=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/gif"
+        },
+        {
+          "url": "https://www.facebook.com/tr?id=1064442748968944&ev=PageView&noscript=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type text/plain"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/auvergne-rhone-alpes.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bourgogne-franche-comte.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/bretagne.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/centre-val-de-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/corse.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/grand-est.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/hauts-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/normandie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/nouvelle-aquitaine.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/occitanie.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/pays-de-la-loire.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/provence-alpes-cote-dazur.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://feuxdeforet.fr/assets/images/regions/ile-de-france.webp",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://stats.dycast.pro/js/index.php?idsite=4&rec=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/gif"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-FONTAINEBLEAU",
+      "source_count": 3,
+      "media_count": 16,
+      "sources": [
+        {
+          "source_id": "source-154adb7ca9924b18",
+          "requested_url": "https://www.nurphoto.com/gallery/640224",
+          "final_url": "https://www.nurphoto.com/gallery/640224",
+          "content_sha256": "75c8b8a6357fc76ae3aa4b15316afdeb384b507fc2e1338bcec0c8122db42361",
+          "title": "Forest Fire In The Paris Region – Photo Gallery | NurPhoto",
+          "description": "Browse 25 high-resolution editorial photographs from “Forest Fire In The Paris Region”, Fontainebleau, France. Press images by NurPhoto, available for editorial licensing.",
+          "published_at": "2026-07-13T14:36:06+02:00"
+        },
+        {
+          "source_id": "source-e8f701563f17cfc1",
+          "requested_url": "https://www.lemonde.fr/planete/article/2026/07/14/a-fontainebleau-plus-les-heures-passent-plus-ca-devient-irreel-de-se-dire-que-la-foret-est-en-flammes_6723244_3244.html",
+          "final_url": "https://www.lemonde.fr/planete/article/2026/07/14/a-fontainebleau-plus-les-heures-passent-plus-ca-devient-irreel-de-se-dire-que-la-foret-est-en-flammes_6723244_3244.html",
+          "content_sha256": "32ed63159c77e21ee19ca1b9aa3213ccf0218eb59539560b132a8e68ef0e18ea",
+          "title": null,
+          "description": null,
+          "published_at": null
+        },
+        {
+          "source_id": "source-458dc7f932e80048",
+          "requested_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "final_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "content_sha256": "9c28777a73f1b321656207c3c459df8f043bee5edeb836bd04df26a7a0fdf9d3",
+          "title": "Incendie du massif forestier de Fontainebleau, faisons le point",
+          "description": "2 000 hectares du massif forestier de Fontainebleau ont été atteints par les incendies en quelques jours. Soit environ 10 % de sa surface.",
+          "published_at": "2026-08-14T15:38:19.918266+02:00"
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-e48dc273aae8f8678cf1",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957562/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/01-e48dc273aae8f867.webp",
+          "sha256": "e48dc273aae8f8678cf16cb1c06a06fc864c0fac4796e25de3a12c93ff647ab6",
+          "size_bytes": 19270,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 393,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-184f5f161fb68820692d",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957563/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/02-184f5f161fb68820.webp",
+          "sha256": "184f5f161fb68820692d374db236d7f3684b681a0470df0fa5cf9d5c31c6df5e",
+          "size_bytes": 20624,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 393,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-14b9c69bfce25e85eec6",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957564/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/03-14b9c69bfce25e85.webp",
+          "sha256": "14b9c69bfce25e85eec6a2178ef32a6a62ccd0ab4de57f61ddf9f7b0db79b8bd",
+          "size_bytes": 13024,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 393,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-73d471b99840bd1bdd83",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957565/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/04-73d471b99840bd1b.webp",
+          "sha256": "73d471b99840bd1bdd83abc3eda516844a307d74026f5f614de8ab60aa16812c",
+          "size_bytes": 21436,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 393,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-44c4afc49d44ffb2e20f",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957566/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/05-44c4afc49d44ffb2.webp",
+          "sha256": "44c4afc49d44ffb2e20f38ede6e35cf7a3fab5e0e20df3703f95396c2d68a4b9",
+          "size_bytes": 17366,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 393,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-c405e4308a4697e0bfad",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957567/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/06-c405e4308a4697e0.webp",
+          "sha256": "c405e4308a4697e0bfadb5a7fe55353f8b4d1b302db536310444c5aa41e4173e",
+          "size_bytes": 12076,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 394,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-a87c5b4459f1a6a0ef29",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957568/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/07-a87c5b4459f1a6a0.webp",
+          "sha256": "a87c5b4459f1a6a0ef29ba83aa366f5ecc45befd0adeea20c225789da64d2fe4",
+          "size_bytes": 7626,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 394,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-ee2e81764d7bfa4b8466",
+          "source_id": "source-154adb7ca9924b18",
+          "source_page_url": "https://www.nurphoto.com/gallery/640224",
+          "media_url": "https://www.nurphoto.com/photo/13957569/picture/gallery_photo",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/08-ee2e81764d7bfa4b.webp",
+          "sha256": "ee2e81764d7bfa4b84669afd01bfc30592250f6f8d2a5e14f2a075ea1f1fe261",
+          "size_bytes": 9162,
+          "content_type": "image/webp",
+          "width": 591,
+          "height": 394,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-a29baaaedc596c632a8a",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++illustration++/++i18n++data:fr/++thumb++800x450.jpeg",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/09-a29baaaedc596c63.jpg",
+          "sha256": "a29baaaedc596c632a8abb79444b552dd8a9561944a2092c955256aae56dcab5",
+          "size_bytes": 61220,
+          "content_type": "image/jpeg",
+          "width": 800,
+          "height": 450,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-2e8252845b920456b6ac",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++paras++/2/++illustration++/++i18n++data:fr/++thumb++md:w1200?_=1784213862.559297",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/10-2e8252845b920456.jpg",
+          "sha256": "2e8252845b920456b6acbc70a43534e5e0b490e84cccc3616b268d42618e3ad7",
+          "size_bytes": 245148,
+          "content_type": "image/jpeg",
+          "width": 1080,
+          "height": 673,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-624033ecef7ab86baae5",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++paras++/17/9/++attr++data/++thumb++pano:w1200?_=1784896171.951295",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/11-624033ecef7ab86b.jpg",
+          "sha256": "624033ecef7ab86baae512edcd51e969f72648fd419c1ca571a99d183444d11c",
+          "size_bytes": 331387,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-63ccf30e3e0969259422",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++paras++/17/11/++attr++data/++thumb++pano:w1200?_=1784896186.887812",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/12-63ccf30e3e096925.jpg",
+          "sha256": "63ccf30e3e0969259422c8b428c669fd138a4fd77f22d23b1e3b554b544e44a2",
+          "size_bytes": 263161,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-6c8ff48ac04186fcde1e",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++paras++/17/12/++attr++data/++thumb++pano:w1200?_=1784896199.460416",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/13-6c8ff48ac04186fc.jpg",
+          "sha256": "6c8ff48ac04186fcde1e37294889dedb87978a828d14cfc0e3e41a9503a83f6b",
+          "size_bytes": 305956,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-ddca51bbb3a25de8d995",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++paras++/17/13/++attr++data/++thumb++pano:w1200?_=1784896204.559437",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/14-ddca51bbb3a25de8.jpg",
+          "sha256": "ddca51bbb3a25de8d995b76bde8eb16443859c8f83c929ab356a9bd2909f5ce5",
+          "size_bytes": 106818,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-e6153e305b300ff4f923",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++paras++/17/14/++attr++data/++thumb++pano:w1200?_=1784896213.923158",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/15-e6153e305b300ff4.jpg",
+          "sha256": "e6153e305b300ff4f92370adc8807caffc447786a6f6d4b9717faeefc0852734",
+          "size_bytes": 204192,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-3e6cebbb72552e092a47",
+          "source_id": "source-458dc7f932e80048",
+          "source_page_url": "https://www.onf.fr/vivre-la-foret/+/2d66::feux-foret-fontainebleau-faisons-le-point.html",
+          "media_url": "https://www.onf.fr/outils/actus/afef0c75-57c9-479f-8215-2bbdd5c0c27c/++versions++/5/++paras++/17/16/++attr++data/++thumb++pano:w1200?_=1784896226.812038",
+          "relative_path": "FR-2026-07-FONTAINEBLEAU/16-3e6cebbb72552e09.jpg",
+          "sha256": "3e6cebbb72552e092a4793f3db6b1a717359196ea94d7717609809d56536aa63",
+          "size_bytes": 113165,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://www.gendarmerie.interieur.gouv.fr/gendinfo/actualites/2026/incendie-de-fontainebleau-une-reponse-globale-de-la-gendarmerie",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-SAUMOS",
+      "source_count": 2,
+      "media_count": 3,
+      "sources": [
+        {
+          "source_id": "source-34dc24bea4a30a2b",
+          "requested_url": "https://www.rtl.fr/actu/meteo/en-images-d-immenses-flammes-une-fumee-epaisse-les-photos-spectaculaires-des-incendies-qui-ravagent-le-sud-ouest-7900657099",
+          "final_url": "https://www.rtl.fr/actu/meteo/en-images-d-immenses-flammes-une-fumee-epaisse-les-photos-spectaculaires-des-incendies-qui-ravagent-le-sud-ouest-7900657099",
+          "content_sha256": "2c8c9cbd1b1cdc7368396b4a9bdafada942e5103971216c20ce4adeafee5cff8",
+          "title": "EN IMAGES - D'immenses flammes, une fumée épaisse... Les photos spectaculaires des incendies qui ravagent le Sud-Ouest",
+          "description": "Vendredi 24 juillet, des incendies ravageurs continuent de se propager en Gironde et dans les Landes. Des milliers d'habitants et de vacanciers ont été évacués. Des milliers d'hectares de forêts sont partis en fumée.",
+          "published_at": "2026-07-24T11:40:43+02:00"
+        },
+        {
+          "source_id": "source-b327bdc4536d94f1",
+          "requested_url": "https://www.gettyimages.dk/detail/news-photo/le-temple-july-24-2026-fire-in-the-temple-and-saumos-area-news-photo/2288151837",
+          "final_url": "https://www.gettyimages.dk/detail/news-photo/le-temple-july-24-2026-fire-in-the-temple-and-saumos-area-news-photo/2288151837",
+          "content_sha256": "1f404b779749809785bfe4d25066ad95d35cda4311ce02f0ad0bec9648d02d6f",
+          "title": "Fire in the Temple and Saumos area of Gironde, smoke and trees with...",
+          "description": "Fire in the Temple and Saumos area of Gironde, smoke and trees with charred trunks after the forest fire.",
+          "published_at": null
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-cc3b97b36d2e2cddbb01",
+          "source_id": "source-34dc24bea4a30a2b",
+          "source_page_url": "https://www.rtl.fr/actu/meteo/en-images-d-immenses-flammes-une-fumee-epaisse-les-photos-spectaculaires-des-incendies-qui-ravagent-le-sud-ouest-7900657099",
+          "media_url": "https://images.rtl.fr/~c/2000v2000/rtl/www/1857522-images-des-violents-incendies-qui-ravagent-les-landes-et-la-gironde-fin-juillet-2026.png",
+          "relative_path": "FR-2026-07-SAUMOS/01-cc3b97b36d2e2cdd.png",
+          "sha256": "cc3b97b36d2e2cddbb018be5d64e8f36b078f942184a3236c3fe2ed04cff8614",
+          "size_bytes": 4503337,
+          "content_type": "image/png",
+          "width": 1500,
+          "height": 1000,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-d9800b3b98eff57e68dd",
+          "source_id": "source-34dc24bea4a30a2b",
+          "source_page_url": "https://www.rtl.fr/actu/meteo/en-images-d-immenses-flammes-une-fumee-epaisse-les-photos-spectaculaires-des-incendies-qui-ravagent-le-sud-ouest-7900657099",
+          "media_url": "https://images.rtl.fr/~c/795v350/rtl/www/1857522-images-des-violents-incendies-qui-ravagent-les-landes-et-la-gironde-fin-juillet-2026.png",
+          "relative_path": "FR-2026-07-SAUMOS/02-d9800b3b98eff57e.png",
+          "sha256": "d9800b3b98eff57e68ddc84a52dd07caa62a1a35387e773da069aa8abc639317",
+          "size_bytes": 546414,
+          "content_type": "image/png",
+          "width": 795,
+          "height": 350,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-23d23b871fc28a0ace65",
+          "source_id": "source-b327bdc4536d94f1",
+          "source_page_url": "https://www.gettyimages.dk/detail/news-photo/le-temple-july-24-2026-fire-in-the-temple-and-saumos-area-news-photo/2288151837",
+          "media_url": "https://media.gettyimages.com/id/2288151837/photo/fires-in-gironde-forest-fire-in-the-temple-saumos-region.jpg?s=594x594&w=gi&k=20&c=I2xVZY1j7NGMjy8O994Bm-sNGDz19_nz1Uv7jzb3Uug=",
+          "relative_path": "FR-2026-07-SAUMOS/03-23d23b871fc28a0a.jpg",
+          "sha256": "23d23b871fc28a0ace65decd83dfc92bcefc41143531fb9678177ebc0e89c792",
+          "size_bytes": 62301,
+          "content_type": "image/jpeg",
+          "width": 594,
+          "height": 396,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mM8IQkAAa8A48opxD0AAAAASUVORK5CYII=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "https://images.rtl.fr/~c/110v110/rtl/www/1776252-amandine-begot-rtl-midi.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.rtl.fr/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x",
+          "stage": "media",
+          "error": "InvalidURL: URL can't contain control characters. '/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x' (found at least ' ')"
+        },
+        {
+          "url": "https://images.rtl.fr/~c/290v193/rtl/www/1785279-l-eurodreams-a-de-nouvelles-regles.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.rtl.fr/~c/290v193/rtl/www/1861767-le-corps-de-sonia-bellina-29-ans-a-ete-retrouve-dans-un-champs-pres-d-arles.jpeg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.rtl.fr/~c/290v193/rtl/www/1850816-la-ministre-de-la-sante-stephanie-rist-le-25-juin-2026.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.rtl.fr/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x",
+          "stage": "media",
+          "error": "InvalidURL: URL can't contain control characters. '/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x' (found at least ' ')"
+        },
+        {
+          "url": "https://images.rtl.fr/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x",
+          "stage": "media",
+          "error": "InvalidURL: URL can't contain control characters. '/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x' (found at least ' ')"
+        },
+        {
+          "url": "https://images.rtl.fr/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x",
+          "stage": "media",
+          "error": "InvalidURL: URL can't contain control characters. '/rtl/www/1385615-ad-square.png 1x, https://images.rtl.fr/rtl/www/1385615-ad-square.png 2x' (found at least ' ')"
+        },
+        {
+          "url": "https://french.ahram.org.eg/NewsContentMulti/91336/Multimedia.aspx",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        },
+        {
+          "url": "https://www.gettyimages.dk/components/global-nav/static/static/UnsplashForBrands-520daa84a09aa3ec.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www.imago-images.com/st/0862769758",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-07-BISCARROSSE",
+      "source_count": 5,
+      "media_count": 20,
+      "sources": [
+        {
+          "source_id": "source-f8dcbb49f1da2adf",
+          "requested_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "final_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "content_sha256": "0c0c506715f5cd0b1b27412c470c966f1e2689e4b27c87c84e213aee0af430e1",
+          "title": "”Le premier truc qui te vient à l’esprit, c’est le chaos” : témoignage d’un Bisontin pris dans l’incendie de Biscarrosse",
+          "description": "Depuis jeudi 23 juillet, en début d'après-midi, Biscarrosse est l'une des communes françaises les plus touchées par les incendies. Ce vendredi à 17 heures,",
+          "published_at": null
+        },
+        {
+          "source_id": "source-a3c0496065b0c6a8",
+          "requested_url": "https://www-pp.afp.com/en/node/3843954",
+          "final_url": "https://www-pp.afp.com/en/node/3843954",
+          "content_sha256": "f555ee90392690f412ae0fbb7de3c09b6d7ccc2afad44a9efc37843b7dd178e2",
+          "title": "De retour après le feu, les habitants de Biscarrosse dans l'incertitude",
+          "description": "\"C'est dur à admettre mais il faut se relever\": à Biscarrosse (Landes), l'incendie qui a détruit près de 200 bâtiments a été \"fixé\" par les pompiers et la \"vie reprend\" mais les habitants, de retour dans la...",
+          "published_at": null
+        },
+        {
+          "source_id": "source-b03db39d9833a749",
+          "requested_url": "https://www.tf1info.fr/societe/les-degats-sont-colossaux-5000-m-d-entrepot-brules-les-images-impressionnantes-d-une-zone-commerciale-ravagee-par-l-incendie-dans-les-landes-2454990.html",
+          "final_url": "https://www.tf1info.fr/societe/les-degats-sont-colossaux-5000-m-d-entrepot-brules-les-images-impressionnantes-d-une-zone-commerciale-ravagee-par-l-incendie-dans-les-landes-2454990.html",
+          "content_sha256": "aa932449fb9e8712e976a1002512f42cfdb0c761bf6b0fd862ece2a5c1ff24a6",
+          "title": "\"Les dégâts sont colossaux, 5000 m² d'entrepôt brûlés\" : les images impressionnantes d'une zone commerciale ravagée par l'incendie dans les Landes | TF1 Info",
+          "description": "[VIDÉO] Depuis le 23 juillet, un incendie d’ampleur fait rage dans le secteur de Biscarrosse, dans les Landes. Brandon Waret, envoyé spécial pour TF1-LCI, constate les dégâts subis par une zone commerciale. - \"Les dégâts sont colossaux, 5000 m² d'entrepôt brûlés\" : les images impressionnantes d'une zone commerciale ravagée par l'incendie dans les Landes (Sujets de société).",
+          "published_at": "2026-07-25T13:02:33.164+02:00"
+        },
+        {
+          "source_id": "source-1958cce674aa4e43",
+          "requested_url": "https://www.amicale-parentissoise-de-loisirs.com/photos",
+          "final_url": "https://www.amicale-parentissoise-de-loisirs.com/photos",
+          "content_sha256": "b41a9b9d5da59334c1b97c35ab233c312d39c432c8f15a565775d2d829f51b53",
+          "title": "Photos | AMICALE PARENTISSOISE DE LOISIRS",
+          "description": "Quelques photographies souvenir des animations réalisées.... ",
+          "published_at": null
+        },
+        {
+          "source_id": "source-7b561c3ed4f9e4de",
+          "requested_url": "https://www.ladepeche.fr/2026/07/24/video-incendie-des-dizaines-de-chevaux-liberes-en-urgence-de-leurs-centres-equestres-pour-echapper-aux-flammes-a-biscarrosse-13482528.php",
+          "final_url": "https://www.ladepeche.fr/2026/07/24/video-incendie-des-dizaines-de-chevaux-liberes-en-urgence-de-leurs-centres-equestres-pour-echapper-aux-flammes-a-biscarrosse-13482528.php",
+          "content_sha256": "367c4532707d589c6866480df4609d2e1cf2006fae3b8432364d4bc8ac6ef8ac",
+          "title": "VIDEO. Incendie : des dizaines de chevaux libérés en urgence de leurs centres équestres pour échapper aux flammes à Biscarrosse",
+          "description": "Alors qu'un incendie ravage les Landes près de Biscarrosse depuis ce jeudi 23 juillet, plusieurs centres équestres ont lâché leurs chevaux en liberté pour leur permettre de s'enfuir. Plus de 2 600 hectares ont déjà...",
+          "published_at": null
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-e2a335a7115413f3cfc5",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/uploads/2026/07/biscarosse-incendie-3-1200x630.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/01-e2a335a7115413f3.jpg",
+          "sha256": "e2a335a7115413f3cfc5a56ad19c8b13716a07301bc5e6a3454ccb571907ac8f",
+          "size_bytes": 54845,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 630,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-dfaff79804b852b5af14",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/uploads/2026/07/biscarosse-incendie-3-1200x766.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/02-dfaff79804b852b5.jpg",
+          "sha256": "dfaff79804b852b5af14cb7f44d418b672d9d94627cfb7d0e46080ec9f06039e",
+          "size_bytes": 56094,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 766,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-f475a34e1711bb0ddcdb",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/uploads/2026/07/biscarosse-incendie.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/03-f475a34e1711bb0d.jpg",
+          "sha256": "f475a34e1711bb0ddcdb09d45c2ef69e8effbb8864f83f4f03c8ecb4dba2bc4b",
+          "size_bytes": 31809,
+          "content_type": "image/jpeg",
+          "width": 940,
+          "height": 620,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-7d8e25b61935c0a28a02",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/uploads/2026/07/biscarosse-incendie-2.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/04-7d8e25b61935c0a2.jpg",
+          "sha256": "7d8e25b61935c0a28a026685d5a04ceb02d9b1ccc7c91909a5b4b459f7b4c4e2",
+          "size_bytes": 46017,
+          "content_type": "image/jpeg",
+          "width": 930,
+          "height": 574,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-65e600b290fb89d0296d",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/uploads/2026/07/biscarosse-incendie-4-1200x766.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/05-65e600b290fb89d0.jpg",
+          "sha256": "65e600b290fb89d0296d4a1f5a3e342d530fe7c0f63fcdffbb3a998be253cbfd",
+          "size_bytes": 60543,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 766,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-6e8a43b43f4e8a06c03f",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/uploads/2026/07/biscarosse-incendie-5.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/06-6e8a43b43f4e8a06.jpg",
+          "sha256": "6e8a43b43f4e8a06c03f5b726a8da99c11c4c86ae3f79ea59cb917ae75d0b352",
+          "size_bytes": 57718,
+          "content_type": "image/jpeg",
+          "width": 928,
+          "height": 578,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-4c1a6462565518318687",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/themes/macommune/assets/img/photo-large.png",
+          "relative_path": "FR-2026-07-BISCARROSSE/07-4c1a646256551831.png",
+          "sha256": "4c1a64625655183186872f222f26a791e7211ba704a1bc88bcafe0ba906a08b5",
+          "size_bytes": 1280,
+          "content_type": "image/png",
+          "width": 400,
+          "height": 270,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-c63716b11b6bf5ef6248",
+          "source_id": "source-f8dcbb49f1da2adf",
+          "source_page_url": "https://www.macommune.info/le-premier-truc-qui-te-vient-a-lesprit-cest-le-chaos-le-temoignage-dun-bisontin-pris-dans-lincendie-de-biscarrosse/",
+          "media_url": "https://www.macommune.info/wp-content/themes/macommune/assets/img/photo-single.png",
+          "relative_path": "FR-2026-07-BISCARROSSE/08-c63716b11b6bf5ef.png",
+          "sha256": "c63716b11b6bf5ef62488f994ad01e56c5a000eb5982353073175b70db543e4b",
+          "size_bytes": 2849,
+          "content_type": "image/png",
+          "width": 940,
+          "height": 380,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-7bcbf56a110a42f0fb11",
+          "source_id": "source-a3c0496065b0c6a8",
+          "source_page_url": "https://www-pp.afp.com/en/node/3843954",
+          "media_url": "https://www-pp.afp.com/sites/default/files/afp-stories/17d7c11550c761b205eb9f36feba0ded-0.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/09-7bcbf56a110a42f0.jpg",
+          "sha256": "7bcbf56a110a42f0fb1175c8e7425a0adb5ed7b16134bfd582e2801b47573fb3",
+          "size_bytes": 42623,
+          "content_type": "image/jpeg",
+          "width": 512,
+          "height": 340,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-a00506b02e0eb54dcf06",
+          "source_id": "source-a3c0496065b0c6a8",
+          "source_page_url": "https://www-pp.afp.com/en/node/3843954",
+          "media_url": "https://www-pp.afp.com/sites/default/files/afp-stories/17d7c11550c761b205eb9f36feba0ded-1.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/10-a00506b02e0eb54d.jpg",
+          "sha256": "a00506b02e0eb54dcf0620e4a033931048b87218dc394847db7918cc9151c524",
+          "size_bytes": 36127,
+          "content_type": "image/jpeg",
+          "width": 512,
+          "height": 341,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-5135527aacf3b1ebc1e1",
+          "source_id": "source-a3c0496065b0c6a8",
+          "source_page_url": "https://www-pp.afp.com/en/node/3843954",
+          "media_url": "https://www-pp.afp.com/sites/default/files/afp-stories/921d4a7d6c3902a8b964f320ec8031d6-0.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/11-5135527aacf3b1eb.jpg",
+          "sha256": "5135527aacf3b1ebc1e10e1003e1130e59bc11dc0f9c95237be7c80a3d57634f",
+          "size_bytes": 46263,
+          "content_type": "image/jpeg",
+          "width": 512,
+          "height": 341,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-45fec7b11547b5f037d1",
+          "source_id": "source-a3c0496065b0c6a8",
+          "source_page_url": "https://www-pp.afp.com/en/node/3843954",
+          "media_url": "https://www-pp.afp.com/sites/default/files/afp-stories/f144f8a122f38f305996d06af1b42c91-0.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/12-45fec7b11547b5f0.jpg",
+          "sha256": "45fec7b11547b5f037d1508e13d894840fb15d495bbbee5eef01bff99bffb269",
+          "size_bytes": 57587,
+          "content_type": "image/jpeg",
+          "width": 512,
+          "height": 341,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-32abacf864948dc4ede0",
+          "source_id": "source-a3c0496065b0c6a8",
+          "source_page_url": "https://www-pp.afp.com/en/node/3843954",
+          "media_url": "https://www-pp.afp.com/sites/default/files/afp-stories/f6752ced750792eb6afbdb6e958fea2e-0.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/13-32abacf864948dc4.jpg",
+          "sha256": "32abacf864948dc4ede0ab6804f9d0056c6af938cf0b772e99b1f84569b9c271",
+          "size_bytes": 58739,
+          "content_type": "image/jpeg",
+          "width": 512,
+          "height": 341,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-adf4d3ec4199e7679b9f",
+          "source_id": "source-b03db39d9833a749",
+          "source_page_url": "https://www.tf1info.fr/societe/les-degats-sont-colossaux-5000-m-d-entrepot-brules-les-images-impressionnantes-d-une-zone-commerciale-ravagee-par-l-incendie-dans-les-landes-2454990.html",
+          "media_url": "https://photos.tf1info.fr/images/1280/720/incendie-dans-les-landes-les-images-d-un-centre-commercial-ravage-par-les-flammes-1-19a904-0@1x.jpeg?overlayImage=bG9nby10ZjFpbmZvLWRlZmF1bHQucG5n&overlayWidth=18&overlayGravity=northwest&s=78c802",
+          "relative_path": "FR-2026-07-BISCARROSSE/14-adf4d3ec4199e767.jpg",
+          "sha256": "adf4d3ec4199e7679b9fc4c6667f0363a8ab6e8f6f59136e9913c928de2c5e08",
+          "size_bytes": 140583,
+          "content_type": "image/jpeg",
+          "width": 1280,
+          "height": 720,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-acaa798fa0f8b4ae4cd1",
+          "source_id": "source-b03db39d9833a749",
+          "source_page_url": "https://www.tf1info.fr/societe/les-degats-sont-colossaux-5000-m-d-entrepot-brules-les-images-impressionnantes-d-une-zone-commerciale-ravagee-par-l-incendie-dans-les-landes-2454990.html",
+          "media_url": "https://vidpreviews.tf1.fr/image//aac8a529e8cdbc1993f4994a956f13336dfb9f40d89de850ed7550d59db9a0c9.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/15-acaa798fa0f8b4ae.jpg",
+          "sha256": "acaa798fa0f8b4ae4cd1f1764ede262ac86282688a0d3fc74fb247f98b2d53e8",
+          "size_bytes": 144858,
+          "content_type": "image/jpeg",
+          "width": 1920,
+          "height": 1080,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-43d58002924d2b4e58d0",
+          "source_id": "source-1958cce674aa4e43",
+          "source_page_url": "https://www.amicale-parentissoise-de-loisirs.com/photos",
+          "media_url": "https://primary.jwwb.nl/public/l/k/r/temp-vryysljebhsyqocbqbzl/20260801-17h25-26-rte-parentis-bisca-incendie-high-wgtv7i.png?enable-io=true&enable=upscale&fit=bounds&width=1200",
+          "relative_path": "FR-2026-07-BISCARROSSE/16-43d58002924d2b4e.webp",
+          "sha256": "43d58002924d2b4e58d066f23fb0b378fd72f4439fcb25648c3fa3810b9808a1",
+          "size_bytes": 602644,
+          "content_type": "image/webp",
+          "width": 1200,
+          "height": 494,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-546cd70a2642e333b612",
+          "source_id": "source-1958cce674aa4e43",
+          "source_page_url": "https://www.amicale-parentissoise-de-loisirs.com/photos",
+          "media_url": "https://primary.jwwb.nl/public/l/k/r/temp-vryysljebhsyqocbqbzl/20260801-17h23-06-rte-parentis-bisca-incendie-high.png?enable-io=true&enable=upscale&fit=bounds&width=1200",
+          "relative_path": "FR-2026-07-BISCARROSSE/17-546cd70a2642e333.webp",
+          "sha256": "546cd70a2642e333b6127b0de0a043e9ad8c17da4c86fc43535473db96ae860f",
+          "size_bytes": 639920,
+          "content_type": "image/webp",
+          "width": 1200,
+          "height": 566,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-37645eec97a76a0f0cbd",
+          "source_id": "source-1958cce674aa4e43",
+          "source_page_url": "https://www.amicale-parentissoise-de-loisirs.com/photos",
+          "media_url": "https://primary.jwwb.nl/public/l/k/r/temp-vryysljebhsyqocbqbzl/20260804-etendue-du-feu-de-biscarrosse-high.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/18-37645eec97a76a0f.webp",
+          "sha256": "37645eec97a76a0f0cbd8fbe36e9b119ac1d418522d277bf4c4e89c9c435abac",
+          "size_bytes": 96966,
+          "content_type": "image/webp",
+          "width": 1169,
+          "height": 801,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-2d6621e7dbfb897e22a6",
+          "source_id": "source-1958cce674aa4e43",
+          "source_page_url": "https://www.amicale-parentissoise-de-loisirs.com/photos",
+          "media_url": "https://primary.jwwb.nl/public/l/k/r/temp-vryysljebhsyqocbqbzl/20260703-05h48-32-paella-de-nonette-high-it5sbo.jpg",
+          "relative_path": "FR-2026-07-BISCARROSSE/19-2d6621e7dbfb897e.webp",
+          "sha256": "2d6621e7dbfb897e22a63f9cab6f01c3f40e717f50782323779d155a359ffaa8",
+          "size_bytes": 619744,
+          "content_type": "image/webp",
+          "width": 1120,
+          "height": 2657,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-e0af5f7cc77b5fc26fac",
+          "source_id": "source-1958cce674aa4e43",
+          "source_page_url": "https://www.amicale-parentissoise-de-loisirs.com/photos",
+          "media_url": "https://primary.jwwb.nl/public/l/k/r/temp-vryysljebhsyqocbqbzl/20260703-05h50-14-paella-de-nonette-high-kugziv.jpg?enable-io=true&enable=upscale&fit=bounds&width=1200",
+          "relative_path": "FR-2026-07-BISCARROSSE/20-e0af5f7cc77b5fc2.webp",
+          "sha256": "e0af5f7cc77b5fc26fac7578fc6dae2e203bb5052ffbb4f2432686eff9cc4c54",
+          "size_bytes": 243330,
+          "content_type": "image/webp",
+          "width": 1200,
+          "height": 1816,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://www-pp.afp.com/modules/custom/afp_homepage/images/social-x.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/modules/custom/afp_stories/images/social-linkedin.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/modules/custom/afp_homepage/images/social-facebook.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/modules/custom/afp_homepage/images/social-instagram.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/modules/custom/afp_homepage/images/carousel-arrow-left.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/modules/custom/afp_homepage/images/carousel-arrow-right.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/sites/default/files/2025-04/Facebook_30x30.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/sites/default/files/2025-04/X_30x30.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/sites/default/files/2025-04/LinkedIn_30x30.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/sites/default/files/2025-04/Instagram_30x30.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www-pp.afp.com/sites/default/files/2025-04/Youtube_30x30.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://photos.tf1info.fr/images/230/230/incendies-dans-les-landes-on-voit-les-flammes-a-quelques-metres-la-peur-des-vacanciers-b142e7-0@1x.jpeg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-08-BELLEGARDE-DIOIS",
+      "source_count": 4,
+      "media_count": 14,
+      "sources": [
+        {
+          "source_id": "source-7d7caa84c3f1b230",
+          "requested_url": "https://www.ledauphine.com/faits-divers-justice/2026/08/10/incendie-dans-le-diois-apres-une-semaine-de-combat-le-feu-est-toujours-actif",
+          "final_url": "https://www.ledauphine.com/faits-divers-justice/2026/08/10/incendie-dans-le-diois-apres-une-semaine-de-combat-le-feu-est-toujours-actif",
+          "content_sha256": "3697040e453be57ce0bef2f3064036a15c2fbc5897f1482c38bae3e0460e66cd",
+          "title": "Drôme. Incendie dans le Diois : environ 400 hectares brûlés, le feu toujours actif",
+          "description": "Une semaine après le départ de feu, d’origine volontaire, dans le massif du Claps à Bellegarde-en-Diois, environ 500 sapeurs-pompiers et militaires sont toujours engagés, ce lundi 10 août. Si le feu n’a pas progressé dans la nuit de dimanche à lundi, la situation n’est toujours pas stabilisée.",
+          "published_at": "2026-08-10T14:14:00Z"
+        },
+        {
+          "source_id": "source-05ab491f22ddf83f",
+          "requested_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "final_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "content_sha256": "fae6cb89002c547bc4c5fdfe2f5305a0d6e1b67cb750607ceffa2ca4b12f1298",
+          "title": "Incendie à Bellegarde-en-Diois : le feu ne progresse plus",
+          "description": "Incendie à Bellegarde-en-Diois. Le feu ne progresse plus.",
+          "published_at": null
+        },
+        {
+          "source_id": "source-af5c88cfe45973a2",
+          "requested_url": "https://www.drome.gouv.fr/Publications/Communiques-de-presse/Communiques-de-presse-2026/Aout-2026",
+          "final_url": "https://www.drome.gouv.fr/Publications/Communiques-de-presse/Communiques-de-presse-2026/Aout-2026",
+          "content_sha256": "4a8137be24a7e136e3da69cb9078c6f8f9a4d926a7d88ee3e8e807c5acdc20ea",
+          "title": "Août 2026",
+          "description": "Août 2026",
+          "published_at": null
+        },
+        {
+          "source_id": "source-5a364083d1caa156",
+          "requested_url": "https://www.alerte-rdv-prefecture.fr/actualites/prefete-de-la-drome/2086121483357638809",
+          "final_url": "https://www.alerte-rdv-prefecture.fr/actualites/prefete-de-la-drome/2086121483357638809",
+          "content_sha256": "032421f9dd435bb888daf9ab7b68661c691daa0c8d585bcf9bb54411e9f68053",
+          "title": "📌 *Incendie du massif du Claps Bellegarde-en-Diois – Point de situ...",
+          "description": "📌 *Incendie du massif du Claps Bellegarde-en-Diois – Point de situation - 18h - Préfecture de la Drôme* \n\nSous l’effet de la chaleur, le feu a connu ",
+          "published_at": null
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-9f23eb1ff5f08068fb56",
+          "source_id": "source-7d7caa84c3f1b230",
+          "source_page_url": "https://www.ledauphine.com/faits-divers-justice/2026/08/10/incendie-dans-le-diois-apres-une-semaine-de-combat-le-feu-est-toujours-actif",
+          "media_url": "https://cdn-s-www.ledauphine.com/images/7544B696-3BDC-42B8-BC6E-7CD48B06416A/FB1200/photo-1786344222.jpg",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/01-9f23eb1ff5f08068.jpg",
+          "sha256": "9f23eb1ff5f08068fb56c1d8dbaac7b30de06c17e6f8590c5c9d9ec24347fdba",
+          "size_bytes": 199276,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 630,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-37ee5380024a98a8161d",
+          "source_id": "source-7d7caa84c3f1b230",
+          "source_page_url": "https://www.ledauphine.com/faits-divers-justice/2026/08/10/incendie-dans-le-diois-apres-une-semaine-de-combat-le-feu-est-toujours-actif",
+          "media_url": "https://cdn-s-www.ledauphine.com/images/7544b696-3bdc-42b8-bc6e-7cd48b06416a/NW_detail/un-important-feu-s-est-declare-lundi-3-aout-dans-le-massif-du-claps-a-bellegarde-en-diois-photo-laurie-muscio-1786344222.jpg",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/02-37ee5380024a98a8.jpg",
+          "sha256": "37ee5380024a98a8161d17236549cbc8844e415aac2b182871826b84310d5c81",
+          "size_bytes": 115791,
+          "content_type": "image/jpeg",
+          "width": 1000,
+          "height": 500,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-4250aa0dd4330c284dc2",
+          "source_id": "source-7d7caa84c3f1b230",
+          "source_page_url": "https://www.ledauphine.com/faits-divers-justice/2026/08/10/incendie-dans-le-diois-apres-une-semaine-de-combat-le-feu-est-toujours-actif",
+          "media_url": "https://cdn-s-www.ledauphine.com/images/588cc89e-3332-4717-ae4d-115ddf062643/NW_listA/les-renforts-ont-fait-une-halte-a-crest-pour-le-ravitaillement-quot-gratuit-quot-des-engins-a-la-station-totalenergies-photo-musee-du-val-de-drome-1786351759.jpg",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/03-4250aa0dd4330c28.jpg",
+          "sha256": "4250aa0dd4330c284dc23a0237945ee061c40f817fec7ad83149947084c496b5",
+          "size_bytes": 64819,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-4d6404e09b4f1887c214",
+          "source_id": "source-7d7caa84c3f1b230",
+          "source_page_url": "https://www.ledauphine.com/faits-divers-justice/2026/08/10/incendie-dans-le-diois-apres-une-semaine-de-combat-le-feu-est-toujours-actif",
+          "media_url": "https://cdn-s-www.ledauphine.com/images/cfd5afa3-51d0-4d30-bfbe-f74eac9a9d48/NW_listA/le-groupe-petrolier-annonce-prendre-en-charge-les-carburants-terrestres-et-aeriens-necessaires-aux-services-de-sapeurs-pompiers-partout-en-france-metropolitaine-du-1er-juillet-au-31-aout-photo-musee-du-val-de-drome-1786351759.jpg",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/04-4d6404e09b4f1887.jpg",
+          "sha256": "4d6404e09b4f1887c2149c1151ae6064be90cd890ea810d93e147cf68a295685",
+          "size_bytes": 53709,
+          "content_type": "image/jpeg",
+          "width": 612,
+          "height": 360,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-38c91ec1c5d1fcb40228",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/article/hero.jpg",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/05-38c91ec1c5d1fcb4.jpg",
+          "sha256": "38c91ec1c5d1fcb4022815b9cd3eda6bdc531e55d9d811b3c540f5f5375008b3",
+          "size_bytes": 81441,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 700,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-4b641e29a2a66a594205",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/mc/68966/ca9ea12b-b2ea-42f5-b37c-70b4b60011b5.webp?v=1786464232",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/06-4b641e29a2a66a59.webp",
+          "sha256": "4b641e29a2a66a594205951a8441c6b1fc69437f8b9e5fd70b23a8495daf93e4",
+          "size_bytes": 51820,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 933,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-7b7415edad85793cb7e0",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/mc/67570/988adce4-41ae-439f-a39b-a69c8b08b6a8.webp?v=1786306621",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/07-7b7415edad85793c.webp",
+          "sha256": "7b7415edad85793cb7e00aed4c30b23ec21b51112aa4a70966bf23895d2b860d",
+          "size_bytes": 21010,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 315,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-cfe147de999b6ed55236",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/mc/67570/8b3b09ab-4fde-4818-9247-c352fe29e048.webp?v=1786306621",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/08-cfe147de999b6ed5.webp",
+          "sha256": "cfe147de999b6ed552362d2ea7594a998036679436e6a03c9763821fa6e87c66",
+          "size_bytes": 18106,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 315,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-976b4413b21ed79b7536",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/mc/67519/e9d6b251-d575-4bbb-9456-e0580227aa05.webp?v=1786301845",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/09-976b4413b21ed79b.webp",
+          "sha256": "976b4413b21ed79b7536a7c92ebd361697917f8edd7487d6ad64de5ccef78db2",
+          "size_bytes": 26534,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 525,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-45855ed816c6773af260",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/mc/67505/e8ef9b25-0274-45e4-a253-30f429cfd40c.webp?v=1786300527",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/10-45855ed816c6773a.webp",
+          "sha256": "45855ed816c6773af2607eca1d5bc2d2460e8965d474a239813cb23cef3654df",
+          "size_bytes": 68252,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 1244,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-ea6eff7650b3145ad342",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/mc/67488/b744eead-c493-4e15-bede-7bc2e905ebb8.webp?v=1786298733",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/11-ea6eff7650b3145a.webp",
+          "sha256": "ea6eff7650b3145ad3428bdf35d43a73bb14de472ef574fd30f2aebba81bccde",
+          "size_bytes": 60758,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 1244,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-018cd85fdbd2ab720132",
+          "source_id": "source-05ab491f22ddf83f",
+          "source_page_url": "https://feuxdeforet.fr/drome-26/bellegarde-en-diois-03-08-2026-8290/",
+          "media_url": "https://fdfdata.fr/storage/signalements/8290/mc/67366/cccfe4e0-c493-4cf9-aa40-31978e88e0a6.webp?v=1786295536",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/12-018cd85fdbd2ab72.webp",
+          "sha256": "018cd85fdbd2ab720132b47fc71ced0293b55eba4042ba55e301d7f5432bf96e",
+          "size_bytes": 45154,
+          "content_type": "image/webp",
+          "width": 700,
+          "height": 932,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-199ab93e2deff6feb4b0",
+          "source_id": "source-5a364083d1caa156",
+          "source_page_url": "https://www.alerte-rdv-prefecture.fr/actualites/prefete-de-la-drome/2086121483357638809",
+          "media_url": "https://www.alerte-rdv-prefecture.fr/assets/img/logo.webp",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/13-199ab93e2deff6fe.webp",
+          "sha256": "199ab93e2deff6feb4b054f7677e690a9d5ffe21f9e5a678df45f7e2cbf35a76",
+          "size_bytes": 93454,
+          "content_type": "image/webp",
+          "width": 780,
+          "height": 772,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-1a81b4e96f16a3766438",
+          "source_id": "source-5a364083d1caa156",
+          "source_page_url": "https://www.alerte-rdv-prefecture.fr/actualites/prefete-de-la-drome/2086121483357638809",
+          "media_url": "https://pbs.twimg.com/media/HPNkbcsXEAAvT7e.jpg",
+          "relative_path": "FR-2026-08-BELLEGARDE-DIOIS/14-1a81b4e96f16a376.jpg",
+          "sha256": "1a81b4e96f16a3766438c1cd652bd5a62ba32a8c239e5d8bfbd35087c982607a",
+          "size_bytes": 159540,
+          "content_type": "image/jpeg",
+          "width": 985,
+          "height": 1200,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/B1072342-1C73-42CC-9CBF-6002DA38DA9F/NW_listC/feu-dans-le-diois-situation-stable-469-sapeurs-pompiers-et-militaires-engages-ce-mercredi-1786514809.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/5151C0F4-051E-4E2A-9426-679F44FD0EF3/NW_listC/dans-une-ancienne-colonie-de-vacances-une-bulle-de-reconfort-pour-les-sapeurs-pompiers-engages-dans-le-feu-du-diois-1786482142.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/89E5DD19-0CF0-4E20-B26D-3A7DAFEE03D9/NW_listC/incendie-dans-le-diois-au-neuvieme-jour-pas-de-reprises-violentes-des-flammes-1786427299.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/4BE1ABDF-4782-4C33-BEE4-1C875C02B73A/NW_listC/incendies-dans-le-diois-l-ete-noir-des-hoteliers-restaurateurs-c-est-toute-l-economie-locale-qui-trinque-1786391072.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/8E743CCE-6474-4C83-A5CB-20A5874E3364/NW_listC/feu-dans-le-diois-le-feu-a-devore-370-hectares-la-situation-toujours-jugee-defavorable-et-500-pompiers-engages-1786305244.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/8702F48B-2AA3-4D0D-A0B8-B496C5E31B0A/NW_listC/incendies-les-benevoles-de-la-croix-rouge-en-premiere-ligne-1786294760.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/46be0486-140a-4765-b577-a28addcfe9cd/JNU_01/edition-du-soir-isere-1787251232.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://cdn-s-www.ledauphine.com/images/46be0486-140a-4765-b577-a28addcfe9cd/JNU_01/edition-du-soir-isere-1787251232.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=",
+          "stage": "media",
+          "error": "ValueError: collection URLs must be plain HTTPS URLs"
+        },
+        {
+          "url": "https://cdn-files.prsmedia.fr/files/REDAC/images/svg/placeholders/digiteka.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://fdfdata.fr/storage/signalements/8290/mc/67812/5838ca2d-d922-469f-b305-7c1de6036064_thumb.jpg?v=1786366390",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://fdfdata.fr/storage/signalements/8290/mc/67752/91fee9db-036f-4107-b73c-2215330ce2b1_thumb.jpg?v=1786363615",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.drome.gouv.fr/extension/ide/design/ide_dsfr_design/images/light.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www.drome.gouv.fr/extension/ide/design/ide_dsfr_design/images/dark.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        },
+        {
+          "url": "https://www.drome.gouv.fr/extension/ide/design/ide_dsfr_design/images/system.svg",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type image/svg+xml"
+        }
+      ]
+    },
+    {
+      "case_id": "FR-2026-08-LUGLON",
+      "source_count": 3,
+      "media_count": 16,
+      "sources": [
+        {
+          "source_id": "source-715f20bacec78e6f",
+          "requested_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "final_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "content_sha256": "64f950bd967f1c7ec6436a732a0151a87148a93bfab2f2aa99c2ce215e4de7aa",
+          "title": "Video. France wildfire forces 525 people to flee as Landes forest burns",
+          "description": "Video. France evacuated about 500 people from the village of Luglon on Thursday, 13 August, as a fast-moving wildfire swept through drought-hit pine forest in the Landes.",
+          "published_at": "2026-08-14 09:52:14 +02:00"
+        },
+        {
+          "source_id": "source-2b76ef658f769f3a",
+          "requested_url": "https://www.boursorama.com/actualite-economique/actualites-amp/incendie-dans-les-landes-le-vent-s-est-leve-la-situation-redevient-defavorable-514641f61e7a088c1454a755677dc9ff",
+          "final_url": "https://www.boursorama.com/actualite-economique/actualites-amp/incendie-dans-les-landes-le-vent-s-est-leve-la-situation-redevient-defavorable-514641f61e7a088c1454a755677dc9ff",
+          "content_sha256": "d0a3eb6cee95d5aaac65c6af8bad8d7a969773adb9b4d0ec6c9f1d8d6f114ffa",
+          "title": "Incendie dans les Landes: scénario plus favorable et progression contenue",
+          "description": "Températures en baisse et humidité en hausse: le scénario \"évolue favorablement\" dans la forêt des Landes, où le feu \"progresse un peu\", avec désormais 1.300 hectares parcourus, mais voit son intensité diminuer \"légèrement\", a annoncé le préfet vendredi en fin",
+          "published_at": "2026-08-14T19:42:30+0200"
+        },
+        {
+          "source_id": "source-ca569fa3204c2cc4",
+          "requested_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "final_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "content_sha256": "1107d34449e76744f7e7916bc5cd320727d0d49ed389b9a7f1c8b009aea03d02",
+          "title": "Feu \"fixé\" dans les Landes : de premiers retours à domicile organisés",
+          "description": "Quelque 600 personnes ont été évacuées la semaine passée dans les communes de Luglon et Garein. Environ la moitié des habitants ont eu l'autorisation de regagner leur logement, ce lundi.",
+          "published_at": "2026-08-17 11:13:37 +02:00"
+        }
+      ],
+      "media": [
+        {
+          "media_id": "media-3f3ae6dfb379e612834b",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/87/41/44/1200x675_cmsv2_82ca7b32-391a-51e0-8925-78b8c0e1944b-9874144.jpg",
+          "relative_path": "FR-2026-08-LUGLON/01-3f3ae6dfb379e612.avif",
+          "sha256": "3f3ae6dfb379e612834bd0e6af886f349283ecad2063a33f57ab5775903b3449",
+          "size_bytes": 41395,
+          "content_type": "image/avif",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-0eeb3129e04c6b5410a8",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/87/41/44/1536x864_cmsv2_82ca7b32-391a-51e0-8925-78b8c0e1944b-9874144.jpg",
+          "relative_path": "FR-2026-08-LUGLON/02-0eeb3129e04c6b54.webp",
+          "sha256": "0eeb3129e04c6b5410a849916df3af976168b12fb6f5f0f891f7d23d1cb89807",
+          "size_bytes": 66118,
+          "content_type": "image/webp",
+          "width": 1536,
+          "height": 864,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-693f7dc044f476ecf3b4",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/87/41/44/320x180_cmsv2_82ca7b32-391a-51e0-8925-78b8c0e1944b-9874144.jpg",
+          "relative_path": "FR-2026-08-LUGLON/03-693f7dc044f476ec.avif",
+          "sha256": "693f7dc044f476ecf3b4e13d01df6e7f7a71fdfde5c6bb142c10d89933cd597a",
+          "size_bytes": 6759,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-10336e758fdd9e7cf6c9",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/23/37/320x180_cmsv2_dce4b7a8-dfae-5f41-bd61-9a17c54af6ca-9882337.jpg",
+          "relative_path": "FR-2026-08-LUGLON/04-10336e758fdd9e7c.avif",
+          "sha256": "10336e758fdd9e7cf6c93c592d13551a961e3e2f4d7b12612aac6a321bdef735",
+          "size_bytes": 6933,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-a001baf1e8478538ca0a",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/16/66/320x180_cmsv2_15671442-5688-542c-9e69-e9f659652716-9881666.jpg",
+          "relative_path": "FR-2026-08-LUGLON/05-a001baf1e8478538.avif",
+          "sha256": "a001baf1e8478538ca0a34aee56f55d3704fa15cdef338078710becc3f8e3d94",
+          "size_bytes": 14570,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-6e5e01c75be2fa70ca67",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/19/68/320x180_cmsv2_22d8e092-deea-57c7-ac74-0669c5a70b17-9881968.jpg",
+          "relative_path": "FR-2026-08-LUGLON/06-6e5e01c75be2fa70.avif",
+          "sha256": "6e5e01c75be2fa70ca67a689366e28d82db6982fbffbfc8317eda416d2e98171",
+          "size_bytes": 6759,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-69441a161a2bd669b65e",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/18/66/320x180_cmsv2_bc487464-50cd-5e92-805f-0be56b917cb2-9881866.jpg",
+          "relative_path": "FR-2026-08-LUGLON/07-69441a161a2bd669.avif",
+          "sha256": "69441a161a2bd669b65e86871213936ea75fe0de68acac1a76f4e8b593ab2dc3",
+          "size_bytes": 18252,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-cfbd771117ce50c2dff6",
+          "source_id": "source-715f20bacec78e6f",
+          "source_page_url": "https://www.euronews.com/video/2026/08/14/france-wildfire-forces-525-people-to-flee-as-landes-forest-burns",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/26/65/320x180_cmsv2_5141b00e-034f-57fb-abfa-1d2c62022603-9882665.jpg",
+          "relative_path": "FR-2026-08-LUGLON/08-cfbd771117ce50c2.avif",
+          "sha256": "cfbd771117ce50c2dff64c5fae8a1ea82a86ad6e1f68817a59760762251eef40",
+          "size_bytes": 10774,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-9a8c55c862add88fac74",
+          "source_id": "source-2b76ef658f769f3a",
+          "source_page_url": "https://www.boursorama.com/actualite-economique/actualites-amp/incendie-dans-les-landes-le-vent-s-est-leve-la-situation-redevient-defavorable-514641f61e7a088c1454a755677dc9ff",
+          "media_url": "https://www.boursorama.com/static/i/content/images/a/1/7/a1751f2d44ef5ccb4dc471cd74a6a6eb-1200x800.jpg",
+          "relative_path": "FR-2026-08-LUGLON/09-9a8c55c862add88f.jpg",
+          "sha256": "9a8c55c862add88fac7499a503a48580ac99aafd59339f0312e07ce412aa3f67",
+          "size_bytes": 390838,
+          "content_type": "image/jpeg",
+          "width": 1200,
+          "height": 800,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-86c8a0755d2febb26d2b",
+          "source_id": "source-ca569fa3204c2cc4",
+          "source_page_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "media_url": "https://images.euronews.com/articles/stories/09/87/65/54/1200x675_cmsv2_852e4d1b-3d8d-5782-8095-6338531f5ce7-9876554.jpg",
+          "relative_path": "FR-2026-08-LUGLON/10-86c8a0755d2febb2.avif",
+          "sha256": "86c8a0755d2febb26d2b167cee19f7777e3e037778ba33227b2b8deab3217acd",
+          "size_bytes": 97726,
+          "content_type": "image/avif",
+          "width": 1200,
+          "height": 675,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-70b686062ee6c028dc6b",
+          "source_id": "source-ca569fa3204c2cc4",
+          "source_page_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "media_url": "https://images.euronews.com/articles/stories/09/87/65/54/1536x864_cmsv2_852e4d1b-3d8d-5782-8095-6338531f5ce7-9876554.jpg",
+          "relative_path": "FR-2026-08-LUGLON/11-70b686062ee6c028.webp",
+          "sha256": "70b686062ee6c028dc6bd52ac5ceff239600941a7844cd4bed4bb9493749f221",
+          "size_bytes": 165904,
+          "content_type": "image/webp",
+          "width": 1536,
+          "height": 864,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-732c754f892f182d9399",
+          "source_id": "source-ca569fa3204c2cc4",
+          "source_page_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/27/62/320x180_cmsv2_491783cb-f72c-5a75-a54c-4e8094470e3c-9882762.jpg",
+          "relative_path": "FR-2026-08-LUGLON/12-732c754f892f182d.avif",
+          "sha256": "732c754f892f182d93995bf83851b6195e074d267e9abc8b206fd26a8cfb7be5",
+          "size_bytes": 13036,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-3865c62f5922b99e0947",
+          "source_id": "source-ca569fa3204c2cc4",
+          "source_page_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/25/67/320x180_cmsv2_fc69b21a-c457-5dd2-ae5c-1cc1ee1ac095-9882567.jpg",
+          "relative_path": "FR-2026-08-LUGLON/13-3865c62f5922b99e.avif",
+          "sha256": "3865c62f5922b99e094717d58ecf6f848ef3f8aa896564517605fcd943791531",
+          "size_bytes": 6531,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-6ef88b3ae07f62b8935f",
+          "source_id": "source-ca569fa3204c2cc4",
+          "source_page_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "media_url": "https://images.euronews.com/articles/stories/09/85/73/82/320x180_cmsv2_e41e6021-630c-52b0-9cf0-712f4171b00f-9857382.jpg",
+          "relative_path": "FR-2026-08-LUGLON/14-6ef88b3ae07f62b8.avif",
+          "sha256": "6ef88b3ae07f62b8935f0199f39da3cfc88e78678c2d23d828282a669525b3e4",
+          "size_bytes": 10162,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-9b21cacb6cf127297230",
+          "source_id": "source-ca569fa3204c2cc4",
+          "source_page_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "media_url": "https://images.euronews.com/articles/stories/09/88/28/77/320x180_cmsv2_7c78aafc-0f53-5022-a556-134d2291571a-9882877.jpg",
+          "relative_path": "FR-2026-08-LUGLON/15-9b21cacb6cf12729.avif",
+          "sha256": "9b21cacb6cf127297230b0c18cd1a4d0f95da876bc878221b79887257ef12d87",
+          "size_bytes": 12309,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        },
+        {
+          "media_id": "media-edaadb6528ecada41335",
+          "source_id": "source-ca569fa3204c2cc4",
+          "source_page_url": "https://fr.euronews.com/2026/08/17/incendie-dans-les-landes-le-feu-est-fixe-de-premiers-retours-a-domicile-organises",
+          "media_url": "https://images.euronews.com/articles/stories/09/82/12/99/320x180_cmsv2_59c2e9f9-1152-5447-b10b-41cbff75eb2c-9821299.jpg",
+          "relative_path": "FR-2026-08-LUGLON/16-edaadb6528ecada4.avif",
+          "sha256": "edaadb6528ecada41335b1fc2e7afeb275b5bb5727cfa30066d8b47286732e6e",
+          "size_bytes": 10901,
+          "content_type": "image/avif",
+          "width": 320,
+          "height": 180,
+          "review_status": "not_reviewed",
+          "rights_status": "not_checked_internal_benchmark"
+        }
+      ],
+      "errors": [
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/26/189x106_cmsv2_cf44fc7c-f0da-5dca-af53-05008d781888-9882826.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/26/189x106_cmsv2_cf44fc7c-f0da-5dca-af53-05008d781888-9882826.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/77/189x106_cmsv2_7c78aafc-0f53-5022-a556-134d2291571a-9882877.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/03/189x106_cmsv2_56c13054-dce3-5042-aa69-82af50509775-9882803.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/27/62/189x106_cmsv2_491783cb-f72c-5a75-a54c-4e8094470e3c-9882762.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-europe-today.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-ring.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-nocomment.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-my-wildest-prediction.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-big-question.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-euronews-tech-talks.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-food-detectives.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-water-matters.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-climate-now.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/77/189x106_cmsv2_7c78aafc-0f53-5022-a556-134d2291571a-9882877.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/03/189x106_cmsv2_56c13054-dce3-5042-aa69-82af50509775-9882803.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/27/62/189x106_cmsv2_491783cb-f72c-5a75-a54c-4e8094470e3c-9882762.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-europe-today.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-ring.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-nocomment.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-my-wildest-prediction.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-big-question.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-euronews-tech-talks.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-food-detectives.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-water-matters.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-climate-now.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.reutersconnect.com/item/wildfires-in-france/dGFnOnJldXRlcnMuY29tLDIwMjY6bmV3c21sX1JDMjBZTUFEMlVLSw",
+          "stage": "page",
+          "error": "HTTPError: HTTP Error 403: Forbidden"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/77/189x106_cmsv2_7c78aafc-0f53-5022-a556-134d2291571a-9882877.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/16/94/189x106_cmsv2_73befe30-e5bb-5a67-838d-3dbaddbb68fa-9881694.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/16/50/189x106_cmsv2_76655647-2df7-5483-9aa0-271cb7e3aa66-9881650.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/82/12/99/189x106_cmsv2_59c2e9f9-1152-5447-b10b-41cbff75eb2c-9821299.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-europe-today.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-ring.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-nocomment.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-big-question.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-food-detectives.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-water-matters.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-climate-now.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/28/77/189x106_cmsv2_7c78aafc-0f53-5022-a556-134d2291571a-9882877.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/16/94/189x106_cmsv2_73befe30-e5bb-5a67-838d-3dbaddbb68fa-9881694.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/88/16/50/189x106_cmsv2_76655647-2df7-5483-9aa0-271cb7e3aa66-9881650.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://images.euronews.com/articles/stories/09/82/12/99/189x106_cmsv2_59c2e9f9-1152-5447-b10b-41cbff75eb2c-9821299.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-europe-today.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-ring.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-nocomment.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-big-question.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-the-food-detectives.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-water-matters.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://static.euronews.com/articles/programs/featured-programs/featured-climate-now.jpg",
+          "stage": "media",
+          "error": "ValueError: media candidate is below the minimum useful dimensions"
+        },
+        {
+          "url": "https://www.facebook.com/tr?id=1612819098956034&ev=PageView&noscript=1",
+          "stage": "media",
+          "error": "ValueError: media candidate returned unsupported content type text/plain"
+        }
+      ]
+    }
+  ]
+}
