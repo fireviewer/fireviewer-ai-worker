@@ -46,3 +46,10 @@ training/reference_cases_data/
 **/run.pid
 **/launcher.pid
 **/events.out.tfevents.*
+
+# Detailed development and working documentation remains local.  The public
+# repository keeps only its short English presentation and disclosure pages.
+*.md
+!README.md
+!LICENSE-DOCS.md
+!SECURITY.md

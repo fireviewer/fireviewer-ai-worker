@@ -1,9 +1,15 @@
-# Licence de la documentation et des illustrations
+# Documentation licence — CC BY 4.0
 
-Copyright 2026 Fire Viewer contributors.
+Copyright 2026 FireViewer contributors.
 
-Sauf mention contraire, la documentation, la roadmap, les diagrammes et les autres contenus non-code de ce dépôt sont mis à disposition sous la licence [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/).
+Unless a file states otherwise, original documentation and other original
+non-code content in this repository are licensed under the
+[Creative Commons Attribution 4.0 International licence](https://creativecommons.org/licenses/by/4.0/).
 
-Vous pouvez partager et adapter ces contenus, y compris commercialement, à condition de fournir une attribution appropriée, un lien vers la licence et une indication des modifications éventuelles.
+You may share and adapt that material, including commercially, provided that
+you give appropriate credit, link to the licence, and indicate whether changes
+were made.
 
-Les textes de licences, les marques de tiers, les dépendances et les données externes restent soumis à leurs propres conditions. Les exceptions et les preuves de provenance des fichiers visuels sont consignées dans [PROVENANCE.md](PROVENANCE.md). Un asset marqué `NON VÉRIFIÉ` dans ce registre n'est pas couvert par la présente concession CC BY 4.0.
+This licence does not cover third-party data, model weights, external datasets,
+trademarks, dependencies, or other referenced material. Those works retain
+their own licences and terms.
