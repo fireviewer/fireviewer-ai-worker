@@ -1,23 +1,22 @@
-# Préparation générique des données
+# Generic training-data preparation
 
-Ce dossier contient uniquement le code de préparation et de validation des
-manifestes d’entraînement. Aucun média, dataset, annotation, rendu, modèle,
-checkpoint ou résultat d’évaluation n’est versionné.
+This directory contains code for preparing and validating training manifests.
+No media, dataset payload, annotation corpus, render, model weight, checkpoint,
+or evaluation output is versioned here.
 
-## Règles
+## Rules
 
-- fournir une racine de données externe au dépôt ;
-- conserver la provenance, la licence et le SHA-256 de chaque entrée ;
-- séparer les groupes proches avant le découpage train/validation/test ;
-- refuser les incidents opérationnels et les productions privées ;
-- ne jamais inclure les données dans une image Docker publique ;
-- exiger une validation humaine avant toute promotion d’un modèle.
+- Supply an explicit data root outside the repository.
+- Preserve provenance, licence, and SHA-256 for every entry.
+- Separate related event or site groups before train/validation/test splitting.
+- Exclude protected operational incidents and private productions.
+- Never copy training data into a public container image.
+- Require human validation before promoting any model.
 
-Les exemples et tests utilisent des identifiants et des contenus synthétiques.
-Les registres JSON versionnés décrivent seulement des contrats ou des sources,
-jamais les échantillons eux-mêmes.
+Examples and tests use synthetic identifiers and content. Versioned JSON
+registries describe contracts or source metadata, never the samples themselves.
 
-## Contrôles
+## Checks
 
 ```bash
 ruff check training tools
@@ -25,5 +24,5 @@ ruff format --check training tools
 pytest -q
 ```
 
-Une exécution GPU, un corpus externe ou une campagne de qualité restent des
-gates séparés et ne sont pas prouvés par ces tests locaux.
+GPU execution, external-corpus admission, independent evaluation, and model
+quality are separate gates and are not proven by these local checks.

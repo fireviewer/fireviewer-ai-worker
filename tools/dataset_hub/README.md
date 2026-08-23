@@ -1,72 +1,60 @@
-# Bundles d'entraînement FireWarning
+# FireViewer training bundles
 
-Le dépôt privé `Charlbi/firewarning-training-corpus` publie **un ZIP par objectif
-d'entraînement**. Les anciennes archives par source sont uniquement des entrées de migration ; elles
-ne constituent pas le format final.
+The dataset-bundle tooling builds one archive per training objective. Source
+archives and raw datasets remain outside the Git checkout; the repository keeps
+only executable specifications, manifests, and validation code.
 
-## Contrat final
+## Bundle contract
 
-Chaque ZIP possède une racine unique portant l'identifiant du train et contient :
+Each archive has one root directory named after its training objective and
+contains:
 
-- `TRAIN_BUNDLE.json` : sources, licences, état des gates et commandes ;
-- `PAYLOAD_CHECKSUMS.sha256` : empreinte de chaque fichier source ;
-- les sources montées aux chemins attendus par les trainers (`corpus/`, `sources/`, `additional/`) ;
-- les manifestes `train` / `validation` / `test` fournis par chaque source ;
-- aucune donnée critique ni incident Référence opérationnelle A/Référence opérationnelle B utilisé comme évaluation finale.
+- `TRAIN_BUNDLE.json`: sources, licences, gate state, and reproducible commands;
+- `PAYLOAD_CHECKSUMS.sha256`: the digest of every payload file;
+- source payloads mounted at the paths expected by the selected trainer;
+- source-provided train, validation, and test manifests;
+- no protected operational incident used as a final evaluation reference.
 
-Les quatre bundles v1 sont déclarés dans `train-bundles-v1.json` et leurs spécifications exécutables
-sont sous `specs/`.
+Bundle declarations live in `train-bundles-v1.json`; executable specifications
+live under `specs/`.
 
-## Construction locale
+## Local build
+
+Use explicit external roots. The following PowerShell example assumes the
+operator has set `$FireViewerDataRoot` to an approved local data directory:
 
 ```powershell
 python tools/dataset_hub/finalize_train_bundle.py `
   --spec tools/dataset_hub/specs/media-filter-fire-smoke-v1.json `
-  --source-root D:\fireviewer-data\_train-bundles\remote `
-  --work-dir D:\fireviewer-data\_train-bundles\work `
-  --output-dir D:\fireviewer-data\_train-bundles\ready
+  --source-root "$FireViewerDataRoot/remote" `
+  --work-dir "$FireViewerDataRoot/work" `
+  --output-dir "$FireViewerDataRoot/ready"
 ```
 
-La commande refuse le ZIP en cas d'archive tronquée, d'empreinte invalide, de chemin dangereux, de
-fichier manquant, de doublon inter-source ou de fuite entre splits. Le ZIP est ensuite relu en entier
-(CRC et SHA-256 de chaque entrée).
+The builder rejects truncated archives, invalid hashes, unsafe paths, missing
+files, duplicates across independent sources, and split leakage. It then reads
+the complete output archive again and verifies each entry's CRC and SHA-256.
 
-## Remplacement sur Hugging Face
+## Publication safeguards
 
-Le remplacement distant n'est autorisé qu'après :
+Remote replacement is allowed only after:
 
-1. validation locale complète du ZIP ;
-2. sauvegarde locale du ZIP et de son rapport ;
-3. commit privé atomique ajoutant le ZIP et supprimant les anciennes archives couvertes ;
-4. téléchargement de contrôle et vérification du SHA-256 distant ;
-5. nettoyage du dossier local temporaire.
+1. complete local archive validation;
+2. a durable local copy of the archive and report;
+3. one atomic remote change that adds the new bundle and removes only the
+   superseded payloads;
+4. a verification download with an identical SHA-256;
+5. removal of temporary local material only after the remote equality check.
 
-Si le commit atomique échoue, les archives distantes existantes restent la référence et la copie
-locale n'est pas supprimée. Une source partagée par plusieurs objectifs reste déclarée dans chaque bundle concerné. Les lots
-critiques et les références opérationnelles restent sous `evaluation/` et ne sont jamais promus dans
-un ZIP de train.
+If the atomic update fails, the existing remote archive remains authoritative
+and the local validated copy is retained. Shared sources stay declared in every
+bundle that uses them. Evaluation-only references are never promoted into a
+training archive.
 
-## Sources supplémentaires
+## Rights and provenance
 
-La préparation locale complémentaire utilise les mêmes manifestes et les mêmes contrôles :
-
-- `prepare_supplemental_sources.py` : FireSpread_MedEU, Boreal Forest Fire,
-  CrisisFACTS, IMSR, TartanAir rural/nature et DIODE outdoor ;
-- `download_supplemental_archives.py` : téléchargements épinglés, reprenables et vérifiés de
-  TartanAir et DIODE ;
-- `download_boreal_forest_fire.py` : inventaire officiel Etsin et téléchargement Boreal par profil ;
-- `prepare_openimages_engaged_assets.py` : sous-ensemble Open Images licencié par image pour
-  ambulance, hélicoptère et avion ;
-- `prepare_access_and_quarantine.py` : demande Corsican Fire Database sans envoi automatique et
-  quarantaine McPed sans téléchargement ni republication des vues Google Earth.
-
-Chaque source normalisée contient `SOURCE_MANIFEST.json`, `VALIDATION_REPORT.json`,
-`manifest.jsonl`, les empreintes des artefacts et des groupes de split isolés par événement ou
-site. La commande `bundle` produit exactement un ZIP par objectif d'entraînement, puis relit
-intégralement le ZIP (CRC, chemins, inventaire et SHA-256 de chaque entrée).
-
-Les sources et archives temporaires ne peuvent être supprimées qu'après publication du ZIP final,
-retéléchargement depuis Hugging Face et égalité de l'empreinte distante. TartanAir reste un prior
-synthétique ; Open Images ne fournit ni classe boxable camion de pompiers ni rôle aérien de lutte ;
-la Corsican Fire Database attend un accord humain signé ; McPed reste privé tant que les droits de
-ses vues aériennes ne permettent pas une republication indépendante.
+Every normalised source must retain `SOURCE_MANIFEST.json`,
+`VALIDATION_REPORT.json`, `manifest.jsonl`, artifact hashes, licence metadata,
+and event- or site-isolated split groups. Discovery or download capability does
+not prove redistribution or training rights. Sources with incomplete rights
+remain excluded or quarantined until a human decision is recorded.
