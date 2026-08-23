@@ -35,11 +35,11 @@ class BrokerPolicy:
     search_templates: dict[str, str]
     max_fetch_bytes: int
     timeout_seconds: int
-    pathname_prefix: str
-    upload_grant: str
-    token_endpoint: str
-    resource_id: str
-    maximum_file_size_bytes: int
+    pathname_prefix: str | None
+    upload_grant: str | None
+    token_endpoint: str | None
+    resource_id: str | None
+    maximum_file_size_bytes: int | None
     allowed_content_types: frozenset[str]
 
 
@@ -48,13 +48,38 @@ class _LinkParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.base_url = base_url
         self.links: list[dict[str, str]] = []
+        self.media_links: list[str] = []
+        self.metadata: dict[str, str] = {}
         self._href: str | None = None
         self._text: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag.casefold() != "a":
+        normalized_tag = tag.casefold()
+        values = {key.casefold(): value for key, value in attrs if value is not None}
+        if normalized_tag == "meta":
+            key = (values.get("property") or values.get("name") or "").casefold()
+            content = values.get("content")
+            if key and content:
+                self.metadata.setdefault(key, content)
+                if key in {"og:image", "twitter:image", "twitter:image:src"}:
+                    self.media_links.append(urljoin(self.base_url, content))
             return
-        href = dict(attrs).get("href")
+        if normalized_tag == "video" and values.get("poster"):
+            self.media_links.append(urljoin(self.base_url, str(values["poster"])))
+            return
+        if normalized_tag == "img":
+            source = (
+                values.get("data-src")
+                or values.get("data-lazy-src")
+                or values.get("data-original")
+                or values.get("src")
+            )
+            if source:
+                self.media_links.append(urljoin(self.base_url, source))
+            return
+        if normalized_tag != "a":
+            return
+        href = values.get("href")
         if href:
             self._href = urljoin(self.base_url, href)
             self._text = []
@@ -149,25 +174,51 @@ class ResearchBroker:
                 raise BrokerPolicyError("broker_search_template_invalid")
         max_fetch_bytes = int(value.get("max_fetch_bytes", 0))
         timeout_seconds = int(value.get("timeout_seconds", 0))
-        maximum_file_size_bytes = int(value.get("maximum_file_size_bytes", 0))
         if not 65_536 <= max_fetch_bytes <= 104_857_600:
             raise BrokerPolicyError("broker_policy_fetch_limit_invalid")
         if not 2 <= timeout_seconds <= 120:
             raise BrokerPolicyError("broker_policy_timeout_invalid")
-        if not 1_048_576 <= maximum_file_size_bytes <= 1_073_741_824:
-            raise BrokerPolicyError("broker_policy_upload_limit_invalid")
+        upload_keys = {
+            "pathname_prefix",
+            "upload_grant",
+            "token_endpoint",
+            "resource_id",
+            "maximum_file_size_bytes",
+            "allowed_content_types",
+        }
+        supplied_upload_keys = upload_keys & set(value)
+        if supplied_upload_keys and supplied_upload_keys != upload_keys:
+            raise BrokerPolicyError("broker_policy_upload_incomplete")
+        if supplied_upload_keys:
+            maximum_file_size_bytes = int(value["maximum_file_size_bytes"])
+            if not 1_048_576 <= maximum_file_size_bytes <= 1_073_741_824:
+                raise BrokerPolicyError("broker_policy_upload_limit_invalid")
+            pathname_prefix = str(value["pathname_prefix"])
+            upload_grant = str(value["upload_grant"])
+            token_endpoint = str(value["token_endpoint"])
+            resource_id = str(value["resource_id"])
+            allowed_content_types = frozenset(
+                str(item) for item in value["allowed_content_types"]
+            )
+        else:
+            maximum_file_size_bytes = None
+            pathname_prefix = None
+            upload_grant = None
+            token_endpoint = None
+            resource_id = None
+            allowed_content_types = frozenset()
         return BrokerPolicy(
             allowed_domains=allowed,
             search_provider_domains=providers,
             search_templates=templates,
             max_fetch_bytes=max_fetch_bytes,
             timeout_seconds=timeout_seconds,
-            pathname_prefix=str(value["pathname_prefix"]),
-            upload_grant=str(value["upload_grant"]),
-            token_endpoint=str(value["token_endpoint"]),
-            resource_id=str(value["resource_id"]),
+            pathname_prefix=pathname_prefix,
+            upload_grant=upload_grant,
+            token_endpoint=token_endpoint,
+            resource_id=resource_id,
             maximum_file_size_bytes=maximum_file_size_bytes,
-            allowed_content_types=frozenset(str(item) for item in value["allowed_content_types"]),
+            allowed_content_types=allowed_content_types,
         )
 
     def configure(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -248,6 +299,13 @@ class ResearchBroker:
         arguments = dict(request.get("arguments", {}))
         domain = str(arguments.get("domain", "")).casefold().rstrip(".")
         query = str(arguments.get("query", "")).strip()
+        try:
+            offset = int(arguments.get("cursor", 0) or 0)
+            limit = int(arguments.get("limit", 20))
+        except (TypeError, ValueError) as exc:
+            raise BrokerPolicyError("broker_search_pagination_invalid") from exc
+        if offset < 0 or not 1 <= limit <= 50:
+            raise BrokerPolicyError("broker_search_pagination_invalid")
         template = policy.search_templates.get(domain)
         if template is None or not query or "{query}" not in template:
             raise BrokerPolicyError("broker_search_request_invalid")
@@ -260,16 +318,28 @@ class ResearchBroker:
         )
         parser = _LinkParser(str(response.url))
         parser.feed(content.decode("utf-8", errors="replace"))
-        links = []
+        all_links: list[dict[str, str]] = []
+        seen_urls: set[str] = set()
         for link in parser.links:
             try:
                 guarded = self._source_link(link["url"], policy=policy)
             except BrokerPolicyError:
                 continue
-            links.append({"url": guarded, "title": link["title"]})
-            if len(links) >= 50:
+            if guarded in seen_urls:
+                continue
+            seen_urls.add(guarded)
+            all_links.append({"url": guarded, "title": link["title"]})
+            if len(all_links) >= 500:
                 break
-        return {"query": query, "domain": domain, "links": links}
+        links = all_links[offset : offset + limit]
+        next_cursor = str(offset + len(links)) if offset + len(links) < len(all_links) else None
+        return {
+            "query": query,
+            "domain": domain,
+            "links": links,
+            "cursor": str(offset) if offset else None,
+            "next_cursor": next_cursor,
+        }
 
     def _source_link(self, value: str, *, policy: BrokerPolicy) -> str:
         try:
@@ -312,6 +382,14 @@ class ResearchBroker:
         pathname: str,
         policy: BrokerPolicy,
     ) -> dict[str, Any]:
+        if (
+            policy.pathname_prefix is None
+            or policy.upload_grant is None
+            or policy.token_endpoint is None
+            or policy.resource_id is None
+            or policy.maximum_file_size_bytes is None
+        ):
+            raise BrokerPolicyError("broker_upload_disabled")
         from vercel.blob import BlobClient
 
         if content_type not in policy.allowed_content_types:
@@ -382,9 +460,12 @@ class ResearchBroker:
             "content_type": content_type,
         }
 
-    def fetch(self, request: dict[str, Any], policy: BrokerPolicy) -> dict[str, Any]:
-        arguments = dict(request.get("arguments", {}))
-        url = str(arguments.get("url", ""))
+    def _fetch_public_content(
+        self,
+        *,
+        url: str,
+        policy: BrokerPolicy,
+    ) -> tuple[dict[str, Any], bytes]:
         response, content = self._request(
             "GET",
             url,
@@ -394,6 +475,7 @@ class ResearchBroker:
         metadata = self._response_metadata(response)
         content_type = str(metadata["content_type"])
         result: dict[str, Any] = {**metadata, "sha256": hashlib.sha256(content).hexdigest()}
+        result["size_bytes"] = len(content)
         if content_type.startswith(("text/", "application/json")):
             text = content.decode("utf-8", errors="replace")[:100_000]
             result["text"] = text
@@ -401,7 +483,31 @@ class ResearchBroker:
                 parser = _LinkParser(url)
                 parser.feed(text)
                 result["links"] = parser.links[:50]
+                result["media_links"] = list(dict.fromkeys(parser.media_links))[:100]
+                result["metadata"] = parser.metadata
+        return result, content
+
+    def fetch_transient_bytes(
+        self,
+        request: dict[str, Any],
+        policy: BrokerPolicy,
+    ) -> tuple[dict[str, Any], bytes]:
+        """Return one allowlisted public object in memory without any storage action."""
+
+        arguments = dict(request.get("arguments", {}))
         if bool(arguments.get("store", False)):
+            raise BrokerPolicyError("broker_transient_store_forbidden")
+        url = str(arguments.get("url", ""))
+        return self._fetch_public_content(url=url, policy=policy)
+
+    def fetch(self, request: dict[str, Any], policy: BrokerPolicy) -> dict[str, Any]:
+        arguments = dict(request.get("arguments", {}))
+        url = str(arguments.get("url", ""))
+        result, content = self._fetch_public_content(url=url, policy=policy)
+        content_type = str(result["content_type"])
+        if bool(arguments.get("store", False)):
+            if policy.pathname_prefix is None:
+                raise BrokerPolicyError("broker_upload_disabled")
             candidate_id = str(arguments.get("candidate_id", ""))
             suffix = Path(urlsplit(url).path).suffix.casefold()
             if not candidate_id or not suffix or len(suffix) > 10:

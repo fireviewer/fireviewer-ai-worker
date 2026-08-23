@@ -19,6 +19,13 @@ from firewarning_worker.mvp.contracts.event_evidence_v1 import (
     Uncertainty,
     VisualObservation,
 )
+from firewarning_worker.mvp.contracts.geographic_hypothesis_v1 import (
+    GeographicAbstention,
+    GeographicHypothesis,
+    GeographicHypothesisResultV1,
+    GeographicReference,
+    GeographicScoreBreakdown,
+)
 from firewarning_worker.mvp.contracts.localization_v1 import (
     CameraEvidence,
     CameraGroup,
@@ -29,6 +36,19 @@ from firewarning_worker.mvp.contracts.localization_v1 import (
     RayUncertainty,
     TargetRay,
 )
+from firewarning_worker.mvp.contracts.point_supervision_v1 import (
+    AUTO_PUBLICATION_CONFIDENCE_THRESHOLD,
+    AssessmentSubscores,
+    CandidatePoint,
+    CompetingPointJsonV1,
+    GeospatialConsistencyCheck,
+    PointAssessmentV1,
+    PointEvidenceBundleV1,
+    PointEvidenceReference,
+    PriorFireStateReference,
+    RagContextExcerpt,
+    UploadLocationEvidence,
+)
 from firewarning_worker.mvp.contracts.satellite_v1 import (
     SatelliteMask,
     SatelliteResultV1,
@@ -36,23 +56,38 @@ from firewarning_worker.mvp.contracts.satellite_v1 import (
 )
 
 __all__ = [
+    "AUTO_PUBLICATION_CONFIDENCE_THRESHOLD",
+    "AssessmentSubscores",
     "CameraEvidence",
     "CameraGroup",
     "CameraIntrinsics",
     "CameraPose",
     "CandidateArea",
     "CandidateCluster",
+    "CandidatePoint",
     "Claim",
+    "CompetingPointJsonV1",
     "Contradiction",
     "Detection",
     "DetectionResultV1",
     "EventEvidenceV1",
     "EvidenceMedia",
     "EvidenceSource",
+    "GeographicAbstention",
+    "GeographicHypothesis",
+    "GeographicHypothesisResultV1",
+    "GeographicReference",
+    "GeographicScoreBreakdown",
+    "GeospatialConsistencyCheck",
     "LocalizationResultV1",
     "LocationCandidate",
+    "PointAssessmentV1",
+    "PointEvidenceBundleV1",
+    "PointEvidenceReference",
     "PoseUncertainty",
+    "PriorFireStateReference",
     "ProviderRun",
+    "RagContextExcerpt",
     "RayUncertainty",
     "SatelliteMask",
     "SatelliteObservation",
@@ -62,5 +97,6 @@ __all__ = [
     "TargetRay",
     "TimeWindow",
     "Uncertainty",
+    "UploadLocationEvidence",
     "VisualObservation",
 ]

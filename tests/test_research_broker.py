@@ -102,6 +102,83 @@ def test_search_returns_only_allowlisted_source_links(
     ]
 
 
+def test_search_paginates_and_fetch_exposes_media_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(socket, "getaddrinfo", _public_dns)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "search.example":
+            return httpx.Response(
+                200,
+                headers={"content-type": "text/html"},
+                content=b"""
+                <a href="https://sources.example/one">one</a>
+                <a href="https://sources.example/two">two</a>
+                <a href="https://sources.example/three">three</a>
+                """,
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/html"},
+            content=b"""
+            <meta property="og:title" content="Incident update">
+            <meta property="og:image" content="/media/fire.jpg">
+            <img src="https://sources.example/media/smoke.jpg">
+            """,
+            request=request,
+        )
+
+    broker = ResearchBroker(
+        control_token=CONTROL_TOKEN,
+        transport=httpx.MockTransport(handler),
+    )
+    token = _configure(broker)
+    policy = broker._session({"session_token": token})
+    first = broker.search(
+        {
+            "arguments": {
+                "domain": "search.example",
+                "query": "fire",
+                "limit": 2,
+            }
+        },
+        policy,
+    )
+    second = broker.search(
+        {
+            "arguments": {
+                "domain": "search.example",
+                "query": "fire",
+                "cursor": first["next_cursor"],
+                "limit": 2,
+            }
+        },
+        policy,
+    )
+    fetched = broker.fetch(
+        {"arguments": {"url": "https://sources.example/one"}},
+        policy,
+    )
+
+    assert [item["url"] for item in first["links"]] == [
+        "https://sources.example/one",
+        "https://sources.example/two",
+    ]
+    assert first["next_cursor"] == "2"
+    assert [item["url"] for item in second["links"]] == [
+        "https://sources.example/three"
+    ]
+    assert second["next_cursor"] is None
+    assert fetched["size_bytes"] > 0
+    assert fetched["metadata"]["og:title"] == "Incident update"
+    assert fetched["media_links"] == [
+        "https://sources.example/media/fire.jpg",
+        "https://sources.example/media/smoke.jpg",
+    ]
+
+
 def test_broker_rejects_private_dns_address(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         socket,
@@ -178,4 +255,53 @@ def test_revoked_session_cannot_use_network_tools() -> None:
                 "session_token": token,
                 "arguments": {"url": "https://sources.example/fire"},
             }
+        )
+
+
+def test_fetch_only_policy_has_no_vercel_upload_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(socket, "getaddrinfo", _public_dns)
+    broker = ResearchBroker(
+        control_token=CONTROL_TOKEN,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                headers={"content-type": "text/html"},
+                content=b"source metadata only",
+                request=request,
+            )
+        ),
+    )
+    configured = broker.configure(
+        {
+            "control_token": CONTROL_TOKEN,
+            "policy": {
+                "allowed_domains": ["sources.example"],
+                "search_templates": {
+                    "search.example": "https://search.example/search?q={query}"
+                },
+                "max_fetch_bytes": 65_536,
+                "timeout_seconds": 5,
+            },
+        }
+    )
+    policy = broker._session({"session_token": configured["session_token"]})
+
+    fetched = broker.fetch(
+        {"arguments": {"url": "https://sources.example/fire"}},
+        policy,
+    )
+    assert fetched["sha256"]
+
+    with pytest.raises(BrokerPolicyError, match="broker_upload_disabled"):
+        broker.fetch(
+            {
+                "arguments": {
+                    "url": "https://sources.example/fire.jpg",
+                    "store": True,
+                    "candidate_id": "candidate-1",
+                }
+            },
+            policy,
         )

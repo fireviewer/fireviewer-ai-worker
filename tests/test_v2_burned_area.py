@@ -8,7 +8,12 @@ import numpy as np
 
 from firewarning_worker.contracts import WorkerInputV2
 from firewarning_worker.model_registry import ModelSpec
-from firewarning_worker.prithvi_burned_area import PrithviBurnedAreaAdapter
+from firewarning_worker.prithvi_burned_area import (
+    PrithviBurnedAreaAdapter,
+    _cuda_autocast_dtype,
+    _default_tile_batch_size,
+    _write_offline_inference_config,
+)
 from firewarning_worker.v2_burned_area import run_burned_area_stage
 
 EXAMPLE = (
@@ -92,6 +97,65 @@ class _LocalRasterFetcher:
     @contextmanager
     def download(self, _url: str):
         yield self.path
+
+
+class _FakeDevice:
+    def __init__(self, device_type: str) -> None:
+        self.type = device_type
+
+
+class _FakeCuda:
+    def __init__(self, *, bf16: bool, memory_gib: int) -> None:
+        self._bf16 = bf16
+        self._memory = memory_gib * 1024**3
+
+    def is_bf16_supported(self) -> bool:
+        return self._bf16
+
+    def get_device_properties(self, _device: object) -> object:
+        return type("Properties", (), {"total_memory": self._memory})()
+
+
+class _FakeTorch:
+    float16 = "float16"
+    bfloat16 = "bfloat16"
+
+    def __init__(self, *, bf16: bool, memory_gib: int) -> None:
+        self.cuda = _FakeCuda(bf16=bf16, memory_gib=memory_gib)
+
+
+def test_prithvi_uses_fp16_and_single_tile_batch_on_t4() -> None:
+    torch_module = _FakeTorch(bf16=False, memory_gib=16)
+    device = _FakeDevice("cuda")
+
+    assert _cuda_autocast_dtype(torch_module, device) == "float16"
+    assert _default_tile_batch_size(torch_module, device) == 1
+
+
+def test_prithvi_keeps_bf16_and_larger_batch_on_large_gpu() -> None:
+    torch_module = _FakeTorch(bf16=True, memory_gib=48)
+    device = _FakeDevice("cuda")
+
+    assert _cuda_autocast_dtype(torch_module, device) == "bfloat16"
+    assert _default_tile_batch_size(torch_module, device) == 4
+
+
+def test_prithvi_derives_an_offline_config_without_changing_the_source(tmp_path: Path) -> None:
+    source = tmp_path / "source.yaml"
+    target = tmp_path / "offline.yaml"
+    source.write_text(
+        "model:\n"
+        "  init_args:\n"
+        "    model_args:\n"
+        "      backbone: prithvi_eo_v2_300\n"
+        "      backbone_pretrained: true\n",
+        encoding="utf-8",
+    )
+
+    _write_offline_inference_config(source, target)
+
+    assert "backbone_pretrained: true" in source.read_text(encoding="utf-8")
+    assert "backbone_pretrained: false" in target.read_text(encoding="utf-8")
 
 
 def test_burned_area_skips_rgb_without_requesting_a_model() -> None:

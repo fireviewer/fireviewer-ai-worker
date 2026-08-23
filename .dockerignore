@@ -6,9 +6,13 @@
 .pytest_cache
 .ruff_cache
 .mypy_cache
+**/node_modules
+eve-point-supervisor/.eve
+eve-point-supervisor/.output
 **/__pycache__
 **/*.egg-info
-tests
+tests/*
+!tests/test_mvp_video_keyframes.py
 benchmark-results
 checkpoints
 data

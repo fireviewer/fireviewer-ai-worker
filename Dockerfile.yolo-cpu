@@ -1,0 +1,46 @@
+FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/opt/huggingface \
+    FW_YOLO_MODEL_CACHE=/opt/huggingface \
+    FW_YOLO_TORCH_THREADS=4 \
+    YOLO_CONFIG_DIR=/tmp/Ultralytics
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/firewarning-worker
+COPY pyproject.toml README.md ./
+
+RUN python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+        torch==2.8.0 torchvision==0.23.0 \
+    && python -m pip install \
+        dill==0.4.1 \
+        huggingface-hub==0.36.2 \
+        httpx==0.28.1 \
+        pillow==12.1.1 \
+        pydantic==2.13.4 \
+        ultralytics==8.4.106 \
+    && python -m pip uninstall --yes opencv-python \
+    && python -m pip install opencv-python-headless==4.13.0.92
+
+COPY src ./src
+COPY tools/prefetch_yolo_cpu.py ./tools/prefetch_yolo_cpu.py
+
+RUN python -m pip install --no-deps . \
+    && python tools/prefetch_yolo_cpu.py --cache-dir /opt/huggingface \
+    && python -c "import torch; assert not torch.cuda.is_available(); assert torch.version.cuda is None"
+
+RUN groupadd --gid 10001 fireviewer \
+    && useradd --create-home --uid 10001 --gid fireviewer worker \
+    && chown -R worker:fireviewer /opt/huggingface
+
+ENV HF_HUB_OFFLINE=1
+
+USER worker
+EXPOSE 8000
+
+ENTRYPOINT ["python", "-m", "firewarning_worker.mvp.vision.yolo_cpu_service"]

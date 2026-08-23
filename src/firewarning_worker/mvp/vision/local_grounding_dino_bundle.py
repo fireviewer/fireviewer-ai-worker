@@ -44,9 +44,7 @@ class LocalGroundingDinoBundleManifest(StrictModel):
         alias="schema",
         serialization_alias="schema",
     )
-    model_id: Literal["IDEA-Research/grounding-dino-tiny"] = (
-        "IDEA-Research/grounding-dino-tiny"
-    )
+    model_id: Literal["IDEA-Research/grounding-dino-tiny"] = "IDEA-Research/grounding-dino-tiny"
     revision: str = Field(pattern=r"^[0-9a-f]{40}$")
     files: tuple[LocalGroundingDinoFile, ...] = Field(min_length=8, max_length=8)
 
@@ -126,7 +124,8 @@ class LocalGroundingDinoModelLoader:
 
         from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
 
-        processor = AutoProcessor.from_pretrained(
+        processor_loader: Any = AutoProcessor.from_pretrained
+        processor = processor_loader(
             self.directory,
             local_files_only=True,
         )

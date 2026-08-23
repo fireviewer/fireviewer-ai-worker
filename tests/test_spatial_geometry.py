@@ -10,6 +10,15 @@ import numpy as np
 import pytest
 
 from firewarning_worker.contracts import CameraMetadataV2
+from firewarning_worker.mvp.localization.durable_terrain import (
+    AzureBackendTerrainResolver,
+    DurableTerrainError,
+    TerrainDownloadReceipt,
+)
+from firewarning_worker.mvp.supervision.backend_event_evidence import (
+    AzureBackendEventEvidenceConfig,
+    DurableTerrainReference,
+)
 from firewarning_worker.spatial_geometry import (
     FWTerrainSurface,
     SpatialGeometryError,
@@ -130,6 +139,95 @@ def test_fwterrain_decoder_restores_absolute_altitude_and_checks_digest(tmp_path
     with pytest.raises(SpatialGeometryError) as error:
         load_fwterrain(path)
     assert error.value.code == "terrain_stored_digest_mismatch"
+
+
+class _TerrainTransport:
+    def __init__(self, payload: bytes) -> None:
+        self.payload = payload
+        self.materialized_path: Path | None = None
+
+    def download(
+        self,
+        url: str,
+        destination: Path,
+        *,
+        headers: dict[str, str],
+        timeout_seconds: float,
+        maximum_bytes: int,
+    ) -> TerrainDownloadReceipt:
+        assert url.endswith("/terrain/content")
+        assert headers["Authorization"] == "Bearer " + ("t" * 32)
+        assert timeout_seconds == 10
+        assert maximum_bytes == len(self.payload)
+        destination.write_bytes(self.payload)
+        self.materialized_path = destination
+        digest = hashlib.sha256(self.payload).hexdigest()
+        return TerrainDownloadReceipt(
+            size_bytes=len(self.payload),
+            sha256=digest,
+            headers={
+                "etag": f'"{digest}"',
+                "x-checksum-sha256": digest,
+            },
+        )
+
+
+def _durable_terrain_reference(payload: bytes) -> DurableTerrainReference:
+    return DurableTerrainReference(
+        terrain_id="TERRAIN-1",
+        package_id="PACKAGE-1",
+        sha256=hashlib.sha256(payload).hexdigest(),
+        size_bytes=len(payload),
+        media_type="application/vnd.fireviewer.terrain",
+        crs="EPSG:2154+EPSG:5720",
+        resolution_m=10,
+        content_url=(
+            "https://api.example.test/api/v1/internal/event-evidence/"
+            "EVENT-1/terrain/content"
+        ),
+    )
+
+
+def test_durable_terrain_resolver_verifies_and_decodes_real_fwterrain() -> None:
+    payload = _far_container()
+    transport = _TerrainTransport(payload)
+    resolver = AzureBackendTerrainResolver(
+        AzureBackendEventEvidenceConfig(
+            base_url="https://api.example.test",
+            bearer_token="t" * 32,
+        ),
+        transport=transport,
+    )
+
+    provider = resolver.resolve(_durable_terrain_reference(payload))
+    longitude, latitude = map_to_wgs84(700_500.0, 6_600_500.0, map_crs="EPSG:2154")
+
+    assert provider.reference_revision == hashlib.sha256(payload).hexdigest()
+    assert provider.resolution_m == 10.0
+    assert provider.elevation_m(longitude, latitude) == pytest.approx(100.0)
+    assert transport.materialized_path is not None
+    assert not transport.materialized_path.exists()
+
+
+def test_durable_terrain_resolver_rejects_a_revision_mismatch() -> None:
+    payload = _far_container()
+    transport = _TerrainTransport(payload)
+    reference = _durable_terrain_reference(payload).model_copy(
+        update={"sha256": "f" * 64}
+    )
+    resolver = AzureBackendTerrainResolver(
+        AzureBackendEventEvidenceConfig(
+            base_url="https://api.example.test",
+            bearer_token="t" * 32,
+        ),
+        transport=transport,
+    )
+
+    with pytest.raises(DurableTerrainError, match="SHA-256"):
+        resolver.resolve(reference)
+
+    assert transport.materialized_path is not None
+    assert not transport.materialized_path.exists()
 
 
 def test_confirmed_camera_pose_projects_a_pixel_onto_the_mnt() -> None:

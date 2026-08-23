@@ -1,0 +1,153 @@
+"""Loopback supervision API used by the CPU-hosted Eve harness."""
+
+from __future__ import annotations
+
+import os
+from typing import Literal, cast
+
+from pydantic import Field, SecretStr
+
+from firewarning_worker.contracts import StrictModel
+from firewarning_worker.mvp.research.multimodal_evidence import (
+    AzureFederatedBedrockClient,
+    AzureManagedIdentityWebTokenProvider,
+)
+from firewarning_worker.mvp.supervision.backend_event_evidence import (
+    AzureBackendEventEvidenceAdapter,
+    AzureBackendEventEvidenceConfig,
+    BackendPointAssessmentPublisher,
+)
+from firewarning_worker.mvp.supervision.bedrock_supervisor import (
+    BedrockPixtralPointSupervisor,
+    BedrockPixtralPointSupervisorConfig,
+)
+from firewarning_worker.mvp.supervision.durable_endpoint import (
+    create_point_supervisor_server,
+)
+from firewarning_worker.mvp.supervision.simulated_supervisor import SimulatedPointSupervisor
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    normalized = value.strip().casefold()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean")
+
+
+class PointSupervisorCpuSettings(StrictModel):
+    host: Literal["127.0.0.1"] = "127.0.0.1"
+    port: int = Field(default=8091, ge=1, le=65_535)
+    supervisor_mode: Literal["managed_vl", "simulated"] = "managed_vl"
+    publication_enabled: bool = False
+    managed_identity_client_id: str | None = Field(default=None, min_length=36, max_length=36)
+    aws_role_arn: str | None = Field(
+        default=None,
+        pattern=r"^arn:aws:iam::\d{12}:role/[A-Za-z0-9+=,.@_/-]+$",
+    )
+    aws_oidc_audience: str | None = Field(default=None, min_length=8, max_length=512)
+    aws_region: str = Field(default="eu-west-3", pattern=r"^[a-z]{2}-[a-z]+-\d$")
+    bedrock_model_id: str = Field(
+        default="eu.mistral.pixtral-large-2502-v1:0",
+        min_length=3,
+        max_length=256,
+    )
+    backend: AzureBackendEventEvidenceConfig
+
+    @classmethod
+    def from_environment(cls) -> PointSupervisorCpuSettings:
+        raw_mode = os.getenv("FIREVIEWER_POINT_SUPERVISOR_MODE", "managed_vl")
+        if raw_mode not in {"managed_vl", "simulated"}:
+            raise ValueError("FIREVIEWER_POINT_SUPERVISOR_MODE is invalid")
+        return cls(
+            port=int(os.getenv("FIREVIEWER_SUPERVISION_PORT", "8091")),
+            supervisor_mode=cast(Literal["managed_vl", "simulated"], raw_mode),
+            publication_enabled=_env_bool(
+                "FIREVIEWER_POINT_PUBLICATION_ENABLED", False
+            ),
+            managed_identity_client_id=os.getenv("AZURE_CLIENT_ID"),
+            aws_role_arn=os.getenv("FIREVIEWER_BEDROCK_ROLE_ARN"),
+            aws_oidc_audience=os.getenv("FIREVIEWER_AWS_OIDC_AUDIENCE"),
+            aws_region=os.getenv("AWS_REGION", "eu-west-3"),
+            bedrock_model_id=os.getenv(
+                "FIREVIEWER_BEDROCK_MODEL_ID",
+                "eu.mistral.pixtral-large-2502-v1:0",
+            ),
+            backend=AzureBackendEventEvidenceConfig(
+                base_url=os.environ["FIREVIEWER_BACKEND_BASE_URL"],
+                bearer_token=SecretStr(os.environ["FIREVIEWER_BACKEND_TOKEN"]),
+                timeout_seconds=float(
+                    os.getenv("FIREVIEWER_BACKEND_TIMEOUT_SECONDS", "20")
+                ),
+            ),
+        )
+
+
+def _managed_supervisor(settings: PointSupervisorCpuSettings) -> BedrockPixtralPointSupervisor:
+    if not all(
+        (
+            settings.managed_identity_client_id,
+            settings.aws_role_arn,
+            settings.aws_oidc_audience,
+        )
+    ):
+        raise ValueError("managed VL mode requires Azure-to-AWS federation settings")
+    return BedrockPixtralPointSupervisor(
+        BedrockPixtralPointSupervisorConfig(
+            region_name=settings.aws_region,
+            inference_profile_id=settings.bedrock_model_id,
+        ),
+        client=AzureFederatedBedrockClient(
+            role_arn=str(settings.aws_role_arn),
+            region_name=settings.aws_region,
+            role_session_name="fireviewer-point-supervisor",
+            web_token_provider=AzureManagedIdentityWebTokenProvider(
+                audience=str(settings.aws_oidc_audience),
+                managed_identity_client_id=str(settings.managed_identity_client_id),
+            ),
+        ),
+    )
+
+
+def main() -> int:
+    settings = PointSupervisorCpuSettings.from_environment()
+    repository = AzureBackendEventEvidenceAdapter(settings.backend)
+    supervisor = (
+        _managed_supervisor(settings)
+        if settings.supervisor_mode == "managed_vl"
+        else SimulatedPointSupervisor()
+    )
+    publisher = (
+        BackendPointAssessmentPublisher(settings.backend)
+        if settings.publication_enabled
+        else None
+    )
+    server = create_point_supervisor_server(
+        repository,
+        host=settings.host,
+        port=settings.port,
+        supervisor=supervisor,
+        publisher=publisher,
+    )
+    print(
+        "point-supervision-api ready "
+        f"http://{settings.host}:{settings.port} "
+        f"supervisor={settings.supervisor_mode} "
+        f"publication={settings.publication_enabled}",
+        flush=True,
+    )
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

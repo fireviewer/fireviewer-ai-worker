@@ -1,5 +1,20 @@
 """Part.3 coarse localization primitives that do not depend on the map builder."""
 
+from firewarning_worker.mvp.localization.azure_maps import (
+    AzureIdentityMapsTransport,
+    AzureMapsConfig,
+    AzureMapsEnrichmentRun,
+    AzureMapsError,
+    AzureMapsGeoEnrichmentProvider,
+    AzureMapsLocationQuery,
+)
+from firewarning_worker.mvp.localization.durable_terrain import (
+    AzureBackendTerrainResolver,
+    DurableTerrainError,
+    DurableTerrainTransport,
+    TerrainDownloadReceipt,
+    UrllibDurableTerrainTransport,
+)
 from firewarning_worker.mvp.localization.event_localizer import (
     EventLocalizationConfig,
     LocalEvidenceImageLoader,
@@ -11,6 +26,17 @@ from firewarning_worker.mvp.localization.evidence_fusion import (
     FusionConfig,
     FusionWeights,
     haversine_m,
+)
+from firewarning_worker.mvp.localization.geographic_endpoint import (
+    DurableGeographicHypothesisService,
+    create_geographic_hypothesis_server,
+)
+from firewarning_worker.mvp.localization.geographic_hypotheses import (
+    GeographicHypothesisConfig,
+    GeographicHypothesisEngine,
+    TerrainElevationProvider,
+    TerrainSurfaceElevationProvider,
+    TerrainVisibility,
 )
 from firewarning_worker.mvp.localization.local_megaloc_bundle import (
     LocalMegaLocBundleManifest,
@@ -30,12 +56,24 @@ from firewarning_worker.mvp.localization.regional_index import (
 from firewarning_worker.mvp.localization.retrieval import MegaLocFaissRetriever, RetrievalConfig
 
 __all__ = [
+    "AzureBackendTerrainResolver",
+    "AzureIdentityMapsTransport",
+    "AzureMapsConfig",
+    "AzureMapsEnrichmentRun",
+    "AzureMapsError",
+    "AzureMapsGeoEnrichmentProvider",
+    "AzureMapsLocationQuery",
     "CachedPanoramaxImageLoader",
     "CallablePanoramaxImageLoader",
     "DeterministicEvidenceFusion",
+    "DurableGeographicHypothesisService",
+    "DurableTerrainError",
+    "DurableTerrainTransport",
     "EventLocalizationConfig",
     "FusionConfig",
     "FusionWeights",
+    "GeographicHypothesisConfig",
+    "GeographicHypothesisEngine",
     "LocalEvidenceImageLoader",
     "LocalMegaLocBundleManifest",
     "LocalMegaLocModelLoader",
@@ -45,7 +83,13 @@ __all__ = [
     "PanoramaxRegionalIndexBuilder",
     "RegionalIndexConfig",
     "RetrievalConfig",
+    "TerrainDownloadReceipt",
+    "TerrainElevationProvider",
+    "TerrainSurfaceElevationProvider",
+    "TerrainVisibility",
+    "UrllibDurableTerrainTransport",
     "abstain_for_missing_reference_coverage",
+    "create_geographic_hypothesis_server",
     "haversine_m",
     "inspect_local_megaloc_bundle",
     "materialize_panoramax_cache",

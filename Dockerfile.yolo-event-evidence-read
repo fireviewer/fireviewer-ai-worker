@@ -1,0 +1,21 @@
+FROM ghcr.io/fireviewer/fireviewer-yolo-cpu@sha256:1ffe856e030bbba6484fbb32bb9388691b8667a21e1e7e502244685137b0693c
+
+LABEL org.opencontainers.image.title="FireViewer visual and geographic evidence worker" \
+      org.opencontainers.image.description="Visual-only YOLO plus separate fail-closed geographic hypothesis stage" \
+      org.opencontainers.image.revision="geographic-hypotheses-1.0"
+
+USER root
+RUN python -m pip install --no-cache-dir \
+    numpy==2.4.6 \
+    pyproj==3.7.2
+COPY --chown=worker:fireviewer src/firewarning_worker/mvp/contracts \
+    /usr/local/lib/python3.12/site-packages/firewarning_worker/mvp/contracts
+COPY --chown=worker:fireviewer src/firewarning_worker/mvp/supervision \
+    /usr/local/lib/python3.12/site-packages/firewarning_worker/mvp/supervision
+COPY --chown=worker:fireviewer src/firewarning_worker/mvp/localization \
+    /usr/local/lib/python3.12/site-packages/firewarning_worker/mvp/localization
+COPY --chown=worker:fireviewer src/firewarning_worker/mvp/vision/yolo_cpu_service.py \
+    /usr/local/lib/python3.12/site-packages/firewarning_worker/mvp/vision/yolo_cpu_service.py
+COPY --chown=worker:fireviewer src/firewarning_worker/spatial_geometry.py \
+    /usr/local/lib/python3.12/site-packages/firewarning_worker/spatial_geometry.py
+USER worker

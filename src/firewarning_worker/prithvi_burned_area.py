@@ -9,6 +9,7 @@ an opportunistic burned-area enhancement, not the satellite-operation gate.
 from __future__ import annotations
 
 import os
+import tempfile
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,54 @@ _CHECKPOINT_NAME = "Prithvi_EO_V2_300M_BurnScars.pt"
 _CONFIG_NAME = "burn_scars_config.yaml"
 
 
+def _write_offline_inference_config(source: Path, target: Path) -> None:
+    """Derive a no-network config while preserving the qualified task checkpoint."""
+
+    import yaml
+
+    payload = yaml.safe_load(source.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise RuntimeError("official Prithvi BurnScars config is not a mapping")
+    model = payload.get("model")
+    if not isinstance(model, dict):
+        raise RuntimeError("official Prithvi BurnScars config has no model section")
+    init_args = model.get("init_args")
+    if not isinstance(init_args, dict):
+        raise RuntimeError("official Prithvi BurnScars config has no model init args")
+    model_args = init_args.get("model_args")
+    if not isinstance(model_args, dict) or model_args.get("backbone") != "prithvi_eo_v2_300":
+        raise RuntimeError("official Prithvi BurnScars config declares an unexpected backbone")
+    model_args["backbone_pretrained"] = False
+    target.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+
+def _cuda_autocast_dtype(torch_module: Any, device: Any) -> Any | None:
+    """Select an autocast dtype supported by the active CUDA device.
+
+    T4 GPUs don't provide native BF16 execution, so they must use FP16. Newer
+    accelerators keep BF16 when PyTorch reports native support.
+    """
+
+    if device.type != "cuda":
+        return None
+    supports_bf16 = getattr(torch_module.cuda, "is_bf16_supported", None)
+    if callable(supports_bf16) and bool(supports_bf16()):
+        return torch_module.bfloat16
+    return torch_module.float16
+
+
+def _default_tile_batch_size(torch_module: Any, device: Any) -> int:
+    """Keep the first T4 deployment conservative without slowing larger GPUs."""
+
+    if device.type != "cuda":
+        return 1
+    try:
+        total_memory = int(torch_module.cuda.get_device_properties(device).total_memory)
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        return 1
+    return 1 if total_memory <= 20 * 1024**3 else 4
+
+
 def _stable_id(prefix: str, *parts: str) -> str:
     digest = sha256("\0".join(parts).encode("utf-8")).hexdigest()[:20].upper()
     return f"{prefix}-{digest}"
@@ -42,7 +91,7 @@ def _closed_polygon(points: list[list[float]]) -> list[list[float]] | None:
 
 
 class PrithviBurnedAreaAdapter:
-    """Sequential A40 adapter for the immutable official BurnScars checkpoint."""
+    """Sequential GPU adapter for the immutable official BurnScars checkpoint."""
 
     def __init__(
         self,
@@ -64,10 +113,13 @@ class PrithviBurnedAreaAdapter:
         config = snapshot / _CONFIG_NAME
         if not checkpoint.is_file() or not config.is_file():
             raise RuntimeError("official Prithvi BurnScars snapshot is incomplete")
-        self.inference_model = LightningInferenceModel.from_config(
-            str(config),
-            str(checkpoint),
-        )
+        with tempfile.TemporaryDirectory(prefix="fireviewer-prithvi-config-") as directory:
+            offline_config = Path(directory) / _CONFIG_NAME
+            _write_offline_inference_config(config, offline_config)
+            self.inference_model = LightningInferenceModel.from_config(
+                str(offline_config),
+                str(checkpoint),
+            )
         import torch
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -274,7 +326,12 @@ class PrithviBurnedAreaAdapter:
                 tiles.append((y, x, datamodule.aug(transformed)["image"]))
 
         device = next(model.parameters()).device
-        batch_size = max(1, int(os.getenv("FW_PRITHVI_TILE_BATCH_SIZE", "4")))
+        default_batch_size = _default_tile_batch_size(torch, device)
+        batch_size = max(
+            1,
+            int(os.getenv("FW_PRITHVI_TILE_BATCH_SIZE", str(default_batch_size))),
+        )
+        autocast_dtype = _cuda_autocast_dtype(torch, device)
         mask = np.zeros(padded.shape[1:], dtype=np.uint8)
         positive_confidences: list[float] = []
         for offset in range(0, len(tiles), batch_size):
@@ -285,8 +342,8 @@ class PrithviBurnedAreaAdapter:
                 torch.inference_mode(),
                 torch.autocast(
                     device_type=device.type,
-                    dtype=torch.bfloat16,
-                    enabled=autocast_enabled,
+                    dtype=autocast_dtype,
+                    enabled=autocast_enabled and autocast_dtype is not None,
                 ),
             ):
                 raw_output = model(tensor)
