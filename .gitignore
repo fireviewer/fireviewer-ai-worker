@@ -50,6 +50,7 @@ training/reference_cases_data/
 # Detailed development and working documentation remains local.  The public
 # repository keeps only its short English presentation and disclosure pages.
 *.md
+!eve-point-supervisor/agent/instructions.md
 !README.md
 !LICENSE-DOCS.md
 !SECURITY.md
