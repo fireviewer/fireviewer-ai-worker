@@ -90,6 +90,8 @@ class _Publisher:
             candidate_id=candidate_id,
             plan_id=payload["plan_id"],
             page_id=payload["page_id"],
+            wave_number=payload["wave_number"],
+            wave_focus=tuple(payload["wave_focus"]),
             replayed=False,
             source_count=len(self.sources),
             claim_count=len(self.claims),
@@ -98,6 +100,11 @@ class _Publisher:
             duplicate_claim_count=0,
             duplicate_media_count=0,
             completed=payload["completed"],
+            media_ticket_limit=payload["media_ticket_limit"],
+            safety_limit_reached=payload["safety_limit_reached"],
+            converged=payload["converged"],
+            zero_yield_wave_streak=payload["zero_yield_wave_streak"],
+            coverage_ready=payload["coverage_ready"],
             next_cursor=payload["next_cursor"],
             source_revision_sha256=revision,
         )
@@ -111,7 +118,8 @@ def _plan() -> SourceAcquisitionPlan:
     return SourceAcquisitionPlan(
         candidate_id="EC-SOURCE-TEST-1",
         plan_id="PLAN-SOURCE-TEST-1",
-        queries=("incendie test",),
+        wave_focus=("incident_identity", "collection_convergence"),
+        queries=("incendie test", "bilan test", "dernieres informations test"),
         allowed_domains=("sources.example",),
         source_policies={
             "sources.example": {
@@ -122,13 +130,13 @@ def _plan() -> SourceAcquisitionPlan:
         },
         search_provider_domain="search.example",
         search_template="https://search.example/search?q={query}",
-        target_media=3,
+        media_ticket_limit=100,
         results_per_page=2,
-        max_pages_per_run=4,
+        max_pages_per_run=12,
     )
 
 
-def test_cpu_worker_paginates_to_twenty_style_target_without_storing_article_text(
+def test_cpu_worker_collects_until_query_convergence_without_a_media_target(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(socket, "getaddrinfo", _public_dns)
@@ -179,13 +187,15 @@ def test_cpu_worker_paginates_to_twenty_style_target_without_storing_article_tex
 
     receipt = worker.run(_plan())
 
-    assert receipt.pages_published == 2
+    assert receipt.pages_published >= 4
     assert receipt.completed is True
+    assert receipt.converged is True
+    assert receipt.coverage_ready is True
     assert receipt.source_count == 3
     assert receipt.claim_count == 0
     assert receipt.media_count == 3
     assert publisher.payloads[0]["next_cursor"] is not None
-    assert publisher.payloads[1]["next_cursor"] is None
+    assert publisher.payloads[-1]["next_cursor"] is None
     serialized = str(publisher.payloads)
     assert "RAW ARTICLE MUST NOT PERSIST" not in serialized
     assert all(payload["claims"] == [] for payload in publisher.payloads)
@@ -217,7 +227,14 @@ def test_cpu_worker_persists_fetch_failures_as_structured_journal(monkeypatch) -
         clock=lambda: NOW,
     )
 
-    receipt = worker.run(_plan().model_copy(update={"target_media": 1}))
+    receipt = worker.run(
+        _plan().model_copy(
+            update={
+                "queries": ("incendie test",),
+                "media_ticket_limit": 100,
+            }
+        )
+    )
 
     assert receipt.completed is True
     journal = publisher.payloads[0]["journal_entries"]
@@ -225,11 +242,7 @@ def test_cpu_worker_persists_fetch_failures_as_structured_journal(monkeypatch) -
     assert journal[0]["outcome"] == "failed"
     assert journal[0]["source_url"] == "https://sources.example/article-1"
     assert "raw article must not persist" not in journal[0]["detail"].casefold()
-    assert any(
-        item["error_code"] == "target_media_not_reached"
-        and item["outcome"] == "missing"
-        for item in journal
-    )
+    assert any(item["error_code"] == "collection_not_converged" for item in journal)
     assert publisher.payloads[0]["sources"] == []
     assert publisher.payloads[0]["claims"] == []
     assert publisher.payloads[0]["media"] == []
@@ -277,7 +290,11 @@ def test_cpu_worker_sends_public_page_and_image_transiently_to_mistral_vl(monkey
         clock=lambda: NOW,
     )
 
-    receipt = worker.run(_plan().model_copy(update={"target_media": 1}))
+    receipt = worker.run(
+        _plan().model_copy(
+            update={"queries": ("incendie test",), "media_ticket_limit": 100}
+        )
+    )
 
     assert receipt.claim_count == 1
     assert provider.documents[0].images[0].content.endswith(b"TRANSIENT PUBLIC IMAGE")

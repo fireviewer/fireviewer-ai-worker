@@ -17,6 +17,16 @@ from firewarning_worker.mvp.supervision.backend_event_evidence import DurableEve
 
 _UNSAFE_LABEL_PATTERN = re.compile(r"(?:https?://|@|\+?\d[\d .()-]{7,}\d)", re.IGNORECASE)
 _LABEL_CHARACTER_PATTERN = re.compile(r"[^\wÀ-ÖØ-öø-ÿ' -]+", re.UNICODE)
+_FOCUS_PATTERN = re.compile(r"[^A-Za-z0-9._:-]+")
+_WEB_ACTIONABLE_FOCUS = frozenset(
+    {
+        "web_query_waves",
+        "official_source",
+        "independent_evidence_families",
+        "time_qualified_observation",
+        "visual_or_satellite_evidence",
+    }
+)
 
 
 def _policy(
@@ -70,8 +80,9 @@ class AutomaticSourcePlannerConfig(StrictModel):
     source_policies: dict[str, SourceDomainPolicy] = Field(
         default_factory=lambda: dict(DEFAULT_SOURCE_POLICIES)
     )
-    target_media: int = Field(default=20, ge=20, le=100)
+    media_ticket_limit: int = Field(default=2_048, ge=1, le=2_048)
     results_per_page: int = Field(default=20, ge=1, le=50)
+    media_per_source: int = Field(default=8, ge=1, le=20)
     max_pages_per_run: int = Field(default=5, ge=1, le=50)
     max_multimodal_analyses_per_run: int = Field(default=20, ge=1, le=100)
 
@@ -94,6 +105,11 @@ def _safe_public_label(value: str | None) -> str | None:
     return normalized
 
 
+def _safe_focus(value: str) -> str | None:
+    normalized = _FOCUS_PATTERN.sub("_", value.strip().casefold()).strip("_")
+    return normalized[:128] if normalized else None
+
+
 class AutomaticSourceAcquisitionPlanner:
     """Build a stable plan without accepting user-supplied domains or templates."""
 
@@ -104,28 +120,107 @@ class AutomaticSourceAcquisitionPlanner:
         observed = durable.event.time_window.from_at
         date = observed.date().isoformat() if observed is not None else ""
         label = _safe_public_label(durable.viewpoint_label)
-        if label:
-            queries = (
-                f'incendie "{label}" {date}'.strip(),
-                f'feu de foret "{label}" {date}'.strip(),
-                f'evacuation pompiers "{label}" {date}'.strip(),
+        progress = durable.research_progress
+        wave_focus: tuple[str, ...]
+        if progress is None:
+            wave_number = 1
+            wave_focus = (
+                "incident_identity",
+                "official_state",
+                "daily_progression",
+                "visual_evidence",
+                "lifecycle_transition",
             )
+        elif (
+            progress.completed
+            and progress.wave_number < 16
+            and (
+                not progress.converged
+                or (
+                    durable.incident_day_coverage is not None
+                    and not durable.incident_day_coverage.documentary_ready
+                )
+            )
+        ):
+            wave_number = progress.wave_number + 1
+            coverage = durable.incident_day_coverage
+            raw_missing = coverage.missing_dimensions if coverage is not None else ()
+            wave_focus = tuple(
+                dict.fromkeys(
+                    focus
+                    for item in raw_missing
+                    if (focus := _safe_focus(item)) is not None
+                    and (focus in _WEB_ACTIONABLE_FOCUS or focus.startswith("lifecycle:"))
+                )
+            ) or ("collection_convergence",)
         else:
-            queries = (
-                f"incendie {date}".strip(),
-                f"feu de foret {date}".strip(),
-                f"evacuation pompiers {date}".strip(),
-            )
-        policies = {
-            domain.casefold().rstrip("."): policy
-            for domain, policy in self.config.source_policies.items()
+            wave_number = progress.wave_number
+            wave_focus = progress.wave_focus
+        subject = f'"{label}"' if label else ""
+        query_terms: list[str] = []
+        focus_queries = {
+            "incident_identity": ("incendie", "feu de foret"),
+            "official_state": ("point de situation prefecture sdis",),
+            "daily_progression": (
+                "progression front secteur",
+                "hectares pompiers evacuation",
+            ),
+            "visual_evidence": ("photo video drone fumee flammes",),
+            "lifecycle_transition": ("reprise feu fixe maitrise circonscrit eteint",),
+            "official_source": ("communique prefecture sdis mairie onf",),
+            "independent_evidence_families": ("reportage temoignage presse locale",),
+            "time_qualified_observation": ("heure chronologie point de situation",),
+            "visual_or_satellite_evidence": ("photo video drone satellite",),
+            "spatial_observation": ("secteur lieu carte drone satellite",),
+            "web_query_waves": (
+                "incendie",
+                "point de situation",
+            ),
+            "collection_convergence": (
+                "bilan chronologie",
+                "dernieres informations",
+            ),
         }
+        for focus in wave_focus:
+            normalized_focus = focus.split(":", 1)[0]
+            if focus.startswith("lifecycle:"):
+                normalized_focus = "lifecycle_transition"
+            query_terms.extend(focus_queries.get(normalized_focus, (normalized_focus,)))
+        query_terms.extend(("bilan chronologie", "dernieres informations"))
+        queries = tuple(
+            dict.fromkeys(
+                " ".join(part for part in (term, subject, date) if part) for term in query_terms
+            )
+        )
+        configured_policies: dict[str, SourceDomainPolicy]
+        if durable.research_source_policies:
+            configured_policies = {
+                domain: SourceDomainPolicy.model_validate(policy)
+                for domain, policy in durable.research_source_policies.items()
+            }
+        else:
+            configured_policies = self.config.source_policies
+        policies = {
+            domain.casefold().rstrip("."): policy for domain, policy in configured_policies.items()
+        }
+        search_provider_domain = self.config.search_provider_domain
+        search_template = self.config.search_template
+        if durable.research_search_templates:
+            preferred = search_provider_domain.casefold().rstrip(".")
+            if preferred in durable.research_search_templates:
+                search_provider_domain = preferred
+                search_template = durable.research_search_templates[preferred]
+            else:
+                search_provider_domain = sorted(durable.research_search_templates)[0]
+                search_template = durable.research_search_templates[search_provider_domain]
         identity = json.dumps(
             {
                 "candidate_id": durable.event.event_id,
+                "wave_number": wave_number,
+                "wave_focus": wave_focus,
                 "queries": queries,
                 "domains": sorted(policies),
-                "target_media": self.config.target_media,
+                "media_ticket_limit": self.config.media_ticket_limit,
             },
             ensure_ascii=False,
             separators=(",", ":"),
@@ -134,17 +229,18 @@ class AutomaticSourceAcquisitionPlanner:
         return SourceAcquisitionPlan(
             candidate_id=durable.event.event_id,
             plan_id=f"PLAN-AUTO-{sha256(identity.encode('utf-8')).hexdigest()[:24]}",
+            wave_number=wave_number,
+            wave_focus=wave_focus,
             queries=queries,
             allowed_domains=tuple(sorted(policies)),
             source_policies=policies,
-            search_provider_domain=self.config.search_provider_domain,
-            search_template=self.config.search_template,
-            target_media=self.config.target_media,
+            search_provider_domain=search_provider_domain,
+            search_template=search_template,
+            media_ticket_limit=self.config.media_ticket_limit,
             results_per_page=self.config.results_per_page,
+            media_per_source=self.config.media_per_source,
             max_pages_per_run=self.config.max_pages_per_run,
-            max_multimodal_analyses_per_run=(
-                self.config.max_multimodal_analyses_per_run
-            ),
+            max_multimodal_analyses_per_run=(self.config.max_multimodal_analyses_per_run),
         )
 
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import socket
+from hashlib import sha256
+from pathlib import Path
 
 import httpx
 import pytest
@@ -125,6 +127,9 @@ def test_search_paginates_and_fetch_exposes_media_candidates(
             content=b"""
             <meta property="og:title" content="Incident update">
             <meta property="og:image" content="/media/fire.jpg">
+            <meta property="og:video:secure_url" content="/media/briefing.mp4">
+            <video poster="/media/poster.jpg"><source src="/media/drone.webm"></video>
+            <audio src="/media/briefing.mp3"></audio>
             <img src="https://sources.example/media/smoke.jpg">
             """,
             request=request,
@@ -175,6 +180,10 @@ def test_search_paginates_and_fetch_exposes_media_candidates(
     assert fetched["metadata"]["og:title"] == "Incident update"
     assert fetched["media_links"] == [
         "https://sources.example/media/fire.jpg",
+        "https://sources.example/media/briefing.mp4",
+        "https://sources.example/media/poster.jpg",
+        "https://sources.example/media/drone.webm",
+        "https://sources.example/media/briefing.mp3",
         "https://sources.example/media/smoke.jpg",
     ]
 
@@ -305,3 +314,76 @@ def test_fetch_only_policy_has_no_vercel_upload_dependency(
             },
             policy,
         )
+
+
+def test_public_media_is_streamed_to_ephemeral_file_with_exact_ticket(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(socket, "getaddrinfo", _public_dns)
+    video = b"verified-public-video"
+    broker = ResearchBroker(
+        control_token=CONTROL_TOKEN,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                headers={
+                    "content-type": "video/mp4",
+                    "content-length": str(len(video)),
+                },
+                content=video,
+                request=request,
+            )
+        ),
+    )
+    token = _configure(broker)
+    policy = broker._session({"session_token": token})
+    destination = tmp_path / "public-video.bin"
+
+    receipt = broker.materialize_transient_file(
+        {"arguments": {"url": "https://sources.example/point.mp4"}},
+        policy,
+        destination=destination,
+        expected_sha256=sha256(video).hexdigest(),
+        expected_size_bytes=len(video),
+        expected_content_type="video/mp4",
+    )
+
+    assert destination.read_bytes() == video
+    assert receipt["binary_stored"] is False
+    destination.unlink()
+    assert not destination.exists()
+
+
+def test_public_media_digest_failure_removes_ephemeral_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(socket, "getaddrinfo", _public_dns)
+    video = b"tampered-public-video"
+    broker = ResearchBroker(
+        control_token=CONTROL_TOKEN,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                headers={"content-type": "video/mp4"},
+                content=video,
+                request=request,
+            )
+        ),
+    )
+    token = _configure(broker)
+    policy = broker._session({"session_token": token})
+    destination = tmp_path / "rejected-video.bin"
+
+    with pytest.raises(BrokerPolicyError, match="broker_transient_digest_mismatch"):
+        broker.materialize_transient_file(
+            {"arguments": {"url": "https://sources.example/point.mp4"}},
+            policy,
+            destination=destination,
+            expected_sha256="0" * 64,
+            expected_size_bytes=len(video),
+            expected_content_type="video/mp4",
+        )
+
+    assert not destination.exists()

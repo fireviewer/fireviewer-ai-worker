@@ -1,0 +1,36 @@
+FROM python:3.11-slim-bookworm AS build
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /build
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
+
+COPY pyproject.toml README.md ./
+COPY src ./src
+COPY tests/test_mvp_satellite_cpu.py ./tests/test_mvp_satellite_cpu.py
+RUN pip install --upgrade pip \
+    && pip install '.[satellite-cpu]' pytest==9.0.2 \
+    && pytest -q -o addopts='' tests/test_mvp_satellite_cpu.py
+RUN pip uninstall --yes pytest setuptools wheel
+RUN python -m pip uninstall --yes pip
+
+FROM gcr.io/distroless/python3-debian12:nonroot AS runtime
+
+ENV PYTHONPATH="/opt/site-packages:/app/src" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    FIREVIEWER_SAGEMAKER_GEO_INVOCATION_ENABLED=false
+
+COPY --from=build /opt/venv/lib/python3.11/site-packages /opt/site-packages
+COPY --from=build /build/src /app/src
+COPY --from=build /usr/lib/x86_64-linux-gnu/libexpat.so.1* /usr/lib/x86_64-linux-gnu/
+WORKDIR /app
+USER nonroot
+EXPOSE 8080
+ENTRYPOINT ["python3", "-m", "firewarning_worker.mvp.satellite_cpu_service"]

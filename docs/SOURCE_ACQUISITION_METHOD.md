@@ -35,7 +35,9 @@ incident + episode + local day + AOI
 ```
 
 The acquisition system does not draw a perimeter and it does not read the
-published perimeter used as evaluation truth.
+published perimeter used as evaluation truth. Its production coverage policy
+has no fixed media target. A previous 20-media figure belonged to a local test
+lot and is not a FireViewer completeness rule.
 
 ## Canonical acquisition target
 
@@ -71,7 +73,8 @@ technical failure is `FAILED`. Exhausting a query list is not success.
 
 `COVERAGE_READY` is reached only when the coverage contract below is satisfied.
 An incomplete bundle is retained for the next acquisition wave, but it does not
-silently start perimeter generation.
+silently start perimeter generation. Page, byte, duration, and media limits are
+operational safety ceilings. Reaching one is never evidence of completeness.
 
 ## Adaptive Web acquisition
 
@@ -99,6 +102,14 @@ The planner produces bounded waves from the canonical target.
      confirmation gets its own targeted wave;
    - adjacent-day pages may be inspected, but evidence is assigned to the target
      day only when the content explicitly supports that time.
+5. **Chronology repair**
+   - the planner compares the incident-wide coverage matrix with the known
+     episode interval;
+   - every uncovered active day, lifecycle transition, named sector, reported
+     resumption, and unexplained spatial jump produces a focused wave;
+   - newly verified names, aliases, sectors, dates, organisations, aircraft,
+     roads, and municipalities may expand later queries, but never the domain
+     allowlist.
 
 Broad and domain-targeted queries are both used. Search providers discover
 candidates only; a search result is never evidence by itself.
@@ -161,6 +172,12 @@ vision may re-fetch an image through the controlled broker by ticket, verify the
 same SHA-256, analyze it, and discard it again. A changed object is journaled as
 stale evidence rather than silently replacing the ticket.
 
+The collector admits every useful, non-duplicate image discovered within its
+bounded execution budget. It does not stop after 20 items. Pagination continues
+across sources and waves until the incident coverage converges or an explicit
+safety limit is reached. Safety-limit exhaustion produces `COLLECTION_PARTIAL`
+with a resumable cursor.
+
 ## Video and audio collection
 
 A video URL counts as one source media item. Its frames do not count as
@@ -189,12 +206,13 @@ The official-source scheduler queries the incident AOI and time window through
 versioned connectors:
 
 - CDSE STAC for product discovery and immutable product metadata;
-- Sentinel-3 FRP products and NASA FIRMS for active thermal observations;
+- Sentinel-3 SLSTR FRP NRT/NTC for classified vegetation-fire points;
+- NASA FIRMS MODIS and VIIRS (S-NPP, NOAA-20 and NOAA-21) for active-fire
+  pixel footprints;
+- CLMS Burnt Area Global 300 m daily V4 for dated burn-scar masks;
 - Sentinel-2 Level-2A for optical change and burned-area analysis;
-- Sentinel-1 GRD as an auxiliary cloud-independent observation when a qualified
-  downstream method is available;
-- EFFIS or CEMS products as separately attributed external observations, never
-  as hidden ground truth.
+- Sentinel-1 GRD discovery as an auxiliary cloud-independent input; no qualified
+  downstream Sentinel-1 processor is claimed yet.
 
 Every observation retains acquisition time, publication time, footprint, CRS,
 platform, sensor, product identifier, resolution, quality flags, licence,
@@ -218,8 +236,18 @@ not silently inserted as model bands. The raster manifest signs its CRS,
 geotransform, bounds, dimensions, band order, nodata policy, resampling method,
 acquisition time, and SHA-256 before inference.
 
-Thermal points preserve their native footprint and accuracy. They are evidence
-of a sensor observation, not exact ground-fire coordinates.
+CLMS DOB/CP/BF rasters are read only for the bounded incident window. Pixels are
+selected for the exact local day, thresholded, polygonised and clipped before a
+derived `burned_area` ticket is persisted. Sentinel-3
+`FRP_MWIR1km_standard.nc` (NRT) and `FRP_in.nc` (NTC) files are streamed to
+ephemeral storage and decoded into classified vegetation-fire points. The
+temporary file is deleted after processing.
+
+FIRMS preserves the provider-reported MODIS or VIIRS scan/track pixel footprint
+and its uncertainty. Sentinel-3 thermal points preserve their native accuracy.
+Neither source is treated as an exact ground-fire coordinate, and points are
+never buffered to manufacture perimeter geometry. They corroborate or
+contradict independently observed masks.
 
 ## Deduplication and independence
 
@@ -239,17 +267,28 @@ twenty independent proofs.
 
 The scraper computes coverage after every wave.
 
-### Incident-level documentary target
+### Incident-level documentary coverage
 
-- at least 20 valid public image or video tickets for the incident collection;
-- at least one official or emergency-service source;
-- multiple independent publisher or capture families;
-- chronological coverage across the documented active episode;
-- no unresolved hash, provenance, or temporal-assignment error on admitted
-  tickets.
+The incident is documentary-complete only when the coverage matrix contains:
 
-The number 20 measures usable media candidates, not independent proofs. Logos,
-duplicates, search-result thumbnails, and derived keyframes do not count.
+- the initial detection or ignition interval when it is publicly observable;
+- every documented active day, including multi-day continuations;
+- every lifecycle transition supported by evidence: resumption, expansion,
+  fixed, contained, controlled, extinguished, or reactivated;
+- official or emergency-service reporting where such reporting exists;
+- multiple independent publisher or original-capture families;
+- enough non-duplicate images and videos to represent the observed sectors and
+  time intervals, without treating mirrors, crops, thumbnails, or keyframes as
+  independent evidence;
+- explicit gaps for intervals where no qualifying public observation exists;
+- no unresolved identity, hash, provenance, or temporal-assignment error on an
+  admitted ticket.
+
+Completeness is therefore measured by covered dimensions, not by a global
+counter. Collection converges only after the required matrix is covered and two
+successive focused waves add no new independent source, lifecycle fact, time
+interval, sector, or spatial observation. If a runtime ceiling is reached first,
+the result remains partial and resumes from its durable cursor.
 
 ### Day-level analysis target
 
@@ -266,8 +305,11 @@ Independent textual reports can make a day useful for the public chronology,
 but a hectare figure or place name alone cannot justify a perimeter geometry.
 
 The coverage object exposes counts by source type, media type, day, evidence
-family, and spatial capability, plus explicit missing dimensions and the next
-query wave. `queries_exhausted` and `coverage_ready` are separate fields.
+family, and spatial capability, but counts remain diagnostics rather than
+targets. It also exposes lifecycle and interval coverage, explicit missing
+dimensions, marginal yield for the latest wave, convergence streak, safety-limit
+state, and the next query wave. `queries_exhausted`, `safety_limit_reached`,
+`converged`, and `coverage_ready` are separate fields.
 
 ## Durable output
 
@@ -287,8 +329,15 @@ The scraper emits an `IncidentDayEvidenceBundle` containing references only:
   "contradictions": [],
   "coverage": {
     "queries_exhausted": false,
-    "incident_media_target": 20,
+    "safety_limit_reached": false,
+    "converged": false,
     "incident_media_count": 0,
+    "independent_evidence_family_count": 0,
+    "covered_days": [],
+    "covered_lifecycle_phases": [],
+    "uncovered_intervals": [],
+    "last_wave_new_independent_evidence": 0,
+    "zero_yield_wave_streak": 0,
     "time_qualified": false,
     "spatially_usable": false,
     "coverage_ready": false,
@@ -337,8 +386,8 @@ A real end-to-end acquisition test must prove:
 1. the target was generated automatically from an incident analysis window;
 2. no manual candidate, source URL, query plan, or evidence JSON was injected;
 3. admitted sources and media can be replayed from their tickets and hashes;
-4. at least 20 valid incident media tickets were collected or the run remains
-   visibly partial;
+4. the coverage matrix and convergence receipts justify completion, or the run
+   remains visibly partial with its next wave and cursor;
 5. claims preserve source and temporal references;
 6. public raw content and transcripts are absent from durable storage;
 7. satellite artifacts carry usable georeferencing and signed band manifests;

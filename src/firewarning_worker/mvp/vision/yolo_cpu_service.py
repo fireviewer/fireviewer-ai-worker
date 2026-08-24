@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import hmac
 import json
 import os
@@ -12,7 +14,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 import httpx
@@ -73,6 +75,40 @@ class YoloEventRequest(StrictModel):
 
 class YoloBackendEventRequest(StrictModel):
     candidate_id: SafeIdentifierV2
+
+
+class YoloTransientImageRequest(StrictModel):
+    media_id: SafeIdentifierV2
+    content_type: Literal["image/jpeg", "image/png", "image/webp"]
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    content_base64: str = Field(min_length=4, max_length=7 * 1_024 * 1_024, repr=False)
+
+    def image(self) -> Image.Image:
+        try:
+            content = base64.b64decode(self.content_base64, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError("transient YOLO image base64 is invalid") from exc
+        if not content or len(content) > 5 * 1_024 * 1_024:
+            raise ValueError("transient YOLO image exceeds its byte limit")
+        if sha256(content).hexdigest() != self.content_sha256:
+            raise ValueError("transient YOLO image digest mismatch")
+        try:
+            image = Image.open(BytesIO(content))
+            image.load()
+        except (UnidentifiedImageError, OSError) as exc:
+            raise ValueError("transient YOLO payload is not an image") from exc
+        return image
+
+
+class _StaticImageLoader:
+    def __init__(self, *, media_id: str, image: Image.Image) -> None:
+        self._media_id = media_id
+        self._image = image
+
+    def load(self, media: EvidenceMedia) -> object:
+        if media.media_id != self._media_id:
+            raise ValueError("transient YOLO media identity mismatch")
+        return self._image
 
 
 class EvidenceDownloadError(RuntimeError):
@@ -361,6 +397,33 @@ class YoloEventService:
         }
         return response
 
+    def analyze_transient(self, request: YoloTransientImageRequest) -> dict[str, Any]:
+        """Analyze one in-memory public frame without retaining or geolocating it."""
+
+        image = request.image()
+        media = EvidenceMedia(
+            media_id=request.media_id,
+            source_id="SRC-TRANSIENT-PUBLIC",
+            media_group_id="GROUP-TRANSIENT-PUBLIC",
+            origin_id="ORIGIN-TRANSIENT-PUBLIC",
+            kind="photo",
+            sha256=request.content_sha256,
+        )
+        with self._lock:
+            if self._runtime is None:
+                self._runtime = self._model_loader()
+            provider = YoloCpuVisionProvider(
+                image_loader=_StaticImageLoader(media_id=media.media_id, image=image),
+                model_loader=lambda: self._require_runtime(),
+                config=YoloCpuConfig(torch_threads=self.settings.torch_threads),
+            )
+            result = provider.detect(media)
+        return {
+            "result": result.model_dump(mode="json", by_alias=True),
+            "input_binary_stored": False,
+            "geographic_output_created": False,
+        }
+
     def locate_backend(self, request: YoloBackendEventRequest) -> dict[str, object]:
         if self._geographic_service is None:
             raise RuntimeError("backend geographic integration is not configured")
@@ -428,6 +491,7 @@ class YoloRequestHandler(BaseHTTPRequestHandler):
             "/v1/backend-event-evidence/detect",
             "/v1/backend-event-evidence/geographic-hypotheses",
             "/v1/backend-event-evidence/point-bundles",
+            "/v1/transient-images/detect",
         }:
             self._write_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
             return
@@ -450,6 +514,8 @@ class YoloRequestHandler(BaseHTTPRequestHandler):
                 "/v1/backend-event-evidence/point-bundles",
             }:
                 backend_request = YoloBackendEventRequest.model_validate_json(raw_body)
+            elif self.path == "/v1/transient-images/detect":
+                transient_request = YoloTransientImageRequest.model_validate_json(raw_body)
             else:
                 event_request = YoloEventRequest.model_validate_json(raw_body)
         except ValueError:
@@ -458,6 +524,8 @@ class YoloRequestHandler(BaseHTTPRequestHandler):
         try:
             if self.path == "/v1/backend-event-evidence/detect":
                 response = self.server.service.analyze_backend(backend_request)
+            elif self.path == "/v1/transient-images/detect":
+                response = self.server.service.analyze_transient(transient_request)
             elif self.path == "/v1/backend-event-evidence/geographic-hypotheses":
                 response = self.server.service.locate_backend(backend_request)
             elif self.path == "/v1/backend-event-evidence/point-bundles":
@@ -535,5 +603,6 @@ __all__ = [
     "YoloEventRequest",
     "YoloEventService",
     "YoloHttpServer",
+    "YoloTransientImageRequest",
     "main",
 ]

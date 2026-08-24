@@ -1,0 +1,753 @@
+"""Deterministic CPU extraction of daily Copernicus wildfire observations."""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any, Literal, Protocol, cast
+from urllib.parse import urlsplit
+
+import boto3
+import numpy as np
+from botocore.config import Config as BotocoreConfig
+from botocore.exceptions import BotoCoreError, ClientError
+from pydantic import Field, SecretStr, model_validator
+
+from firewarning_worker.contracts import SafeIdentifierV2, StrictModel
+from firewarning_worker.mvp.satellite_cpu import SatelliteCpuError
+from firewarning_worker.mvp.supervision.backend_event_evidence import (
+    BackendIncidentDaySatelliteArtifact,
+    BackendIncidentDaySatelliteObservationPublisher,
+    DurableEventEvidence,
+    EventEvidenceRepository,
+)
+
+_CLMS_PROCESSOR = "clms_burned_area_daily_v1"
+_CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.0.0"
+_CLMS_COLLECTION = "clms_ba_global_300m_daily_v4_cog"
+_CLMS_ASSETS = ("ba300_dob_nrt", "ba300_cp_nrt", "ba300_bf_nrt")
+_FRP_PROCESSOR = "sentinel3_frp_v1"
+_FRP_REVISION = "fireviewer-sentinel3-frp-cpu-1.1.0"
+_FRP_COLLECTIONS = {"sentinel-3-sl-2-frp-nrt", "sentinel-3-sl-2-frp-ntc"}
+_FRP_ASSETS_BY_COLLECTION = {
+    "sentinel-3-sl-2-frp-nrt": ("FRP_MWIR1km_STANDARD",),
+    "sentinel-3-sl-2-frp-ntc": ("FRP_in",),
+}
+_MAX_FRP_SAMPLES = 500_000
+
+
+class SatelliteObservationAsset(StrictModel):
+    asset_name: SafeIdentifierV2
+    object_uri: str = Field(pattern=r"^s3://eodata/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+$")
+    media_type: str = Field(min_length=3, max_length=255)
+    file_size_bytes: int = Field(gt=0, le=2_147_483_648)
+    file_checksum: str = Field(pattern=r"^[0-9a-f]{32,128}$")
+    proj_code: str | None = Field(default=None, min_length=3, max_length=128)
+    proj_shape: tuple[int, int] | None = None
+    proj_transform: tuple[float, float, float, float, float, float] | None = None
+    nodata: float | None = Field(default=None, allow_inf_nan=False)
+    data_type: str | None = Field(default=None, min_length=2, max_length=32)
+    raster_scale: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_grid(self) -> SatelliteObservationAsset:
+        grid_values = (
+            self.proj_code,
+            self.proj_shape,
+            self.proj_transform,
+            self.nodata,
+            self.data_type,
+            self.raster_scale,
+        )
+        if self.asset_name in _CLMS_ASSETS:
+            if any(value is None for value in grid_values) or self.proj_code != "EPSG:4326":
+                raise ValueError("CLMS processing asset has no complete EPSG:4326 grid")
+        elif any(value is not None for value in grid_values):
+            raise ValueError("non-raster satellite asset unexpectedly exposes a grid")
+        if self.asset_name in {"FRP_in", "FRP_MWIR1km_STANDARD"} and (
+            self.file_size_bytes > 256 * 1_024 * 1_024
+        ):
+            raise ValueError("Sentinel-3 FRP processing asset exceeds 256 MiB")
+        return self
+
+    @property
+    def s3_key(self) -> str:
+        parsed = urlsplit(self.object_uri)
+        if parsed.scheme != "s3" or parsed.netloc != "eodata":
+            raise SatelliteCpuError("cdse_satellite_asset_uri_invalid", retryable=False)
+        return parsed.path.lstrip("/")
+
+
+class CdseObservationS3Config(StrictModel):
+    endpoint_url: Literal["https://eodata.dataspace.copernicus.eu"] = (
+        "https://eodata.dataspace.copernicus.eu"
+    )
+    access_key: SecretStr = Field(min_length=8, max_length=512)
+    secret_key: SecretStr = Field(min_length=16, max_length=512)
+    region_name: str = Field(default="eu-central-1", min_length=3, max_length=64)
+    maximum_window_pixels: int = Field(default=4_000_000, ge=256, le=25_000_000)
+
+
+@dataclass(frozen=True, slots=True)
+class SatelliteAssetReceipt:
+    asset_name: str
+    source_checksum: str
+    derived_content_sha256: str
+    bytes_read: int
+
+    def as_payload(self) -> dict[str, Any]:
+        return {
+            "asset_name": self.asset_name,
+            "source_checksum": self.source_checksum,
+            "derived_content_sha256": self.derived_content_sha256,
+            "bytes_read": self.bytes_read,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ClmsRasterWindow:
+    day_of_burn: np.ndarray[Any, Any]
+    burn_probability: np.ndarray[Any, Any]
+    burn_fraction: np.ndarray[Any, Any]
+    valid_masks: tuple[np.ndarray[Any, Any], np.ndarray[Any, Any], np.ndarray[Any, Any]]
+    transform: Any
+    receipts: tuple[SatelliteAssetReceipt, ...]
+
+
+class SatelliteObservationAssetReader(Protocol):
+    def read_clms_window(
+        self,
+        *,
+        assets: tuple[SatelliteObservationAsset, ...],
+        bbox: tuple[float, float, float, float],
+    ) -> ClmsRasterWindow: ...
+
+    def fetch_frp_file(
+        self,
+        *,
+        asset: SatelliteObservationAsset,
+        output_path: Path,
+    ) -> SatelliteAssetReceipt: ...
+
+
+def _window_digest(
+    *, asset: SatelliteObservationAsset, array: np.ndarray[Any, Any], transform: Any
+) -> str:
+    digest = sha256()
+    digest.update(asset.asset_name.encode())
+    digest.update(asset.file_checksum.encode())
+    digest.update(str(tuple(float(value) for value in transform.to_gdal())).encode())
+    digest.update(str(array.shape).encode())
+    digest.update(str(array.dtype).encode())
+    digest.update(np.ascontiguousarray(array).tobytes())
+    return digest.hexdigest()
+
+
+def _validate_clms_window_size(*, width: float, height: float, maximum_pixels: int) -> None:
+    pixels = math.ceil(width) * math.ceil(height)
+    if pixels <= 0:
+        raise SatelliteCpuError("clms_satellite_window_empty", retryable=False)
+    if pixels > maximum_pixels:
+        raise SatelliteCpuError("clms_satellite_window_too_large", retryable=False)
+
+
+class CdseS3ObservationAssetReader:
+    """Read bounded COG windows and one small FRP NetCDF from official CDSE S3."""
+
+    def __init__(self, config: CdseObservationS3Config, *, s3_client: Any | None = None) -> None:
+        self.config = config
+        session = boto3.Session(
+            aws_access_key_id=config.access_key.get_secret_value(),
+            aws_secret_access_key=config.secret_key.get_secret_value(),
+            region_name=config.region_name,
+        )
+        self._session = session
+        self._s3 = s3_client or session.client(
+            "s3",
+            endpoint_url=config.endpoint_url,
+            config=BotocoreConfig(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+                retries={"mode": "adaptive", "total_max_attempts": 5},
+                connect_timeout=10,
+                read_timeout=120,
+            ),
+        )
+
+    def read_clms_window(
+        self,
+        *,
+        assets: tuple[SatelliteObservationAsset, ...],
+        bbox: tuple[float, float, float, float],
+    ) -> ClmsRasterWindow:
+        import rasterio
+        from rasterio.session import AWSSession
+        from rasterio.windows import Window, from_bounds
+
+        if tuple(item.asset_name for item in assets) != _CLMS_ASSETS:
+            raise SatelliteCpuError("clms_satellite_asset_set_invalid", retryable=False)
+        arrays: list[np.ndarray[Any, Any]] = []
+        masks: list[np.ndarray[Any, Any]] = []
+        receipts: list[SatelliteAssetReceipt] = []
+        common_transform: Any | None = None
+        common_shape: tuple[int, int] | None = None
+        aws_session = AWSSession(session=self._session, requester_pays=False)
+        endpoint_host = urlsplit(self.config.endpoint_url).hostname
+        try:
+            with rasterio.Env(
+                aws_session,
+                AWS_S3_ENDPOINT=endpoint_host,
+                AWS_HTTPS="YES",
+                AWS_VIRTUAL_HOSTING="FALSE",
+                GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+            ):
+                for asset in assets:
+                    with rasterio.open(f"/vsis3/eodata/{asset.s3_key}") as dataset:
+                        if str(dataset.crs) != asset.proj_code or dataset.count != 1:
+                            raise SatelliteCpuError("clms_satellite_grid_mismatch", retryable=False)
+                        requested = from_bounds(*bbox, transform=dataset.transform)
+                        requested = requested.round_offsets().round_lengths()
+                        try:
+                            window = requested.intersection(
+                                Window(0, 0, dataset.width, dataset.height)
+                            )
+                        except rasterio.errors.WindowError as exc:
+                            raise SatelliteCpuError(
+                                "incident_outside_clms_product", retryable=False
+                            ) from exc
+                        _validate_clms_window_size(
+                            width=window.width,
+                            height=window.height,
+                            maximum_pixels=self.config.maximum_window_pixels,
+                        )
+                        masked = dataset.read(1, window=window, masked=True)
+                        transform = dataset.window_transform(window)
+                        if masked.size == 0:
+                            raise SatelliteCpuError("clms_satellite_window_empty", retryable=False)
+                        if common_shape is None:
+                            common_shape = cast(tuple[int, int], masked.shape)
+                            common_transform = transform
+                        elif masked.shape != common_shape or transform != common_transform:
+                            raise SatelliteCpuError("clms_satellite_grid_mismatch", retryable=False)
+                        scale = float(asset.raster_scale or 1.0)
+                        values = np.asarray(masked.filled(0), dtype=np.float64) * scale
+                        valid = ~np.ma.getmaskarray(masked)
+                        arrays.append(values)
+                        masks.append(valid)
+                        receipts.append(
+                            SatelliteAssetReceipt(
+                                asset_name=asset.asset_name,
+                                source_checksum=asset.file_checksum,
+                                derived_content_sha256=_window_digest(
+                                    asset=asset, array=np.asarray(masked.data), transform=transform
+                                ),
+                                bytes_read=int(masked.data.nbytes),
+                            )
+                        )
+        except SatelliteCpuError:
+            raise
+        except (BotoCoreError, ClientError, OSError, rasterio.errors.RasterioError) as exc:
+            raise SatelliteCpuError("cdse_clms_read_failed", retryable=True) from exc
+        if common_transform is None or len(arrays) != 3:
+            raise SatelliteCpuError("clms_satellite_window_incomplete", retryable=False)
+        return ClmsRasterWindow(
+            day_of_burn=arrays[0],
+            burn_probability=arrays[1],
+            burn_fraction=arrays[2],
+            valid_masks=cast(
+                tuple[np.ndarray[Any, Any], np.ndarray[Any, Any], np.ndarray[Any, Any]],
+                tuple(masks),
+            ),
+            transform=common_transform,
+            receipts=tuple(receipts),
+        )
+
+    def fetch_frp_file(
+        self,
+        *,
+        asset: SatelliteObservationAsset,
+        output_path: Path,
+    ) -> SatelliteAssetReceipt:
+        digest = sha256()
+        size = 0
+        try:
+            response = self._s3.get_object(Bucket="eodata", Key=asset.s3_key)
+            body = response["Body"]
+            with output_path.open("wb") as stream:
+                while True:
+                    chunk = body.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > asset.file_size_bytes:
+                        raise SatelliteCpuError("sentinel3_frp_size_mismatch", retryable=False)
+                    digest.update(chunk)
+                    stream.write(chunk)
+        except SatelliteCpuError:
+            output_path.unlink(missing_ok=True)
+            raise
+        except (BotoCoreError, ClientError, KeyError, OSError) as exc:
+            output_path.unlink(missing_ok=True)
+            raise SatelliteCpuError("cdse_sentinel3_frp_read_failed", retryable=True) from exc
+        if size != asset.file_size_bytes:
+            output_path.unlink(missing_ok=True)
+            raise SatelliteCpuError("sentinel3_frp_size_mismatch", retryable=False)
+        return SatelliteAssetReceipt(
+            asset_name=asset.asset_name,
+            source_checksum=asset.file_checksum,
+            derived_content_sha256=digest.hexdigest(),
+            bytes_read=size,
+        )
+
+
+def _artifact_assets(
+    artifact: BackendIncidentDaySatelliteArtifact,
+) -> tuple[str, tuple[SatelliteObservationAsset, ...]]:
+    processor = artifact.quality_flags.get("satellite_observation_processor")
+    raw_assets = artifact.quality_flags.get("satellite_observation_assets")
+    if processor not in {_CLMS_PROCESSOR, _FRP_PROCESSOR} or not isinstance(raw_assets, list):
+        raise SatelliteCpuError("satellite_observation_manifest_missing", retryable=False)
+    try:
+        assets = tuple(SatelliteObservationAsset.model_validate(item) for item in raw_assets)
+    except ValueError as exc:
+        raise SatelliteCpuError("satellite_observation_manifest_invalid", retryable=False) from exc
+    expected = (
+        _CLMS_ASSETS
+        if processor == _CLMS_PROCESSOR
+        else _FRP_ASSETS_BY_COLLECTION.get(artifact.collection_key, ())
+    )
+    if tuple(item.asset_name for item in assets) != expected:
+        raise SatelliteCpuError("satellite_observation_asset_set_invalid", retryable=False)
+    return str(processor), assets
+
+
+def _result_id(analysis_id: str, artifact_id: str, processor: str) -> str:
+    digest = sha256(f"{analysis_id}:{artifact_id}:{processor}".encode()).hexdigest()
+    return f"SATOBS-{digest[:24]}"
+
+
+def _observation_time(
+    durable: DurableEventEvidence, artifact: BackendIncidentDaySatelliteArtifact
+) -> datetime:
+    start = durable.event.time_window.from_at
+    end = durable.event.time_window.to_at
+    if start is None or end is None:
+        raise SatelliteCpuError("satellite_incident_day_time_missing", retryable=False)
+    acquired = artifact.acquisition_start_at
+    if acquired is not None and start <= acquired < end:
+        return acquired
+    return start + ((end - start) / 2)
+
+
+def _clms_observations(
+    *,
+    durable: DurableEventEvidence,
+    artifact: BackendIncidentDaySatelliteArtifact,
+    window: ClmsRasterWindow,
+    probability_threshold: float,
+    fraction_threshold: float,
+) -> list[dict[str, Any]]:
+    from rasterio.features import shapes
+    from shapely.geometry import box, mapping, shape
+    from shapely.ops import unary_union
+
+    if durable.incident_day_local_date is None or durable.incident_day_bbox is None:
+        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
+    target_day = durable.incident_day_local_date.timetuple().tm_yday
+    valid = window.valid_masks[0] & window.valid_masks[1] & window.valid_masks[2]
+    selected = (
+        valid
+        & (np.rint(window.day_of_burn).astype(np.int32) == target_day)
+        & (window.burn_probability >= probability_threshold)
+        & (window.burn_fraction >= fraction_threshold)
+    )
+    pixel_count = int(np.count_nonzero(selected))
+    if pixel_count == 0:
+        return []
+    incident_extent = box(*durable.incident_day_bbox)
+    polygons = []
+    for raw_geometry, value in shapes(
+        selected.astype(np.uint8), mask=selected, transform=window.transform
+    ):
+        if int(value) != 1:
+            continue
+        clipped = shape(raw_geometry).intersection(incident_extent)
+        if not clipped.is_empty:
+            polygons.append(clipped)
+    if not polygons:
+        return []
+    geometry = unary_union(polygons)
+    if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
+        raise SatelliteCpuError("clms_burned_area_geometry_invalid", retryable=False)
+    probability_mean = float(np.mean(window.burn_probability[selected]))
+    fraction_mean = float(np.mean(window.burn_fraction[selected]))
+    observation_digest = sha256(
+        (artifact.artifact_revision_id + str(target_day) + geometry.wkb_hex).encode()
+    ).hexdigest()
+    return [
+        {
+            "observation_id": f"CLMS-BA-{observation_digest[:24]}",
+            "observed_at": _observation_time(durable, artifact).isoformat(),
+            "geometry_geojson": mapping(geometry),
+            "horizontal_accuracy_m": max(300.0, float(artifact.resolution_m or 300)),
+            "confidence": min(1.0, max(0.0, probability_mean)),
+            "metrics": {
+                "target_day_of_year": target_day,
+                "pixel_count": pixel_count,
+                "burn_probability_mean": probability_mean,
+                "burn_fraction_mean": fraction_mean,
+                "probability_threshold": probability_threshold,
+                "fraction_threshold": fraction_threshold,
+            },
+        }
+    ]
+
+
+def _netcdf_variables(dataset: Any) -> dict[str, Any]:
+    variables: dict[str, Any] = {}
+
+    def visit(name: str, value: Any) -> None:
+        if hasattr(value, "shape") and hasattr(value, "dtype"):
+            variables.setdefault(name.rsplit("/", 1)[-1], value)
+
+    dataset.visititems(visit)
+    return variables
+
+
+def _variable(variables: Mapping[str, Any], *names: str, required: bool = False) -> Any | None:
+    folded = {name.casefold(): variable for name, variable in variables.items()}
+    for name in names:
+        if name.casefold() in folded:
+            return folded[name.casefold()]
+    if required:
+        raise SatelliteCpuError("sentinel3_frp_variable_missing", retryable=False)
+    return None
+
+
+def _flat_values(
+    variable: Any | None, *, length: int, default: float = math.nan
+) -> np.ndarray[Any, Any]:
+    if variable is None:
+        return np.full(length, default, dtype=np.float64)
+    values = np.ma.asarray(variable[:]).reshape(-1)
+    if len(values) != length:
+        raise SatelliteCpuError("sentinel3_frp_variable_shape_mismatch", retryable=False)
+    return np.asarray(values.filled(default))
+
+
+def _frp_sample_count(variable: Any) -> int:
+    shape = getattr(variable, "shape", None)
+    if not isinstance(shape, tuple) or len(shape) != 1:
+        raise SatelliteCpuError("sentinel3_frp_variable_shape_mismatch", retryable=False)
+    length = int(shape[0])
+    if length < 0 or length > _MAX_FRP_SAMPLES:
+        raise SatelliteCpuError("sentinel3_frp_sample_limit_exceeded", retryable=False)
+    return length
+
+
+def _frp_observation_times(
+    variable: Any | None,
+    *,
+    length: int,
+    fallback: datetime,
+) -> tuple[datetime, ...]:
+    if variable is None:
+        return (fallback,) * length
+    values = np.ma.asarray(variable[:]).reshape(-1)
+    if len(values) != length:
+        raise SatelliteCpuError("sentinel3_frp_variable_shape_mismatch", retryable=False)
+    units = variable.attrs.get("units", "")
+    if isinstance(units, bytes):
+        units = units.decode("ascii", errors="strict")
+    normalized_units = str(units).strip().casefold()
+    if normalized_units and (
+        "since" not in normalized_units or "2000-01-01" not in normalized_units
+    ):
+        raise SatelliteCpuError("sentinel3_frp_time_units_invalid", retryable=False)
+    if normalized_units.startswith(("second", "s since")):
+        multiplier = 1_000_000.0
+    elif normalized_units.startswith(("millisecond", "ms since")):
+        multiplier = 1_000.0
+    else:
+        multiplier = 1.0
+    origin = datetime(2000, 1, 1, tzinfo=UTC)
+    try:
+        return tuple(origin + timedelta(microseconds=float(value) * multiplier) for value in values)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise SatelliteCpuError("sentinel3_frp_time_invalid", retryable=False) from exc
+
+
+def _frp_observations(
+    *,
+    durable: DurableEventEvidence,
+    artifact: BackendIncidentDaySatelliteArtifact,
+    path: Path,
+    minimum_confidence: float,
+) -> list[dict[str, Any]]:
+    import h5py
+
+    if durable.incident_day_bbox is None:
+        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
+    start = durable.event.time_window.from_at
+    end = durable.event.time_window.to_at
+    if start is None or end is None:
+        raise SatelliteCpuError("satellite_incident_day_time_missing", retryable=False)
+    fallback_time = _observation_time(durable, artifact)
+    try:
+        with h5py.File(path, "r") as dataset:
+            variables = _netcdf_variables(dataset)
+            latitude_variable = cast(Any, _variable(variables, "latitude", "lat", required=True))
+            longitude_variable = cast(Any, _variable(variables, "longitude", "lon", required=True))
+            frp_variable = cast(Any, _variable(variables, "FRP_MWIR", "frp_mwir", required=True))
+            length = _frp_sample_count(latitude_variable)
+            if (
+                _frp_sample_count(longitude_variable) != length
+                or _frp_sample_count(frp_variable) != length
+            ):
+                raise SatelliteCpuError("sentinel3_frp_variable_shape_mismatch", retryable=False)
+            latitude = np.ma.asarray(latitude_variable[:]).reshape(-1)
+            longitude = np.ma.asarray(longitude_variable[:]).reshape(-1)
+            frp = np.ma.asarray(frp_variable[:]).reshape(-1)
+            if len(longitude) != length or len(frp) != length:
+                raise SatelliteCpuError("sentinel3_frp_variable_shape_mismatch", retryable=False)
+            uncertainty = _flat_values(
+                _variable(variables, "FRP_uncertainty", "frp_uncertainty_mwir"),
+                length=length,
+            )
+            ifov_area = _flat_values(
+                _variable(variables, "IFOV_area", "ifov_area_m2"), length=length
+            )
+            provider_confidence = _flat_values(
+                _variable(
+                    variables,
+                    "confidence",
+                    "confidence_level",
+                    "fire_confidence",
+                ),
+                length=length,
+            )
+            confidence_class = _flat_values(_variable(variables, "confidence_class"), length=length)
+            classification = _flat_values(
+                _variable(
+                    variables,
+                    "classification",
+                    "fire_classification",
+                    required=True,
+                ),
+                length=length,
+            )
+            observation_times = _frp_observation_times(
+                _variable(variables, "time"),
+                length=length,
+                fallback=fallback_time,
+            )
+    except SatelliteCpuError:
+        raise
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise SatelliteCpuError("sentinel3_frp_decode_failed", retryable=False) from exc
+
+    min_lon, min_lat, max_lon, max_lat = durable.incident_day_bbox
+    accuracy = max(1_000.0, float(artifact.resolution_m or 1_000))
+    observations: list[dict[str, Any]] = []
+    for index in range(length):
+        lon = float(longitude[index])
+        lat = float(latitude[index])
+        power = float(frp[index])
+        confidence_value = float(provider_confidence[index])
+        class_confidence = float(confidence_class[index])
+        if not math.isfinite(confidence_value) and math.isfinite(class_confidence):
+            confidence_value = {0: 15.0, 1: 55.0, 2: 90.0}.get(int(class_confidence), math.nan)
+        normalized_confidence = (
+            confidence_value / 100.0
+            if math.isfinite(confidence_value) and confidence_value > 1
+            else confidence_value
+        )
+        if not math.isfinite(normalized_confidence):
+            normalized_confidence = 0.5
+        normalized_confidence = min(1.0, max(0.0, normalized_confidence))
+        class_value = float(classification[index])
+        vegetation_fire = math.isfinite(class_value) and (int(class_value) & 1) == 1
+        observed_at = observation_times[index]
+        if (
+            not all(math.isfinite(value) for value in (lon, lat, power))
+            or not min_lon <= lon <= max_lon
+            or not min_lat <= lat <= max_lat
+            or power < 0
+            or normalized_confidence < minimum_confidence
+            or not vegetation_fire
+            or not start <= observed_at < end
+        ):
+            continue
+        metrics: dict[str, Any] = {"frp_mwir_mw": power}
+        uncertainty_value = float(uncertainty[index])
+        if math.isfinite(uncertainty_value) and uncertainty_value >= 0:
+            metrics["frp_uncertainty_mw"] = uncertainty_value
+        ifov_value = float(ifov_area[index])
+        if math.isfinite(ifov_value) and ifov_value >= 0:
+            metrics["ifov_area_m2"] = ifov_value
+        if math.isfinite(class_value):
+            metrics["classification"] = int(class_value)
+        if math.isfinite(confidence_value):
+            metrics["provider_confidence"] = normalized_confidence
+        digest = sha256(
+            f"{artifact.artifact_revision_id}:{index}:{lon:.8f}:{lat:.8f}:{power:.8f}".encode()
+        ).hexdigest()
+        observations.append(
+            {
+                "observation_id": f"S3-FRP-{digest[:24]}",
+                "observed_at": observed_at.isoformat(),
+                "geometry_geojson": {"type": "Point", "coordinates": [lon, lat]},
+                "horizontal_accuracy_m": accuracy,
+                "confidence": normalized_confidence,
+                "metrics": metrics,
+            }
+        )
+    if len(observations) > 2_048:
+        raise SatelliteCpuError("sentinel3_frp_observation_limit_exceeded", retryable=False)
+    return observations
+
+
+@dataclass(frozen=True, slots=True)
+class SatelliteObservationCpuRunReceipt:
+    analysis_id: str
+    artifact_revision_id: str
+    processed: int
+    remaining: int
+    status: Literal["completed", "no_observation", "replayed"]
+
+
+class SatelliteObservationCpuWorker:
+    def __init__(
+        self,
+        *,
+        repository: EventEvidenceRepository,
+        asset_reader: SatelliteObservationAssetReader,
+        publisher: BackendIncidentDaySatelliteObservationPublisher,
+        probability_threshold: float = 0.5,
+        fraction_threshold: float = 0.1,
+        minimum_frp_confidence: float = 0.3,
+    ) -> None:
+        for value in (probability_threshold, fraction_threshold, minimum_frp_confidence):
+            if not 0 <= value <= 1:
+                raise ValueError("satellite observation threshold is outside [0, 1]")
+        self.repository = repository
+        self.asset_reader = asset_reader
+        self.publisher = publisher
+        self.probability_threshold = probability_threshold
+        self.fraction_threshold = fraction_threshold
+        self.minimum_frp_confidence = minimum_frp_confidence
+
+    def run(self, analysis_id: str, artifact_revision_id: str) -> SatelliteObservationCpuRunReceipt:
+        durable = self.repository.read(analysis_id)
+        if (
+            durable.research_target_kind != "incident_day"
+            or durable.incident_day_bbox is None
+            or durable.incident_day_local_date is None
+        ):
+            raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
+        eligible = []
+        for item in durable.satellite_artifact_tickets:
+            processor = item.quality_flags.get("satellite_observation_processor")
+            if processor in {_CLMS_PROCESSOR, _FRP_PROCESSOR}:
+                eligible.append(item)
+        completed_ids = {
+            item.artifact_revision_id for item in durable.satellite_observation_batches
+        }
+        artifact = next(
+            (item for item in eligible if item.artifact_revision_id == artifact_revision_id),
+            None,
+        )
+        if artifact is None:
+            raise SatelliteCpuError("satellite_observation_artifact_unknown", retryable=False)
+        if artifact_revision_id in completed_ids:
+            return SatelliteObservationCpuRunReceipt(
+                analysis_id=analysis_id,
+                artifact_revision_id=artifact_revision_id,
+                processed=0,
+                remaining=len(
+                    [item for item in eligible if item.artifact_revision_id not in completed_ids]
+                ),
+                status="replayed",
+            )
+        processor, assets = _artifact_assets(artifact)
+        if processor == _CLMS_PROCESSOR and artifact.collection_key != _CLMS_COLLECTION:
+            raise SatelliteCpuError("clms_satellite_collection_mismatch", retryable=False)
+        if processor == _FRP_PROCESSOR and artifact.collection_key not in _FRP_COLLECTIONS:
+            raise SatelliteCpuError("sentinel3_frp_collection_mismatch", retryable=False)
+        with TemporaryDirectory(prefix="fireviewer-satellite-observation-") as directory:
+            if processor == _CLMS_PROCESSOR:
+                window = self.asset_reader.read_clms_window(
+                    assets=assets, bbox=durable.incident_day_bbox
+                )
+                observations = _clms_observations(
+                    durable=durable,
+                    artifact=artifact,
+                    window=window,
+                    probability_threshold=self.probability_threshold,
+                    fraction_threshold=self.fraction_threshold,
+                )
+                receipts = window.receipts
+                revision = _CLMS_REVISION
+                parameters = {
+                    "probability_threshold": self.probability_threshold,
+                    "fraction_threshold": self.fraction_threshold,
+                }
+            else:
+                output_path = Path(directory) / "sentinel3-frp.nc"
+                receipt = self.asset_reader.fetch_frp_file(asset=assets[0], output_path=output_path)
+                observations = _frp_observations(
+                    durable=durable,
+                    artifact=artifact,
+                    path=output_path,
+                    minimum_confidence=self.minimum_frp_confidence,
+                )
+                receipts = (receipt,)
+                revision = _FRP_REVISION
+                parameters = {"minimum_confidence": self.minimum_frp_confidence}
+            status: Literal["completed", "no_observation"] = (
+                "completed" if observations else "no_observation"
+            )
+            self.publisher.publish(
+                candidate_id=analysis_id,
+                payload={
+                    "schema_version": "incident-day-satellite-observation-1.0",
+                    "analysis_id": analysis_id,
+                    "source_revision_sha256": durable.source_revision_sha256,
+                    "artifact_revision_id": artifact_revision_id,
+                    "result_id": _result_id(analysis_id, artifact_revision_id, processor),
+                    "processor": processor,
+                    "processor_revision": revision,
+                    "status": status,
+                    "observations": observations,
+                    "asset_receipts": [item.as_payload() for item in receipts],
+                    "processing_parameters": parameters,
+                    "raw_satellite_content_stored": False,
+                },
+            )
+        return SatelliteObservationCpuRunReceipt(
+            analysis_id=analysis_id,
+            artifact_revision_id=artifact_revision_id,
+            processed=1,
+            remaining=max(
+                0,
+                len([item for item in eligible if item.artifact_revision_id not in completed_ids])
+                - 1,
+            ),
+            status=status,
+        )
+
+
+__all__ = [
+    "CdseObservationS3Config",
+    "CdseS3ObservationAssetReader",
+    "ClmsRasterWindow",
+    "SatelliteAssetReceipt",
+    "SatelliteObservationAsset",
+    "SatelliteObservationCpuRunReceipt",
+    "SatelliteObservationCpuWorker",
+]

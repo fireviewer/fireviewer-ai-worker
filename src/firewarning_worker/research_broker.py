@@ -34,6 +34,7 @@ class BrokerPolicy:
     search_provider_domains: frozenset[str]
     search_templates: dict[str, str]
     max_fetch_bytes: int
+    max_media_fetch_bytes: int
     timeout_seconds: int
     pathname_prefix: str | None
     upload_grant: str | None
@@ -53,6 +54,17 @@ class _LinkParser(HTMLParser):
         self._href: str | None = None
         self._text: list[str] = []
 
+    def _media(self, value: str | None) -> None:
+        if value:
+            self.media_links.append(urljoin(self.base_url, value))
+
+    def _srcset(self, value: str | None) -> None:
+        if not value:
+            return
+        for candidate in value.split(","):
+            source = candidate.strip().split(" ", 1)[0]
+            self._media(source)
+
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         normalized_tag = tag.casefold()
         values = {key.casefold(): value for key, value in attrs if value is not None}
@@ -61,11 +73,26 @@ class _LinkParser(HTMLParser):
             content = values.get("content")
             if key and content:
                 self.metadata.setdefault(key, content)
-                if key in {"og:image", "twitter:image", "twitter:image:src"}:
-                    self.media_links.append(urljoin(self.base_url, content))
+                if key in {
+                    "og:image",
+                    "og:image:url",
+                    "og:image:secure_url",
+                    "twitter:image",
+                    "twitter:image:src",
+                    "og:video",
+                    "og:video:url",
+                    "og:video:secure_url",
+                    "twitter:player:stream",
+                    "og:audio",
+                    "og:audio:url",
+                    "og:audio:secure_url",
+                }:
+                    self._media(content)
             return
-        if normalized_tag == "video" and values.get("poster"):
-            self.media_links.append(urljoin(self.base_url, str(values["poster"])))
+        if normalized_tag in {"video", "audio", "source"}:
+            self._media(values.get("src"))
+            if normalized_tag == "video":
+                self._media(values.get("poster"))
             return
         if normalized_tag == "img":
             source = (
@@ -75,12 +102,35 @@ class _LinkParser(HTMLParser):
                 or values.get("src")
             )
             if source:
-                self.media_links.append(urljoin(self.base_url, source))
+                self._media(source)
+            self._srcset(values.get("data-srcset") or values.get("srcset"))
+            return
+        if normalized_tag == "link" and (
+            values.get("rel", "").casefold() in {"image_src", "preload"}
+        ):
+            self._media(values.get("href"))
             return
         if normalized_tag != "a":
             return
         href = values.get("href")
         if href:
+            path = urlsplit(href).path.casefold()
+            if path.endswith(
+                (
+                    ".avif",
+                    ".jpeg",
+                    ".jpg",
+                    ".png",
+                    ".webp",
+                    ".m4a",
+                    ".mp3",
+                    ".mp4",
+                    ".mov",
+                    ".wav",
+                    ".webm",
+                )
+            ):
+                self._media(href)
             self._href = urljoin(self.base_url, href)
             self._text = []
 
@@ -173,9 +223,12 @@ class ResearchBroker:
             ):
                 raise BrokerPolicyError("broker_search_template_invalid")
         max_fetch_bytes = int(value.get("max_fetch_bytes", 0))
+        max_media_fetch_bytes = int(value.get("max_media_fetch_bytes", max_fetch_bytes))
         timeout_seconds = int(value.get("timeout_seconds", 0))
-        if not 65_536 <= max_fetch_bytes <= 104_857_600:
+        if not 65_536 <= max_fetch_bytes <= 512 * 1_024 * 1_024:
             raise BrokerPolicyError("broker_policy_fetch_limit_invalid")
+        if not max_fetch_bytes <= max_media_fetch_bytes <= 512 * 1_024 * 1_024:
+            raise BrokerPolicyError("broker_policy_media_fetch_limit_invalid")
         if not 2 <= timeout_seconds <= 120:
             raise BrokerPolicyError("broker_policy_timeout_invalid")
         upload_keys = {
@@ -212,6 +265,7 @@ class ResearchBroker:
             search_provider_domains=providers,
             search_templates=templates,
             max_fetch_bytes=max_fetch_bytes,
+            max_media_fetch_bytes=max_media_fetch_bytes,
             timeout_seconds=timeout_seconds,
             pathname_prefix=pathname_prefix,
             upload_grant=upload_grant,
@@ -497,8 +551,154 @@ class ResearchBroker:
         arguments = dict(request.get("arguments", {}))
         if bool(arguments.get("store", False)):
             raise BrokerPolicyError("broker_transient_store_forbidden")
-        url = str(arguments.get("url", ""))
-        return self._fetch_public_content(url=url, policy=policy)
+        result, content = self.fetch_transient_media(request, policy)
+        if content is None:
+            raise BrokerPolicyError("broker_transient_memory_limit_exceeded")
+        return result, content
+
+    def fetch_transient_media(
+        self,
+        request: dict[str, Any],
+        policy: BrokerPolicy,
+        *,
+        maximum_in_memory_bytes: int = 8 * 1_024 * 1_024,
+    ) -> tuple[dict[str, Any], bytes | None]:
+        """Hash public media in a stream; retain bytes only for small image inputs."""
+
+        arguments = dict(request.get("arguments", {}))
+        if bool(arguments.get("store", False)):
+            raise BrokerPolicyError("broker_transient_store_forbidden")
+        if not 0 <= maximum_in_memory_bytes <= 16 * 1_024 * 1_024:
+            raise BrokerPolicyError("broker_transient_memory_limit_invalid")
+        url = self._guard_url(
+            str(arguments.get("url", "")),
+            allowed_domains=policy.allowed_domains,
+        )
+        headers = {
+            "User-Agent": "FireWarning-SourceResearch/1.0 (+private-human-review)",
+            "Accept": "image/*,audio/*,video/*",
+        }
+        digest = hashlib.sha256()
+        size = 0
+        buffered: list[bytes] | None = []
+        with (
+            httpx.Client(
+                timeout=policy.timeout_seconds,
+                follow_redirects=False,
+                headers=headers,
+                transport=self._transport,
+            ) as client,
+            client.stream("GET", url) as response,
+        ):
+            if 300 <= response.status_code < 400:
+                raise BrokerPolicyError("broker_redirect_forbidden")
+            response.raise_for_status()
+            metadata = self._response_metadata(response)
+            content_type = str(metadata["content_type"])
+            retain = content_type.startswith("image/") and maximum_in_memory_bytes > 0
+            if not retain:
+                buffered = None
+            declared = response.headers.get("content-length")
+            if (
+                declared
+                and declared.isdecimal()
+                and int(declared) > policy.max_media_fetch_bytes
+            ):
+                raise BrokerPolicyError("broker_response_too_large")
+            for chunk in response.iter_bytes():
+                size += len(chunk)
+                if size > policy.max_media_fetch_bytes:
+                    raise BrokerPolicyError("broker_response_too_large")
+                digest.update(chunk)
+                if buffered is not None:
+                    if size <= maximum_in_memory_bytes:
+                        buffered.append(chunk)
+                    else:
+                        buffered = None
+        result = {
+            **metadata,
+            "sha256": digest.hexdigest(),
+            "size_bytes": size,
+            "binary_stored": False,
+        }
+        return result, b"".join(buffered) if buffered is not None else None
+
+    def materialize_transient_file(
+        self,
+        request: dict[str, Any],
+        policy: BrokerPolicy,
+        *,
+        destination: Path,
+        expected_sha256: str,
+        expected_size_bytes: int,
+        expected_content_type: str,
+    ) -> dict[str, Any]:
+        """Stream one verified public object to an ephemeral caller-owned path."""
+
+        arguments = dict(request.get("arguments", {}))
+        if bool(arguments.get("store", False)):
+            raise BrokerPolicyError("broker_transient_store_forbidden")
+        if (
+            not expected_size_bytes > 0
+            or expected_size_bytes > policy.max_media_fetch_bytes
+            or len(expected_sha256) != 64
+        ):
+            raise BrokerPolicyError("broker_transient_expectation_invalid")
+        url = self._guard_url(
+            str(arguments.get("url", "")),
+            allowed_domains=policy.allowed_domains,
+        )
+        if destination.exists() or not destination.parent.is_dir():
+            raise BrokerPolicyError("broker_transient_destination_invalid")
+        headers = {
+            "User-Agent": "FireWarning-PublicMedia/1.0 (+private-human-review)",
+            "Accept": expected_content_type,
+        }
+        digest = hashlib.sha256()
+        size = 0
+        try:
+            with (
+                httpx.Client(
+                    timeout=policy.timeout_seconds,
+                    follow_redirects=False,
+                    headers=headers,
+                    transport=self._transport,
+                ) as client,
+                client.stream("GET", url) as response,
+            ):
+                if 300 <= response.status_code < 400:
+                    raise BrokerPolicyError("broker_redirect_forbidden")
+                response.raise_for_status()
+                content_type = response.headers.get("content-type", "").split(";", 1)[0]
+                if content_type != expected_content_type:
+                    raise BrokerPolicyError("broker_transient_content_type_mismatch")
+                declared = response.headers.get("content-length")
+                if declared and declared.isdecimal() and int(declared) != expected_size_bytes:
+                    raise BrokerPolicyError("broker_transient_size_mismatch")
+                with destination.open("xb") as stream:
+                    for chunk in response.iter_bytes():
+                        size += len(chunk)
+                        if size > policy.max_media_fetch_bytes or size > expected_size_bytes:
+                            raise BrokerPolicyError("broker_response_too_large")
+                        digest.update(chunk)
+                        stream.write(chunk)
+        except Exception:
+            destination.unlink(missing_ok=True)
+            raise
+        if size != expected_size_bytes:
+            destination.unlink(missing_ok=True)
+            raise BrokerPolicyError("broker_transient_size_mismatch")
+        if digest.hexdigest() != expected_sha256:
+            destination.unlink(missing_ok=True)
+            raise BrokerPolicyError("broker_transient_digest_mismatch")
+        return {
+            "url": url,
+            "content_type": expected_content_type,
+            "size_bytes": size,
+            "sha256": expected_sha256,
+            "retrieved_at": datetime.now(UTC).isoformat(),
+            "binary_stored": False,
+        }
 
     def fetch(self, request: dict[str, Any], policy: BrokerPolicy) -> dict[str, Any]:
         arguments = dict(request.get("arguments", {}))

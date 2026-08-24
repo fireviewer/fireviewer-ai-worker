@@ -88,8 +88,9 @@ def test_bedrock_pixtral_extracts_strict_multimodal_claims_with_converse() -> No
     assert request["inferenceConfig"] == {"maxTokens": 2048, "temperature": 0}
     content = request["messages"][0]["content"]
     text_payload = json.loads(content[0]["text"])
-    assert "120 hectares" in text_payload["public_page_text"]
-    assert "RAW_SCRIPT_SECRET" not in text_payload["public_page_text"]
+    assert text_payload["content_role"] == "page"
+    assert "120 hectares" in text_payload["public_content_text"]
+    assert "RAW_SCRIPT_SECRET" not in text_payload["public_content_text"]
     assert text_payload["supplied_media_ids"] == ["MEDIA-WEB-1"]
     assert content[1]["image"]["format"] == "jpeg"
     assert content[1]["image"]["source"]["bytes"].startswith(b"\xff\xd8\xff")

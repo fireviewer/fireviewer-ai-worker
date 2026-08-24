@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from hashlib import sha256
 from http import HTTPStatus
 from ipaddress import ip_address
@@ -39,15 +39,22 @@ from firewarning_worker.mvp.supervision.point_supervisor import PointSupervisorI
 _SNAPSHOT_SCHEMA = "event-evidence-read-1.0"
 _SNAPSHOT_PATH = "/api/v1/internal/event-evidence/{candidate_id}"
 _ASSET_PATH = "/api/v1/internal/event-evidence/{candidate_id}/assets/{asset_id}/content"
-_KEYFRAME_PATH = (
-    "/api/v1/internal/event-evidence/{candidate_id}/keyframes/{keyframe_id}/content"
-)
+_KEYFRAME_PATH = "/api/v1/internal/event-evidence/{candidate_id}/keyframes/{keyframe_id}/content"
 _KEYFRAME_UPLOAD_PATH = "/api/v1/internal/derived-keyframes/{candidate_id}/{keyframe_id}"
 _VISUAL_EVIDENCE_PATH = "/api/v1/internal/event-evidence/{candidate_id}/visual-observations"
 _RESEARCH_EVIDENCE_PATH = "/api/v1/internal/event-evidence/{candidate_id}/research-pages"
-_GEOGRAPHIC_EVIDENCE_PATH = (
-    "/api/v1/internal/event-evidence/{candidate_id}/geographic-hypotheses"
+_INCIDENT_DAY_RESEARCH_PATH = "/api/v1/internal/incident-day-research/{analysis_id}"
+_INCIDENT_DAY_RESEARCH_PAGE_PATH = "/api/v1/internal/incident-day-research/{analysis_id}/pages"
+_INCIDENT_DAY_MEDIA_ANALYSIS_PATH = (
+    "/api/v1/internal/incident-day-research/{analysis_id}/media-analyses"
 )
+_INCIDENT_DAY_SATELLITE_ANALYSIS_PATH = (
+    "/api/v1/internal/incident-day-research/{analysis_id}/satellite-analyses"
+)
+_INCIDENT_DAY_SATELLITE_OBSERVATION_PATH = (
+    "/api/v1/internal/incident-day-research/{analysis_id}/satellite-observations"
+)
+_GEOGRAPHIC_EVIDENCE_PATH = "/api/v1/internal/event-evidence/{candidate_id}/geographic-hypotheses"
 _POINT_ASSESSMENT_PATH = "/api/v1/internal/event-evidence/{candidate_id}/point-assessments"
 _DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 
@@ -264,15 +271,94 @@ class BackendResearchSource(EvidenceSource):
 class BackendResearchMedia(EvidenceMedia):
     source_url: str = Field(min_length=8, max_length=2_048)
     content_type: str = Field(min_length=3, max_length=128)
-    size_bytes: int = Field(gt=0, le=64 * 1_024 * 1_024)
+    size_bytes: int = Field(gt=0, le=512 * 1_024 * 1_024)
+
+
+class BackendResearchDetection(StrictModel):
+    detection_id: SafeIdentifierV2
+    label: Literal["fire", "smoke"]
+    score: float = Field(ge=0, le=1, allow_inf_nan=False)
+    x_min: float = Field(ge=0, le=1, allow_inf_nan=False)
+    y_min: float = Field(ge=0, le=1, allow_inf_nan=False)
+    x_max: float = Field(ge=0, le=1, allow_inf_nan=False)
+    y_max: float = Field(ge=0, le=1, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_box(self) -> BackendResearchDetection:
+        if self.x_max <= self.x_min or self.y_max <= self.y_min:
+            raise ValueError("backend research detection must have positive area")
+        return self
+
+
+class BackendResearchKeyframeObservation(StrictModel):
+    observation_id: SafeIdentifierV2
+    media_id: SafeIdentifierV2
+    keyframe_id: SafeIdentifierV2
+    frame_index: int = Field(ge=0)
+    timestamp_seconds: float = Field(ge=0, allow_inf_nan=False)
+    frame_sha256: Sha256HexV2
+    detector_provider_id: str = Field(min_length=1, max_length=128)
+    detector_model_id: str = Field(min_length=1, max_length=255)
+    detector_model_revision: str = Field(min_length=1, max_length=255)
+    detections: tuple[BackendResearchDetection, ...] = Field(default=(), max_length=64)
+    abstained: bool = False
+    reason_codes: tuple[str, ...] = Field(default=(), max_length=32)
+    frame_binary_stored: Literal[False]
+
+
+class BackendResearchTranscriptionReceipt(StrictModel):
+    receipt_id: SafeIdentifierV2
+    media_id: SafeIdentifierV2
+    provider_id: str = Field(min_length=1, max_length=128)
+    model_revision: str = Field(min_length=1, max_length=255)
+    transcript_sha256: Sha256HexV2
+    duration_seconds: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    language: str | None = Field(default=None, min_length=2, max_length=16)
+    claim_ids: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=256)
+    partial: bool = False
+    transcript_stored: Literal[False]
+    audio_binary_stored: Literal[False]
+
+
+class BackendResearchMediaAnalysisBatch(StrictModel):
+    batch_id: SafeIdentifierV2
+    media_id: SafeIdentifierV2
+    media_sha256: Sha256HexV2
+    processor_id: str = Field(min_length=1, max_length=128)
+    processor_revision: str = Field(min_length=1, max_length=255)
+    analyzed_at: datetime
+    outcome: Literal["success", "partial", "failed"]
+    request_sha256: Sha256HexV2
+    claim_count: int = Field(ge=0, le=256)
+    keyframe_observation_count: int = Field(ge=0, le=256)
+    transcription_receipt_count: int = Field(ge=0, le=8)
+    journal_entry_count: int = Field(ge=1, le=256)
+    raw_content_stored: Literal[False]
+
+    @model_validator(mode="after")
+    def validate_time(self) -> BackendResearchMediaAnalysisBatch:
+        if not is_timezone_aware(self.analyzed_at):
+            raise ValueError("backend media analysis time must include a timezone")
+        return self
 
 
 class BackendResearchPage(StrictModel):
     page_id: SafeIdentifierV2
     page_number: int = Field(ge=1, le=10_000)
+    wave_number: int = Field(default=1, ge=1, le=16)
+    wave_focus: tuple[SafeIdentifierV2, ...] = Field(
+        default=("general",),
+        min_length=1,
+        max_length=32,
+    )
     cursor: str | None = Field(default=None, max_length=2_048)
     next_cursor: str | None = Field(default=None, max_length=2_048)
     completed: bool
+    media_ticket_limit: int = Field(default=2_048, ge=1, le=2_048)
+    safety_limit_reached: bool = False
+    converged: bool = False
+    zero_yield_wave_streak: int = Field(default=0, ge=0, le=100)
+    coverage_ready: bool = False
     request_sha256: Sha256HexV2
     duplicate_counts: tuple[int, int, int]
     persisted_at: datetime
@@ -283,6 +369,214 @@ class BackendResearchPage(StrictModel):
             raise ValueError("backend research duplicate counts cannot be negative")
         if not is_timezone_aware(self.persisted_at):
             raise ValueError("backend research persistence time must include a timezone")
+        return self
+
+
+class BackendIncidentDaySourcePolicy(StrictModel):
+    publisher: str = Field(min_length=1, max_length=500)
+    source_type: Literal[
+        "official",
+        "press",
+        "social",
+        "witness",
+        "satellite",
+        "panoramax",
+        "metadata",
+        "other",
+    ]
+    independence_weight: float = Field(ge=0, le=1, allow_inf_nan=False)
+    claim_types: tuple[SafeIdentifierV2, ...] = Field(min_length=1, max_length=32)
+
+
+class BackendIncidentDaySatelliteBand(StrictModel):
+    canonical_band: Literal["B02", "B03", "B04", "B8A", "B11", "B12"]
+    asset_name: SafeIdentifierV2
+    source_checksum: str = Field(pattern=r"^(?:1220|1620)[0-9a-f]{64}$")
+    content_sha256: Sha256HexV2
+    size_bytes: int = Field(gt=0, le=2_147_483_648)
+    media_type: Literal["image/jp2"]
+    gsd_m: Literal[20]
+    proj_code: str = Field(min_length=3, max_length=128)
+    proj_shape: tuple[int, int]
+    proj_transform: tuple[float, float, float, float, float, float]
+    content_path: str = Field(
+        pattern=(
+            r"^/api/v1/internal/satellite-materializations/"
+            r"[A-Za-z0-9._:-]{3,96}/bands/(?:B02|B03|B04|B8A|B11|B12)/content$"
+        )
+    )
+
+
+class BackendIncidentDaySatelliteArtifact(StrictModel):
+    artifact_revision_id: SafeIdentifierV2
+    provider_key: SafeIdentifierV2
+    collection_key: SafeIdentifierV2
+    semantic_role: str = Field(min_length=3, max_length=64)
+    external_product_id: str = Field(min_length=1, max_length=512)
+    source_url: str = Field(min_length=8, max_length=2_048)
+    content_hash: Sha256HexV2
+    acquisition_start_at: datetime | None = None
+    acquisition_end_at: datetime | None = None
+    native_crs: str | None = Field(default=None, min_length=3, max_length=128)
+    footprint_geojson: dict[str, Any] | None = None
+    resolution_m: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    quality_flags: dict[str, Any] = Field(default_factory=dict)
+    license: str = Field(min_length=1, max_length=1_000)
+    attribution: str = Field(min_length=1, max_length=1_000)
+    materialization_state: str = Field(min_length=3, max_length=64)
+    materialization_bundle_id: SafeIdentifierV2 | None = None
+    materialization_manifest_sha256: Sha256HexV2 | None = None
+    prithvi_bands: tuple[BackendIncidentDaySatelliteBand, ...] = Field(
+        default=(),
+        max_length=6,
+    )
+
+    @model_validator(mode="after")
+    def validate_materialization(self) -> BackendIncidentDaySatelliteArtifact:
+        if self.materialization_state == "materialized":
+            if (
+                self.materialization_bundle_id is None
+                or self.materialization_manifest_sha256 is None
+                or tuple(item.canonical_band for item in self.prithvi_bands)
+                != ("B02", "B03", "B04", "B8A", "B11", "B12")
+            ):
+                raise ValueError("materialized satellite artifact is incomplete")
+        elif (
+            self.materialization_bundle_id is not None
+            or self.materialization_manifest_sha256 is not None
+            or self.prithvi_bands
+        ):
+            raise ValueError("unmaterialized satellite artifact exposes band receipts")
+        return self
+
+
+class BackendIncidentDaySpatialObservation(StrictModel):
+    claim_id: SafeIdentifierV2
+    artifact_revision_id: SafeIdentifierV2
+    provider_key: SafeIdentifierV2
+    semantic_role: Literal[
+        "raw_earth_observation",
+        "sensor_detection",
+        "interpreted_observation",
+    ]
+    source_url: str = Field(min_length=8, max_length=2_048)
+    attribution: str = Field(min_length=1, max_length=1_000)
+    retrieved_at: datetime
+    observed_at: datetime
+    assertion_kind: str = Field(min_length=3, max_length=128)
+    geometry_geojson: dict[str, Any]
+    confidence: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    horizontal_accuracy_m: float | None = Field(
+        default=None,
+        gt=0,
+        le=100_000,
+        allow_inf_nan=False,
+    )
+    resolution_m: float | None = Field(
+        default=None,
+        gt=0,
+        le=100_000,
+        allow_inf_nan=False,
+    )
+    processor: str | None = Field(default=None, min_length=3, max_length=128)
+    source_dataset: str | None = Field(default=None, min_length=1, max_length=128)
+    satellite: str | None = Field(default=None, min_length=1, max_length=128)
+    instrument: str | None = Field(default=None, min_length=1, max_length=128)
+    metrics: dict[str, float | int] = Field(default_factory=dict, max_length=64)
+    independent_family_key: str = Field(min_length=1, max_length=255)
+
+    @model_validator(mode="after")
+    def validate_times(self) -> BackendIncidentDaySpatialObservation:
+        if not is_timezone_aware(self.retrieved_at) or not is_timezone_aware(self.observed_at):
+            raise ValueError("satellite observation timestamps must include a timezone")
+        return self
+
+
+class BackendIncidentDayCoverage(StrictModel):
+    queries_exhausted: bool
+    safety_limit_reached: bool
+    converged: bool
+    source_count: int = Field(ge=0)
+    official_source_count: int = Field(ge=0)
+    independent_evidence_family_count: int = Field(ge=0)
+    claim_count: int = Field(ge=0)
+    image_count: int = Field(ge=0)
+    video_count: int = Field(ge=0)
+    audio_count: int = Field(ge=0)
+    media_analysis_required_count: int = Field(ge=0)
+    media_analysis_completed_count: int = Field(ge=0)
+    media_analysis_failed_count: int = Field(ge=0)
+    satellite_artifact_count: int = Field(ge=0)
+    materialized_satellite_count: int = Field(ge=0)
+    satellite_analysis_required_count: int = Field(ge=0)
+    satellite_analysis_completed_count: int = Field(ge=0)
+    spatial_observation_count: int = Field(ge=0)
+    time_qualified_observation_count: int = Field(ge=0)
+    expected_lifecycle_phases: tuple[str, ...] = Field(max_length=16)
+    covered_lifecycle_phases: tuple[str, ...] = Field(max_length=16)
+    missing_dimensions: tuple[str, ...] = Field(max_length=64)
+    documentary_ready: bool
+    spatial_ready: bool
+    satellite_analysis_ready: bool
+    media_analysis_ready: bool
+    coverage_ready: bool
+
+
+class BackendIncidentDayResearchContext(StrictModel):
+    schema_version: Literal["incident-day-research-read-1.0"]
+    analysis_id: SafeIdentifierV2
+    fire_id: SafeIdentifierV2
+    episode_id: SafeIdentifierV2
+    incident_name: str = Field(min_length=2, max_length=255)
+    incident_reference: tuple[float, float]
+    incident_bbox: tuple[float, float, float, float]
+    local_date: date
+    timezone: str = Field(min_length=3, max_length=64)
+    window_start_at: datetime
+    window_end_at: datetime
+    episode_started_at: datetime
+    episode_last_observed_at: datetime
+    episode_ended_at: datetime | None = None
+    episode_status: str = Field(min_length=1, max_length=64)
+    source_registry_version: str = Field(min_length=3, max_length=64)
+    source_policies: dict[str, BackendIncidentDaySourcePolicy] = Field(
+        min_length=1,
+        max_length=200,
+    )
+    search_templates: dict[str, str] = Field(min_length=1, max_length=10)
+    research_evidence: dict[str, Any] | None = None
+    satellite_artifacts: tuple[BackendIncidentDaySatelliteArtifact, ...] = Field(
+        default=(),
+        max_length=512,
+    )
+    spatial_observations: tuple[BackendIncidentDaySpatialObservation, ...] = Field(
+        default=(),
+        max_length=2_048,
+    )
+    coverage: BackendIncidentDayCoverage
+    source_sha256: Sha256HexV2
+
+    @model_validator(mode="after")
+    def validate_context(self) -> BackendIncidentDayResearchContext:
+        longitude, latitude = self.incident_reference
+        if not -180 <= longitude <= 180 or not -90 <= latitude <= 90:
+            raise ValueError("incident reference must be WGS84")
+        min_lon, min_lat, max_lon, max_lat = self.incident_bbox
+        if not (-180 <= min_lon < max_lon <= 180 and -90 <= min_lat < max_lat <= 90):
+            raise ValueError("incident bbox must be ordered WGS84")
+        times = (
+            self.window_start_at,
+            self.window_end_at,
+            self.episode_started_at,
+            self.episode_last_observed_at,
+            self.episode_ended_at,
+        )
+        if any(value is not None and not is_timezone_aware(value) for value in times):
+            raise ValueError("incident-day timestamps must include a timezone")
+        if self.window_end_at <= self.window_start_at:
+            raise ValueError("incident-day analysis window is invalid")
+        if set(self.source_policies) & set(self.search_templates):
+            raise ValueError("search providers and evidence domains must be disjoint")
         return self
 
 
@@ -316,27 +610,106 @@ class BackendResearchJournalEntry(StrictModel):
         return self
 
 
+class BackendSatelliteAnalysisBatch(StrictModel):
+    request_id: SafeIdentifierV2
+    artifact_revision_id: SafeIdentifierV2
+    materialization_bundle_id: SafeIdentifierV2
+    materialization_manifest_sha256: Sha256HexV2
+    prithvi_input_sha256: Sha256HexV2
+    gpu_request_sha256: Sha256HexV2
+    sink_request_sha256: Sha256HexV2
+    status: Literal["completed", "abstained"]
+    model_id: str = Field(min_length=1, max_length=500)
+    model_revision: str = Field(pattern=r"^[0-9a-f]{40,64}$")
+    reason_codes: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=16)
+    claim_ids: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=16)
+    raw_content_stored: Literal[False]
+    persisted_at: datetime
+
+    @field_validator("persisted_at")
+    @classmethod
+    def validate_persisted_at(cls, value: datetime) -> datetime:
+        if not is_timezone_aware(value):
+            raise ValueError("satellite analysis persistence time must include a timezone")
+        return value
+
+
+class BackendSatelliteObservationBatch(StrictModel):
+    result_id: SafeIdentifierV2
+    artifact_revision_id: SafeIdentifierV2
+    sink_request_sha256: Sha256HexV2
+    status: Literal["completed", "no_observation"]
+    processor: Literal["clms_burned_area_daily_v1", "sentinel3_frp_v1"]
+    processor_revision: str = Field(min_length=8, max_length=255)
+    claim_ids: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=2_048)
+    asset_receipt_sha256: Sha256HexV2
+    raw_content_stored: Literal[False]
+    persisted_at: datetime
+
+    @field_validator("persisted_at")
+    @classmethod
+    def validate_persisted_at(cls, value: datetime) -> datetime:
+        if not is_timezone_aware(value):
+            raise ValueError("satellite observation persistence time must include a timezone")
+        return value
+
+
 class BackendResearchEvidence(StrictModel):
-    schema_version: str = Field(pattern=r"^research-evidence-1\.0$")
+    schema_version: str = Field(pattern=r"^research-evidence-1\.[01]$")
     candidate_id: SafeIdentifierV2
     plan_id: SafeIdentifierV2
     plan_revision: Sha256HexV2
+    wave_number: int = Field(default=1, ge=1, le=16)
+    wave_focus: tuple[SafeIdentifierV2, ...] = Field(
+        default=("general",),
+        min_length=1,
+        max_length=32,
+    )
     pages: tuple[BackendResearchPage, ...] = Field(default=(), max_length=10_000)
     sources: tuple[BackendResearchSource, ...] = Field(default=(), max_length=512)
     claims: tuple[Claim, ...] = Field(default=(), max_length=2_048)
     media: tuple[BackendResearchMedia, ...] = Field(default=(), max_length=2_048)
+    keyframe_observations: tuple[BackendResearchKeyframeObservation, ...] = Field(
+        default=(),
+        max_length=8_192,
+    )
+    transcription_receipts: tuple[BackendResearchTranscriptionReceipt, ...] = Field(
+        default=(),
+        max_length=2_048,
+    )
+    media_analysis_batches: tuple[BackendResearchMediaAnalysisBatch, ...] = Field(
+        default=(),
+        max_length=10_000,
+    )
+    satellite_analysis_batches: tuple[BackendSatelliteAnalysisBatch, ...] = Field(
+        default=(),
+        max_length=512,
+    )
+    satellite_observation_batches: tuple[BackendSatelliteObservationBatch, ...] = Field(
+        default=(),
+        max_length=2_048,
+    )
     journal_entries: tuple[BackendResearchJournalEntry, ...] = Field(
         default=(),
         max_length=10_000,
     )
     retention_policy: BackendResearchRetentionPolicy
     completed: bool
+    media_ticket_limit: int = Field(default=2_048, ge=1, le=2_048)
+    safety_limit_reached: bool = False
+    converged: bool = False
+    zero_yield_wave_streak: int = Field(default=0, ge=0, le=100)
+    coverage_ready: bool = False
     next_cursor: str | None = Field(default=None, max_length=2_048)
 
     @model_validator(mode="after")
     def validate_research(self) -> BackendResearchEvidence:
         if self.completed and self.next_cursor is not None:
             raise ValueError("completed backend research cannot expose a next cursor")
+        if self.converged and not self.completed:
+            raise ValueError("backend research convergence is inconsistent")
+        if self.coverage_ready and (not self.completed or not self.converged):
+            raise ValueError("backend research coverage is inconsistent")
         page_ids = [item.page_id for item in self.pages]
         if len(page_ids) != len(set(page_ids)):
             raise ValueError("duplicate backend research page identifier")
@@ -347,6 +720,52 @@ class BackendResearchEvidence(StrictModel):
             item.source_id not in source_ids for item in self.media
         ):
             raise ValueError("backend research evidence references an unknown source")
+        media_by_id = {item.media_id: item for item in self.media}
+        if len(media_by_id) != len(self.media):
+            raise ValueError("duplicate backend research media identifier")
+        if any(not set(item.evidence_media_ids).issubset(media_by_id) for item in self.claims):
+            raise ValueError("backend research claim references unknown media")
+        if any(
+            item.media_id not in media_by_id or media_by_id[item.media_id].kind != "video"
+            for item in self.keyframe_observations
+        ):
+            raise ValueError("backend keyframe observation references an unknown video")
+        if any(
+            item.media_id not in media_by_id
+            or media_by_id[item.media_id].kind not in {"video", "audio"}
+            for item in self.transcription_receipts
+        ):
+            raise ValueError("backend transcription references an unknown video")
+        batch_ids = [item.batch_id for item in self.media_analysis_batches]
+        if len(batch_ids) != len(set(batch_ids)):
+            raise ValueError("duplicate backend media-analysis batch identifier")
+        if any(
+            item.media_id not in media_by_id
+            or media_by_id[item.media_id].sha256 != item.media_sha256
+            for item in self.media_analysis_batches
+        ):
+            raise ValueError("backend media-analysis batch references unknown media")
+        satellite_request_ids = [item.request_id for item in self.satellite_analysis_batches]
+        if len(satellite_request_ids) != len(set(satellite_request_ids)):
+            raise ValueError("duplicate backend satellite-analysis request identifier")
+        satellite_result_ids = [item.result_id for item in self.satellite_observation_batches]
+        if len(satellite_result_ids) != len(set(satellite_result_ids)):
+            raise ValueError("duplicate backend satellite-observation result identifier")
+        claim_ids = {item.claim_id for item in self.claims}
+        if any(not set(item.claim_ids).issubset(claim_ids) for item in self.transcription_receipts):
+            raise ValueError("backend transcription references an unknown claim")
+        for label, identifiers in (
+            (
+                "keyframe observation",
+                [item.observation_id for item in self.keyframe_observations],
+            ),
+            (
+                "transcription receipt",
+                [item.receipt_id for item in self.transcription_receipts],
+            ),
+        ):
+            if len(identifiers) != len(set(identifiers)):
+                raise ValueError(f"duplicate backend research {label} identifier")
         journal_ids = [item.entry_id for item in self.journal_entries]
         if len(journal_ids) != len(set(journal_ids)):
             raise ValueError("duplicate backend research journal identifier")
@@ -575,14 +994,10 @@ class UrllibBackendEventEvidenceTransport:
             ) as response:
                 raw_length = response.headers.get("content-length")
                 if raw_length is not None and int(raw_length) > max_response_bytes:
-                    raise BackendEventEvidenceError(
-                        "backend media exceeds the size limit"
-                    )
+                    raise BackendEventEvidenceError("backend media exceeds the size limit")
                 content = response.read(max_response_bytes + 1)
                 if len(content) > max_response_bytes:
-                    raise BackendEventEvidenceError(
-                        "backend media exceeds the size limit"
-                    )
+                    raise BackendEventEvidenceError("backend media exceeds the size limit")
                 response_headers = {
                     key.casefold(): value for key, value in response.headers.items()
                 }
@@ -693,8 +1108,15 @@ class UrllibBackendEventEvidenceTransport:
 class DurableResearchProgress:
     plan_id: str
     plan_revision: str
+    wave_number: int
+    wave_focus: tuple[str, ...]
     page_count: int
     completed: bool
+    media_ticket_limit: int
+    safety_limit_reached: bool
+    converged: bool
+    zero_yield_wave_streak: int
+    coverage_ready: bool
     next_cursor: str | None
 
 
@@ -713,6 +1135,20 @@ class DurableEventEvidence:
     research_journal: tuple[BackendResearchJournalEntry, ...] = ()
     incident_id: str | None = None
     viewpoint_label: str | None = None
+    research_source_policies: dict[str, dict[str, Any]] | None = None
+    research_search_templates: dict[str, str] | None = None
+    research_target_kind: Literal["event_candidate", "incident_day"] = "event_candidate"
+    incident_day_coverage: BackendIncidentDayCoverage | None = None
+    satellite_artifact_tickets: tuple[BackendIncidentDaySatelliteArtifact, ...] = ()
+    spatial_observation_tickets: tuple[BackendIncidentDaySpatialObservation, ...] = ()
+    research_media_tickets: tuple[BackendResearchMedia, ...] = ()
+    research_media_analysis_batches: tuple[BackendResearchMediaAnalysisBatch, ...] = ()
+    satellite_analysis_batches: tuple[BackendSatelliteAnalysisBatch, ...] = ()
+    satellite_observation_batches: tuple[BackendSatelliteObservationBatch, ...] = ()
+    incident_day_episode_id: str | None = None
+    incident_day_local_date: date | None = None
+    incident_day_timezone: str | None = None
+    incident_day_bbox: tuple[float, float, float, float] | None = None
 
     def checks_for(self, candidate_id: str) -> tuple[GeospatialConsistencyCheck, ...]:
         return tuple(
@@ -803,6 +1239,12 @@ class BackendResearchEvidenceReceipt(StrictModel):
     candidate_id: SafeIdentifierV2
     plan_id: SafeIdentifierV2
     page_id: SafeIdentifierV2
+    wave_number: int = Field(default=1, ge=1, le=16)
+    wave_focus: tuple[SafeIdentifierV2, ...] = Field(
+        default=("general",),
+        min_length=1,
+        max_length=32,
+    )
     replayed: bool
     source_count: int = Field(ge=0)
     claim_count: int = Field(ge=0)
@@ -811,7 +1253,43 @@ class BackendResearchEvidenceReceipt(StrictModel):
     duplicate_claim_count: int = Field(ge=0)
     duplicate_media_count: int = Field(ge=0)
     completed: bool
+    media_ticket_limit: int = Field(default=2_048, ge=1, le=2_048)
+    safety_limit_reached: bool = False
+    converged: bool = False
+    zero_yield_wave_streak: int = Field(default=0, ge=0, le=100)
+    coverage_ready: bool = False
     next_cursor: str | None = None
+    source_revision_sha256: Sha256HexV2
+
+
+class BackendResearchMediaAnalysisReceipt(StrictModel):
+    candidate_id: SafeIdentifierV2
+    batch_id: SafeIdentifierV2
+    media_id: SafeIdentifierV2
+    replayed: bool
+    claim_count: int = Field(ge=0)
+    keyframe_observation_count: int = Field(ge=0)
+    transcription_receipt_count: int = Field(ge=0)
+    journal_entry_count: int = Field(ge=1)
+    source_revision_sha256: Sha256HexV2
+
+
+class BackendIncidentDaySatelliteAnalysisReceipt(StrictModel):
+    analysis_id: SafeIdentifierV2
+    materialization_bundle_id: SafeIdentifierV2
+    replayed: bool
+    status: Literal["completed", "abstained"]
+    claim_ids: tuple[SafeIdentifierV2, ...]
+    source_revision_sha256: Sha256HexV2
+
+
+class BackendIncidentDaySatelliteObservationReceipt(StrictModel):
+    analysis_id: SafeIdentifierV2
+    artifact_revision_id: SafeIdentifierV2
+    result_id: SafeIdentifierV2
+    replayed: bool
+    status: Literal["completed", "no_observation"]
+    claim_ids: tuple[SafeIdentifierV2, ...]
     source_revision_sha256: Sha256HexV2
 
 
@@ -842,9 +1320,7 @@ class BackendPointAssessmentReceipt(StrictModel):
         )
         if published != all(item is not None for item in publication_fields):
             raise ValueError("point publication receipt fields are inconsistent")
-        if published != (
-            self.release_status == "eligible_for_automatic_publication"
-        ):
+        if published != (self.release_status == "eligible_for_automatic_publication"):
             raise ValueError("point publication receipt release status is inconsistent")
         return self
 
@@ -905,9 +1381,7 @@ def _snapshot_to_durable(
         )
     if snapshot.research_evidence is not None:
         sources.extend(
-            EvidenceSource.model_validate(
-                item.model_dump(mode="json", exclude={"content_sha256"})
-            )
+            EvidenceSource.model_validate(item.model_dump(mode="json", exclude={"content_sha256"}))
             for item in snapshot.research_evidence.sources
         )
         claims.extend(snapshot.research_evidence.claims)
@@ -944,10 +1418,11 @@ def _snapshot_to_durable(
         semantic_role = raw.get("semantic_role")
         geometry = raw.get("geometry_geojson")
         phenomenon = raw.get("phenomenon")
-        if (
-            semantic_role not in {"raw_earth_observation", "sensor_detection"}
-            or not isinstance(geometry, dict)
-        ):
+        if semantic_role not in {
+            "raw_earth_observation",
+            "sensor_detection",
+            "interpreted_observation",
+        } or not isinstance(geometry, dict):
             continue
         reference_id = raw.get("observation_id")
         artifact_revision = raw.get("artifact_revision_id")
@@ -971,9 +1446,7 @@ def _snapshot_to_durable(
                 "horizontal_uncertainty_m": (
                     resolution if isinstance(resolution, (int, float)) else None
                 ),
-                "confidence": (
-                    confidence if isinstance(confidence, (int, float)) else None
-                ),
+                "confidence": (confidence if isinstance(confidence, (int, float)) else None),
                 "artifact_revision": artifact_revision,
                 "lineage_family_id": (
                     lineage_family_id if isinstance(lineage_family_id, str) else None
@@ -987,9 +1460,7 @@ def _snapshot_to_durable(
                     observation_id=reference.reference_id,
                     source_id=source_id,
                     observation_type=(
-                        "hotspot"
-                        if reference.reference_kind == "satellite_hotspot"
-                        else "change"
+                        "hotspot" if reference.reference_kind == "satellite_hotspot" else "change"
                     ),
                     result_reference=artifact_revision,
                     acquired_at=reference.observed_at,
@@ -1103,9 +1574,7 @@ def _snapshot_to_durable(
     )
     for history_item in snapshot.prior_fire_activity_events:
         geometry_type = history_item.geometry.get("type")
-        reference_kind: Literal[
-            "prior_active_point", "prior_fire_front", "prior_perimeter"
-        ]
+        reference_kind: Literal["prior_active_point", "prior_fire_front", "prior_perimeter"]
         if history_item.phenomenon_kind in {"visible_front", "visible_fire_front"}:
             reference_kind = "prior_fire_front"
         elif geometry_type in {"Point", "MultiPoint"}:
@@ -1220,8 +1689,15 @@ def _snapshot_to_durable(
             DurableResearchProgress(
                 plan_id=snapshot.research_evidence.plan_id,
                 plan_revision=snapshot.research_evidence.plan_revision,
+                wave_number=snapshot.research_evidence.wave_number,
+                wave_focus=snapshot.research_evidence.wave_focus,
                 page_count=len(snapshot.research_evidence.pages),
                 completed=snapshot.research_evidence.completed,
+                media_ticket_limit=snapshot.research_evidence.media_ticket_limit,
+                safety_limit_reached=snapshot.research_evidence.safety_limit_reached,
+                converged=snapshot.research_evidence.converged,
+                zero_yield_wave_streak=(snapshot.research_evidence.zero_yield_wave_streak),
+                coverage_ready=snapshot.research_evidence.coverage_ready,
                 next_cursor=snapshot.research_evidence.next_cursor,
             )
             if snapshot.research_evidence is not None
@@ -1234,6 +1710,171 @@ def _snapshot_to_durable(
         ),
         incident_id=snapshot.bundle.incident_id,
         viewpoint_label=snapshot.bundle.viewpoint.label,
+    )
+
+
+def _incident_day_to_durable(
+    context: BackendIncidentDayResearchContext,
+) -> DurableEventEvidence:
+    research: BackendResearchEvidence | None = None
+    if context.research_evidence is not None:
+        normalized = dict(context.research_evidence)
+        stored_analysis_id = normalized.pop("analysis_id", context.analysis_id)
+        if stored_analysis_id != context.analysis_id:
+            raise BackendEventEvidenceError("incident-day research target mismatch")
+        normalized["candidate_id"] = context.analysis_id
+        research = BackendResearchEvidence.model_validate(normalized)
+    satellite_sources: list[EvidenceSource] = []
+    satellite_claims: list[Claim] = []
+    satellite_observations: list[SatelliteObservation] = []
+    geographic_references: list[GeographicReference] = []
+    source_ids = {item.source_id for item in research.sources} if research is not None else set()
+    for item in context.spatial_observations:
+        source_id = item.artifact_revision_id
+        if source_id not in source_ids:
+            satellite_sources.append(
+                EvidenceSource.model_validate(
+                    {
+                        "source_id": source_id,
+                        "origin_id": _stable_id("SATELLITE-ORIGIN", item.independent_family_key),
+                        "source_url": item.source_url,
+                        "publisher": item.attribution,
+                        "published_at": item.observed_at,
+                        "retrieved_at": item.retrieved_at,
+                        "source_type": "satellite",
+                        "independence_weight": 1.0,
+                    }
+                )
+            )
+            source_ids.add(source_id)
+        metric_text = json.dumps(
+            item.metrics,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        descriptors = [
+            value
+            for value in (
+                item.processor,
+                item.source_dataset,
+                item.satellite,
+                item.instrument,
+            )
+            if value is not None
+        ]
+        satellite_claims.append(
+            Claim(
+                claim_id=item.claim_id,
+                source_id=source_id,
+                claim_type=item.assertion_kind,
+                text=(
+                    f"Observation satellite {item.assertion_kind}; "
+                    f"provenance={','.join(descriptors) or item.provider_key}; "
+                    f"metrics={metric_text}."
+                ),
+                observed_at=item.observed_at,
+                confidence=item.confidence if item.confidence is not None else 0.5,
+            )
+        )
+        observation_id = _stable_id("SATELLITE-OBSERVATION", item.claim_id)
+        hotspot = item.assertion_kind in {"thermal_hotspot", "visible_front"}
+        satellite_observations.append(
+            SatelliteObservation(
+                observation_id=observation_id,
+                source_id=source_id,
+                observation_type=(
+                    "burn_scar"
+                    if item.assertion_kind == "burned_area"
+                    else "hotspot"
+                    if hotspot
+                    else "change"
+                ),
+                result_reference=item.claim_id,
+                acquired_at=item.observed_at,
+                confidence=item.confidence,
+            )
+        )
+        geographic_references.append(
+            GeographicReference(
+                reference_id=observation_id,
+                reference_kind=("satellite_hotspot" if hotspot else "satellite_active_area"),
+                geometry_geojson=item.geometry_geojson,
+                observed_at=item.observed_at,
+                horizontal_uncertainty_m=(item.horizontal_accuracy_m or item.resolution_m),
+                confidence=item.confidence,
+                artifact_revision=item.artifact_revision_id,
+                lineage_family_id=_stable_id(
+                    "SATELLITE-FAMILY",
+                    item.independent_family_key,
+                ),
+            )
+        )
+    event = EventEvidenceV1(
+        event_id=context.analysis_id,
+        time_window=TimeWindow(
+            from_at=context.window_start_at,
+            to_at=context.window_end_at,
+        ),
+        sources=(research.sources if research is not None else ()) + tuple(satellite_sources),
+        claims=(research.claims if research is not None else ()) + tuple(satellite_claims),
+        media=research.media if research is not None else (),
+        satellite_observations=tuple(satellite_observations),
+        needs_human_review=True,
+    )
+    return DurableEventEvidence(
+        event=event,
+        media_locations=(),
+        vision_artifacts=(),
+        upload_locations=(),
+        prior_fire_states=(),
+        geospatial_checks=(),
+        geographic_references=tuple(geographic_references),
+        source_revision_sha256=context.source_sha256,
+        research_progress=(
+            DurableResearchProgress(
+                plan_id=research.plan_id,
+                plan_revision=research.plan_revision,
+                wave_number=research.wave_number,
+                wave_focus=research.wave_focus,
+                page_count=len(research.pages),
+                completed=research.completed,
+                media_ticket_limit=research.media_ticket_limit,
+                safety_limit_reached=research.safety_limit_reached,
+                converged=research.converged,
+                zero_yield_wave_streak=research.zero_yield_wave_streak,
+                coverage_ready=research.coverage_ready,
+                next_cursor=research.next_cursor,
+            )
+            if research is not None
+            else None
+        ),
+        research_journal=research.journal_entries if research is not None else (),
+        incident_id=context.fire_id,
+        viewpoint_label=context.incident_name,
+        research_source_policies={
+            domain: policy.model_dump(mode="json")
+            for domain, policy in context.source_policies.items()
+        },
+        research_search_templates=dict(context.search_templates),
+        research_target_kind="incident_day",
+        incident_day_coverage=context.coverage,
+        satellite_artifact_tickets=context.satellite_artifacts,
+        spatial_observation_tickets=context.spatial_observations,
+        research_media_tickets=research.media if research is not None else (),
+        research_media_analysis_batches=(
+            research.media_analysis_batches if research is not None else ()
+        ),
+        satellite_analysis_batches=(
+            research.satellite_analysis_batches if research is not None else ()
+        ),
+        satellite_observation_batches=(
+            research.satellite_observation_batches if research is not None else ()
+        ),
+        incident_day_episode_id=context.episode_id,
+        incident_day_local_date=context.local_date,
+        incident_day_timezone=context.timezone,
+        incident_day_bbox=context.incident_bbox,
     )
 
 
@@ -1338,6 +1979,48 @@ class AzureBackendEventEvidenceAdapter:
             raise BackendEventEvidenceError(
                 "backend media type is not accepted by the point supervisor"
             ) from exc
+
+
+class AzureBackendIncidentDayEvidenceAdapter:
+    """Read the backend-created incident/day target without perimeter truth."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendEventEvidenceTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def read(self, event_id: str) -> DurableEventEvidence:
+        if not event_id or len(event_id) > 128:
+            raise ValueError("analysis_id is invalid")
+        response = self._transport.get_json(
+            self._config.base_url
+            + _INCIDENT_DAY_RESEARCH_PATH.format(
+                analysis_id=quote(event_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        raw_payload = dict(response.payload)
+        checksum = raw_payload.pop("source_sha256", None)
+        if not isinstance(checksum, str) or _canonical_sha256(raw_payload) != checksum:
+            raise BackendEventEvidenceError("incident-day evidence checksum mismatch")
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError("incident-day evidence revision headers mismatch")
+        context = BackendIncidentDayResearchContext.model_validate(response.payload)
+        if context.analysis_id != event_id:
+            raise BackendEventEvidenceError("incident-day evidence target mismatch")
+        return _incident_day_to_durable(context)
 
 
 class BackendVisualEvidencePublisher:
@@ -1552,8 +2235,190 @@ class BackendResearchEvidencePublisher:
             response.headers.get("x-checksum-sha256") != checksum
             or response.headers.get("etag") != f'"{checksum}"'
         ):
+            raise BackendEventEvidenceError("backend research evidence revision headers mismatch")
+        return receipt
+
+
+class BackendIncidentDayResearchPublisher:
+    """Append one ticket-only page to a durable incident/day analysis window."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendVisualEvidenceTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        payload: Mapping[str, Any],
+    ) -> BackendResearchEvidenceReceipt:
+        if payload.get("candidate_id") != candidate_id:
+            raise BackendEventEvidenceError("incident-day research target mismatch")
+        response = self._transport.post_json(
+            self._config.base_url
+            + _INCIDENT_DAY_RESEARCH_PAGE_PATH.format(
+                analysis_id=quote(candidate_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            payload=payload,
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        receipt = BackendResearchEvidenceReceipt.model_validate(response.payload)
+        if receipt.candidate_id != candidate_id:
+            raise BackendEventEvidenceError("incident-day research receipt mismatch")
+        checksum = receipt.source_revision_sha256
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError("incident-day research revision headers mismatch")
+        return receipt
+
+
+class BackendIncidentDayMediaAnalysisPublisher:
+    """Persist only derived public-media tickets after source collection closes."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendVisualEvidenceTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        payload: Mapping[str, Any],
+    ) -> BackendResearchMediaAnalysisReceipt:
+        if payload.get("candidate_id") != candidate_id:
+            raise BackendEventEvidenceError("incident-day media-analysis target mismatch")
+        response = self._transport.post_json(
+            self._config.base_url
+            + _INCIDENT_DAY_MEDIA_ANALYSIS_PATH.format(
+                analysis_id=quote(candidate_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            payload=payload,
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        receipt = BackendResearchMediaAnalysisReceipt.model_validate(response.payload)
+        if receipt.candidate_id != candidate_id:
+            raise BackendEventEvidenceError("incident-day media-analysis receipt mismatch")
+        checksum = receipt.source_revision_sha256
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError("incident-day media-analysis revision headers mismatch")
+        return receipt
+
+
+class BackendIncidentDaySatelliteAnalysisPublisher:
+    """Persist only derived satellite geometry tickets or an explicit abstention."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendVisualEvidenceTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        payload: Mapping[str, Any],
+    ) -> BackendIncidentDaySatelliteAnalysisReceipt:
+        if payload.get("analysis_id") != candidate_id:
+            raise BackendEventEvidenceError("incident-day satellite target mismatch")
+        response = self._transport.post_json(
+            self._config.base_url
+            + _INCIDENT_DAY_SATELLITE_ANALYSIS_PATH.format(
+                analysis_id=quote(candidate_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            payload=payload,
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        receipt = BackendIncidentDaySatelliteAnalysisReceipt.model_validate(response.payload)
+        if receipt.analysis_id != candidate_id:
+            raise BackendEventEvidenceError("incident-day satellite-analysis receipt mismatch")
+        checksum = receipt.source_revision_sha256
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
             raise BackendEventEvidenceError(
-                "backend research evidence revision headers mismatch"
+                "incident-day satellite-analysis revision headers mismatch"
+            )
+        return receipt
+
+
+class BackendIncidentDaySatelliteObservationPublisher:
+    """Persist deterministic satellite observations without retaining source bytes."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendVisualEvidenceTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        payload: Mapping[str, Any],
+    ) -> BackendIncidentDaySatelliteObservationReceipt:
+        if payload.get("analysis_id") != candidate_id:
+            raise BackendEventEvidenceError("incident-day satellite target mismatch")
+        response = self._transport.post_json(
+            self._config.base_url
+            + _INCIDENT_DAY_SATELLITE_OBSERVATION_PATH.format(
+                analysis_id=quote(candidate_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            payload=payload,
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        receipt = BackendIncidentDaySatelliteObservationReceipt.model_validate(response.payload)
+        if receipt.analysis_id != candidate_id:
+            raise BackendEventEvidenceError("incident-day satellite-observation receipt mismatch")
+        checksum = receipt.source_revision_sha256
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError(
+                "incident-day satellite-observation revision headers mismatch"
             )
         return receipt
 
@@ -1611,15 +2476,14 @@ class BackendPointAssessmentPublisher:
             response.headers.get("x-checksum-sha256") != checksum
             or response.headers.get("etag") != f'"{checksum}"'
         ):
-            raise BackendEventEvidenceError(
-                "backend point assessment receipt headers mismatch"
-            )
+            raise BackendEventEvidenceError("backend point assessment receipt headers mismatch")
         return receipt
 
 
 __all__ = [
     "AzureBackendEventEvidenceAdapter",
     "AzureBackendEventEvidenceConfig",
+    "AzureBackendIncidentDayEvidenceAdapter",
     "BackendBinaryResponse",
     "BackendDerivedKeyframeReceipt",
     "BackendEventEvidenceError",
@@ -1630,6 +2494,13 @@ __all__ = [
     "BackendEvidenceMediaTransport",
     "BackendGeographicEvidencePublisher",
     "BackendGeographicEvidenceReceipt",
+    "BackendIncidentDayMediaAnalysisPublisher",
+    "BackendIncidentDayResearchContext",
+    "BackendIncidentDayResearchPublisher",
+    "BackendIncidentDaySatelliteAnalysisPublisher",
+    "BackendIncidentDaySatelliteAnalysisReceipt",
+    "BackendIncidentDaySatelliteObservationPublisher",
+    "BackendIncidentDaySatelliteObservationReceipt",
     "BackendJsonResponse",
     "BackendKeyframeEvidencePublisher",
     "BackendKeyframeEvidenceTransport",
@@ -1638,6 +2509,7 @@ __all__ = [
     "BackendResearchEvidence",
     "BackendResearchEvidencePublisher",
     "BackendResearchEvidenceReceipt",
+    "BackendResearchMediaAnalysisReceipt",
     "BackendTerrainReference",
     "BackendVisualEvidencePublisher",
     "BackendVisualEvidenceReceipt",

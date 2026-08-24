@@ -52,11 +52,14 @@ class Claim(StrictModel):
     text: str = Field(min_length=1, max_length=10_000)
     observed_at: datetime | None = None
     confidence: float = Field(ge=0, le=1)
+    evidence_media_ids: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=16)
 
     @model_validator(mode="after")
     def validate_observed_at(self) -> Claim:
         if self.observed_at is not None and not is_timezone_aware(self.observed_at):
             raise ValueError("claim observed_at must include a timezone")
+        if len(self.evidence_media_ids) != len(set(self.evidence_media_ids)):
+            raise ValueError("claim evidence media identifiers must be unique")
         return self
 
 
@@ -65,7 +68,7 @@ class EvidenceMedia(StrictModel):
     source_id: SafeIdentifierV2
     media_group_id: SafeIdentifierV2
     origin_id: SafeIdentifierV2
-    kind: Literal["photo", "video", "keyframe", "satellite_image"]
+    kind: Literal["photo", "video", "audio", "keyframe", "satellite_image"]
     sha256: Sha256HexV2
     captured_at: datetime | None = None
     parent_media_id: SafeIdentifierV2 | None = None

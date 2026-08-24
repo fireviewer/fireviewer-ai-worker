@@ -23,14 +23,14 @@ from pydantic import AnyHttpUrl, Field, model_validator
 from firewarning_worker.contracts import SafeIdentifierV2, Sha256HexV2, StrictModel
 
 _PROMPT = """
-You extract explicitly stated wildfire facts from one public page and its public images.
+You extract explicitly supported wildfire facts from one public source content item and its images.
 Return exactly one JSON object with this shape:
 {"claims":[{"claim_type":"one allowed value","text":"short paraphrase",
 "observed_at":"ISO-8601 timestamp with timezone or null","confidence":0.0,
 "evidence_media_ids":["optional supplied media id"]}],"partial":false}
 
 Rules:
-- Use only the supplied page and images. Never add outside knowledge.
+- Use only the supplied source content and images. Never add outside knowledge.
 - claim_type must be one of allowed_claim_types.
 - text must be a concise paraphrase, never a copied passage.
 - confidence measures extraction faithfulness, not whether the reported fact is true.
@@ -71,6 +71,7 @@ class MultimodalEvidenceDocument(StrictModel):
     published_at: datetime | None = None
     content_sha256: Sha256HexV2
     content_type: Literal["text/html", "text/plain", "application/json"]
+    content_role: Literal["page", "transcript"] = "page"
     transient_content: str = Field(min_length=1, max_length=100_000, repr=False)
     images: tuple[TransientEvidenceImage, ...] = Field(default=(), max_length=4, repr=False)
     public_content: Literal[True] = True
@@ -430,7 +431,8 @@ class BedrockPixtralMultimodalProvider:
                             else None
                         ),
                         "allowed_claim_types": allowed,
-                        "public_page_text": visible_text,
+                        "content_role": document.content_role,
+                        "public_content_text": visible_text,
                         "supplied_media_ids": [item.media_id for item in selected_images],
                     },
                     ensure_ascii=False,

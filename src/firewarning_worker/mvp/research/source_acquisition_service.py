@@ -7,9 +7,10 @@ import os
 from hmac import compare_digest
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from time import monotonic
 from typing import Any, Protocol
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 from firewarning_worker.contracts import SafeIdentifierV2, StrictModel
 from firewarning_worker.mvp.research.multimodal_evidence import (
@@ -18,7 +19,11 @@ from firewarning_worker.mvp.research.multimodal_evidence import (
     BedrockPixtralConfig,
     BedrockPixtralMultimodalProvider,
 )
-from firewarning_worker.mvp.research.source_acquisition import CpuSourceAcquisitionWorker
+from firewarning_worker.mvp.research.source_acquisition import (
+    CpuSourceAcquisitionWorker,
+    SourceAcquisitionPlan,
+    SourceAcquisitionRunReceipt,
+)
 from firewarning_worker.mvp.research.source_planner import (
     AutomaticSourceAcquisitionPlanner,
     AutomaticSourcePlannerConfig,
@@ -26,6 +31,8 @@ from firewarning_worker.mvp.research.source_planner import (
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     AzureBackendEventEvidenceAdapter,
     AzureBackendEventEvidenceConfig,
+    AzureBackendIncidentDayEvidenceAdapter,
+    BackendIncidentDayResearchPublisher,
     BackendResearchEvidencePublisher,
     EventEvidenceRepository,
 )
@@ -47,11 +54,20 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 class SourceAcquisitionRequest(StrictModel):
-    candidate_id: SafeIdentifierV2
+    candidate_id: SafeIdentifierV2 | None = None
+    analysis_id: SafeIdentifierV2 | None = None
+
+    @model_validator(mode="after")
+    def validate_target(self) -> SourceAcquisitionRequest:
+        if (self.candidate_id is None) == (self.analysis_id is None):
+            raise ValueError("exactly one durable acquisition target is required")
+        return self
 
 
 class SourceAcquisitionRunner(Protocol):
     def run_candidate(self, candidate_id: str) -> dict[str, Any]: ...
+
+    def run_analysis(self, analysis_id: str) -> dict[str, Any]: ...
 
 
 class SourceAcquisitionOrchestrator:
@@ -59,23 +75,98 @@ class SourceAcquisitionOrchestrator:
         self,
         *,
         repository: EventEvidenceRepository,
+        incident_repository: EventEvidenceRepository,
         planner: AutomaticSourceAcquisitionPlanner,
         worker: CpuSourceAcquisitionWorker,
+        incident_worker: CpuSourceAcquisitionWorker,
+        max_incident_cycles: int = 1,
+        max_incident_runtime_seconds: float = 180,
     ) -> None:
         self._repository = repository
+        self._incident_repository = incident_repository
         self._planner = planner
         self._worker = worker
+        self._incident_worker = incident_worker
+        self._max_incident_cycles = max_incident_cycles
+        self._max_incident_runtime_seconds = max_incident_runtime_seconds
+
+    @staticmethod
+    def _result(
+        *,
+        receipt: SourceAcquisitionRunReceipt,
+        plan: SourceAcquisitionPlan,
+        planner: str,
+    ) -> dict[str, Any]:
+        return {
+            **receipt.model_dump(mode="json"),
+            "planner": planner,
+            "query_count": len(plan.queries),
+            "domain_policy_count": len(plan.source_policies),
+        }
 
     def run_candidate(self, candidate_id: str) -> dict[str, Any]:
         durable = self._repository.read(candidate_id)
         plan = self._planner.build(durable)
         receipt = self._worker.run(plan)
-        return {
-            **receipt.model_dump(mode="json"),
-            "planner": "automatic-durable-candidate-v1",
-            "query_count": len(plan.queries),
-            "domain_policy_count": len(plan.source_policies),
-        }
+        return self._result(
+            receipt=receipt,
+            plan=plan,
+            planner="automatic-durable-candidate-v1",
+        )
+
+    def run_analysis(self, analysis_id: str) -> dict[str, Any]:
+        started_at = monotonic()
+        cycles = 0
+        executed_waves: list[int] = []
+        receipt: SourceAcquisitionRunReceipt | None = None
+        plan: SourceAcquisitionPlan | None = None
+        durable = self._incident_repository.read(analysis_id)
+        while cycles < self._max_incident_cycles:
+            if monotonic() - started_at >= self._max_incident_runtime_seconds:
+                break
+            plan = self._planner.build(durable)
+            receipt = self._incident_worker.run(plan)
+            cycles += 1
+            if not executed_waves or executed_waves[-1] != receipt.wave_number:
+                executed_waves.append(receipt.wave_number)
+            durable = self._incident_repository.read(analysis_id)
+            coverage = durable.incident_day_coverage
+            if (
+                coverage is not None
+                and coverage.documentary_ready
+                and receipt.completed
+                and receipt.converged
+            ):
+                break
+            if receipt.safety_limit_reached or receipt.wave_number >= 16:
+                break
+        if receipt is None or plan is None:
+            raise RuntimeError("incident-day acquisition has no executable research work")
+        result = self._result(
+            receipt=receipt,
+            plan=plan,
+            planner="automatic-incident-day-v1",
+        )
+        coverage = durable.incident_day_coverage
+        result.update(
+            {
+                "orchestration_cycles": cycles,
+                "waves_executed": executed_waves,
+                "orchestration_complete": bool(
+                    coverage is not None
+                    and coverage.documentary_ready
+                    and receipt.completed
+                    and receipt.converged
+                ),
+                "daily_bundle_ready": bool(coverage is not None and coverage.coverage_ready),
+                "coverage_ready": bool(coverage is not None and coverage.documentary_ready),
+                "missing_dimensions": (
+                    list(coverage.missing_dimensions) if coverage is not None else []
+                ),
+            }
+        )
+        result["analysis_id"] = result.pop("candidate_id")
+        return result
 
 
 class SourceAcquisitionServiceSettings(StrictModel):
@@ -93,6 +184,12 @@ class SourceAcquisitionServiceSettings(StrictModel):
         max_length=256,
     )
     multimodal_enabled: bool = False
+    max_incident_cycles: int = Field(default=1, ge=1, le=8)
+    max_incident_runtime_seconds: int = Field(default=180, ge=60, le=210)
+    max_pages_per_run: int = Field(default=1, ge=1, le=5)
+    results_per_page: int = Field(default=1, ge=1, le=5)
+    media_per_source: int = Field(default=2, ge=1, le=8)
+    max_multimodal_analyses_per_run: int = Field(default=1, ge=1, le=4)
     search_provider_domain: str = Field(default="html.duckduckgo.com", min_length=3)
     search_template: str = Field(
         default="https://html.duckduckgo.com/html/?q={query}", min_length=16
@@ -105,9 +202,7 @@ class SourceAcquisitionServiceSettings(StrictModel):
             host=os.getenv("FIREVIEWER_SOURCE_WORKER_HOST", "0.0.0.0"),  # noqa: S104
             port=int(os.getenv("PORT", "8080")),
             worker_token=SecretStr(os.environ["FIREVIEWER_SOURCE_WORKER_TOKEN"]),
-            broker_control_token=SecretStr(
-                os.environ["FIREVIEWER_SOURCE_BROKER_CONTROL_TOKEN"]
-            ),
+            broker_control_token=SecretStr(os.environ["FIREVIEWER_SOURCE_BROKER_CONTROL_TOKEN"]),
             managed_identity_client_id=os.environ["AZURE_CLIENT_ID"],
             aws_role_arn=os.environ["FIREVIEWER_BEDROCK_ROLE_ARN"],
             aws_oidc_audience=os.environ["FIREVIEWER_AWS_OIDC_AUDIENCE"],
@@ -117,6 +212,16 @@ class SourceAcquisitionServiceSettings(StrictModel):
                 "eu.mistral.pixtral-large-2502-v1:0",
             ),
             multimodal_enabled=_env_bool("FIREVIEWER_MULTIMODAL_ENABLED", False),
+            max_incident_cycles=int(os.getenv("FIREVIEWER_SOURCE_MAX_INCIDENT_CYCLES", "1")),
+            max_incident_runtime_seconds=int(
+                os.getenv("FIREVIEWER_SOURCE_MAX_RUNTIME_SECONDS", "180")
+            ),
+            max_pages_per_run=int(os.getenv("FIREVIEWER_SOURCE_MAX_PAGES_PER_RUN", "1")),
+            results_per_page=int(os.getenv("FIREVIEWER_SOURCE_RESULTS_PER_PAGE", "1")),
+            media_per_source=int(os.getenv("FIREVIEWER_SOURCE_MEDIA_PER_SOURCE", "2")),
+            max_multimodal_analyses_per_run=int(
+                os.getenv("FIREVIEWER_SOURCE_MAX_MULTIMODAL_PER_RUN", "1")
+            ),
             search_provider_domain=os.getenv(
                 "FIREVIEWER_SOURCE_SEARCH_PROVIDER_DOMAIN", "html.duckduckgo.com"
             ),
@@ -142,6 +247,7 @@ class SourceAcquisitionService:
         self.settings = settings
         if runner is None:
             repository = AzureBackendEventEvidenceAdapter(settings.backend)
+            incident_repository = AzureBackendIncidentDayEvidenceAdapter(settings.backend)
             provider = None
             if settings.multimodal_enabled:
                 config = BedrockPixtralConfig(
@@ -167,15 +273,30 @@ class SourceAcquisitionService:
                 broker_control_token=control_token,
                 multimodal_evidence_provider=provider,
             )
+            incident_worker = CpuSourceAcquisitionWorker(
+                repository=incident_repository,
+                publisher=BackendIncidentDayResearchPublisher(settings.backend),
+                broker=ResearchBroker(control_token=control_token),
+                broker_control_token=control_token,
+                multimodal_evidence_provider=provider,
+            )
             runner = SourceAcquisitionOrchestrator(
                 repository=repository,
+                incident_repository=incident_repository,
                 planner=AutomaticSourceAcquisitionPlanner(
                     AutomaticSourcePlannerConfig(
                         search_provider_domain=settings.search_provider_domain,
                         search_template=settings.search_template,
+                        results_per_page=settings.results_per_page,
+                        media_per_source=settings.media_per_source,
+                        max_pages_per_run=settings.max_pages_per_run,
+                        max_multimodal_analyses_per_run=(settings.max_multimodal_analyses_per_run),
                     )
                 ),
                 worker=worker,
+                incident_worker=incident_worker,
+                max_incident_cycles=settings.max_incident_cycles,
+                max_incident_runtime_seconds=settings.max_incident_runtime_seconds,
             )
         self.runner = runner
 
@@ -185,6 +306,10 @@ class SourceAcquisitionService:
 
     def run(self, payload: object) -> dict[str, Any]:
         request = SourceAcquisitionRequest.model_validate(payload)
+        if request.analysis_id is not None:
+            return self.runner.run_analysis(request.analysis_id)
+        if request.candidate_id is None:
+            raise RuntimeError("validated source target is missing")
         return self.runner.run_candidate(request.candidate_id)
 
 
@@ -211,7 +336,8 @@ def _handler_for(service: SourceAcquisitionService) -> type[BaseHTTPRequestHandl
                 {
                     "status": "ok",
                     "runtime": "azure-cpu",
-                    "planner": "automatic-durable-candidate-v1",
+                    "planner": "automatic-durable-target-v1",
+                    "incident_day_supported": True,
                     "manual_plan_accepted": False,
                     "multimodal_provider": "aws-bedrock-pixtral",
                     "multimodal_model": service.settings.bedrock_model_id,
@@ -224,7 +350,10 @@ def _handler_for(service: SourceAcquisitionService) -> type[BaseHTTPRequestHandl
             )
 
         def do_POST(self) -> None:
-            if self.path != "/v1/event-evidence/research":
+            if self.path not in {
+                "/v1/event-evidence/research",
+                "/v1/incident-day/research",
+            }:
                 self._json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
                 return
             if not service.authorize(self.headers.get("Authorization")):
@@ -235,6 +364,14 @@ def _handler_for(service: SourceAcquisitionService) -> type[BaseHTTPRequestHandl
                 if not 1 <= length <= _MAX_REQUEST_BYTES:
                     raise ValueError("request_size_invalid")
                 payload = json.loads(self.rfile.read(length))
+                if self.path == "/v1/incident-day/research" and (
+                    not isinstance(payload, dict) or "analysis_id" not in payload
+                ):
+                    raise ValueError("analysis_id is required for this route")
+                if self.path == "/v1/event-evidence/research" and (
+                    not isinstance(payload, dict) or "candidate_id" not in payload
+                ):
+                    raise ValueError("candidate_id is required for this route")
                 result = service.run(payload)
             except Exception as exc:
                 self._json(

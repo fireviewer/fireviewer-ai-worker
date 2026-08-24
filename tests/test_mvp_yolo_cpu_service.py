@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import threading
 from datetime import UTC, datetime
 from hashlib import sha256
 from io import BytesIO
@@ -24,6 +26,8 @@ from firewarning_worker.mvp.vision.yolo_cpu_service import (
     YoloCpuServiceSettings,
     YoloEventRequest,
     YoloEventService,
+    YoloHttpServer,
+    YoloTransientImageRequest,
 )
 
 
@@ -262,6 +266,73 @@ def test_backend_yolo_persists_visual_observation_without_geographic_output(
     }
     assert len(publisher.calls) == 1
     assert publisher.calls[0]["source_revision_sha256"] == "e" * 64
+
+
+def test_transient_public_frame_is_detected_without_storage_or_geographic_output() -> None:
+    payload = _image_bytes()
+    service = YoloEventService(
+        settings=YoloCpuServiceSettings(
+            auth_token="a" * 40,
+            allowed_hosts=frozenset({"api.example.test"}),
+            model_cache=Path("model-cache"),
+        ),
+        model_loader=_SmokeModel,
+    )
+
+    result = service.analyze_transient(
+        YoloTransientImageRequest(
+            media_id="KEYFRAME-PUBLIC-0001",
+            content_type="image/png",
+            content_sha256=sha256(payload).hexdigest(),
+            content_base64=base64.b64encode(payload).decode("ascii"),
+        )
+    )
+
+    assert result["result"]["media_id"] == "KEYFRAME-PUBLIC-0001"
+    assert result["result"]["status"] == "smoke"
+    assert result["result"]["provider_run"]["cost_usd"] == 0
+    assert result["input_binary_stored"] is False
+    assert result["geographic_output_created"] is False
+
+
+def test_transient_yolo_http_route_requires_auth_and_never_returns_input_bytes() -> None:
+    payload = _image_bytes()
+    token = "a" * 40
+    service = YoloEventService(
+        settings=YoloCpuServiceSettings(
+            auth_token=token,
+            allowed_hosts=frozenset({"api.example.test"}),
+            model_cache=Path("model-cache"),
+        ),
+        model_loader=_SmokeModel,
+    )
+    server = YoloHttpServer(("127.0.0.1", 0), auth_token=token, service=service)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    request = {
+        "media_id": "KEYFRAME-PUBLIC-0002",
+        "content_type": "image/png",
+        "content_sha256": sha256(payload).hexdigest(),
+        "content_base64": base64.b64encode(payload).decode("ascii"),
+    }
+    try:
+        endpoint = f"http://127.0.0.1:{server.server_port}/v1/transient-images/detect"
+        unauthorized = httpx.post(endpoint, json=request, timeout=5)
+        response = httpx.post(
+            endpoint,
+            json=request,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=5,
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert unauthorized.status_code == 401
+    assert response.status_code == 200
+    assert response.json()["result"]["status"] == "smoke"
+    assert "content_base64" not in response.text
 
 
 def test_service_settings_are_cpu_only_and_fail_closed(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -79,6 +79,20 @@ video-mvp = [
   "opencv-python-headless==4.13.0.92",
   "pillow==12.1.1",
 ]
+public-media = [
+  "boto3==1.43.50",
+  "httpx==0.28.1",
+  "opencv-python-headless==4.13.0.92",
+  "pillow==12.1.1",
+]
+satellite-cpu = [
+  "boto3==1.43.50",
+  "h5py==3.15.1",
+  "httpx==0.28.1",
+  "numpy==2.4.6",
+  "rasterio==1.4.4",
+  "shapely==2.1.2",
+]
 corpus = [
   "datasets==4.8.5",
   "huggingface-hub==0.36.2",
@@ -197,7 +211,7 @@ strict = true
 packages = ["firewarning_worker"]
 
 [[tool.mypy.overrides]]
-module = ["azure.*", "boto3", "boto3.*", "botocore", "botocore.*", "cv2.*", "huggingface_hub.*", "kornia.*", "numpy.*", "pyproj.*", "rasterio.*", "romatch.*", "terratorch.*", "torch.*", "torchvision.*", "transformers.*", "PIL.*", "qwen_vl_utils.*", "httpx.*", "runpod.*", "flash_attn.*", "ultralytics.*", "vercel.*"]
+module = ["azure.*", "boto3", "boto3.*", "botocore", "botocore.*", "cv2.*", "h5py.*", "huggingface_hub.*", "kornia.*", "numpy.*", "pyproj.*", "rasterio.*", "romatch.*", "shapely.*", "terratorch.*", "torch.*", "torchvision.*", "transformers.*", "PIL.*", "qwen_vl_utils.*", "httpx.*", "runpod.*", "flash_attn.*", "ultralytics.*", "vercel.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -14,6 +14,11 @@ eve-point-supervisor/.output
 tests/*
 !tests/test_mvp_video_keyframes.py
 !tests/test_mvp_keyframe_cpu_service.py
+!tests/test_mvp_public_media_cpu.py
+!tests/test_mvp_public_media_cpu_service.py
+!tests/test_mvp_transcription.py
+!tests/test_research_broker.py
+!tests/test_mvp_satellite_cpu.py
 benchmark-results
 checkpoints
 data

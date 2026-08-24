@@ -28,8 +28,15 @@ from firewarning_worker.research_broker import BrokerPolicy, ResearchBroker
 
 _DEFAULT_TEXT_CLAIM_TYPES = (
     "incident_status",
+    "ignition",
     "location_report",
+    "observation_time",
     "fire_progression",
+    "fire_resumption",
+    "fire_fixed",
+    "fire_contained",
+    "fire_controlled",
+    "fire_extinguished",
     "area_burned",
     "response_resources",
     "evacuation",
@@ -65,17 +72,25 @@ class SourceDomainPolicy(StrictModel):
 class SourceAcquisitionPlan(StrictModel):
     candidate_id: SafeIdentifierV2
     plan_id: SafeIdentifierV2
+    wave_number: int = Field(default=1, ge=1, le=16)
+    wave_focus: tuple[SafeIdentifierV2, ...] = Field(min_length=1, max_length=32)
     queries: tuple[str, ...] = Field(min_length=1, max_length=100)
     allowed_domains: tuple[str, ...] = Field(min_length=1, max_length=200)
     source_policies: dict[str, SourceDomainPolicy]
     search_provider_domain: str = Field(min_length=1, max_length=255)
     search_template: str = Field(min_length=16, max_length=2_048)
-    target_media: int = Field(default=20, ge=1, le=100)
+    media_ticket_limit: int = Field(default=2_048, ge=1, le=2_048)
+    convergence_zero_yield_waves: int = Field(default=2, ge=2, le=5)
     results_per_page: int = Field(default=20, ge=1, le=50)
     media_per_source: int = Field(default=8, ge=1, le=20)
     max_multimodal_analyses_per_run: int = Field(default=20, ge=1, le=100)
     max_pages_per_run: int = Field(default=5, ge=1, le=50)
     max_fetch_bytes: int = Field(default=16 * 1_024 * 1_024, ge=65_536, le=64 * 1_024 * 1_024)
+    max_media_fetch_bytes: int = Field(
+        default=512 * 1_024 * 1_024,
+        ge=65_536,
+        le=512 * 1_024 * 1_024,
+    )
     timeout_seconds: int = Field(default=20, ge=2, le=120)
 
     @model_validator(mode="after")
@@ -85,6 +100,8 @@ class SourceAcquisitionPlan(StrictModel):
             raise ValueError("source acquisition domains must be unique")
         if set(self.source_policies) != set(normalized_domains):
             raise ValueError("every source acquisition domain requires a policy")
+        if self.max_media_fetch_bytes < self.max_fetch_bytes:
+            raise ValueError("media fetch limit cannot be smaller than the page fetch limit")
         provider = self.search_provider_domain.casefold().rstrip(".")
         if provider in normalized_domains:
             raise ValueError("the search provider must be separate from source domains")
@@ -103,11 +120,18 @@ class SourceAcquisitionRunReceipt(StrictModel):
     candidate_id: SafeIdentifierV2
     plan_id: SafeIdentifierV2
     plan_revision: str = Field(pattern=r"^[0-9a-f]{64}$")
+    wave_number: int = Field(ge=1, le=16)
+    wave_focus: tuple[SafeIdentifierV2, ...] = Field(min_length=1, max_length=32)
     pages_published: int = Field(ge=0)
     source_count: int = Field(ge=0)
     claim_count: int = Field(ge=0)
     media_count: int = Field(ge=0)
     completed: bool
+    media_ticket_limit: int = Field(ge=1, le=2_048)
+    safety_limit_reached: bool
+    converged: bool
+    zero_yield_wave_streak: int = Field(ge=0, le=100)
+    coverage_ready: bool
     next_cursor: str | None = None
     source_revision_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     errors: tuple[str, ...] = Field(default=(), max_length=200)
@@ -287,6 +311,7 @@ class CpuSourceAcquisitionWorker:
                     if claim.observed_at is not None
                     else None,
                     "confidence": claim.confidence,
+                    "evidence_media_ids": list(claim.evidence_media_ids),
                 }
             )
         outcome: Literal["success", "partial"] = (
@@ -324,6 +349,7 @@ class CpuSourceAcquisitionWorker:
                 plan.search_provider_domain: plan.search_template,
             },
             "max_fetch_bytes": plan.max_fetch_bytes,
+            "max_media_fetch_bytes": plan.max_media_fetch_bytes,
             "timeout_seconds": plan.timeout_seconds,
         }
 
@@ -464,15 +490,16 @@ class CpuSourceAcquisitionWorker:
             candidates = raw_media_links if isinstance(raw_media_links, list) else []
             for media_url_value in candidates:
                 if (
-                    research_media_count + len(media) >= plan.target_media
+                    research_media_count + len(media) >= plan.media_ticket_limit
                     or source_media >= plan.media_per_source
                 ):
                     break
                 media_url = str(media_url_value)
                 try:
-                    media_fetch, transient_bytes = self._broker.fetch_transient_bytes(
+                    media_fetch, transient_bytes = self._broker.fetch_transient_media(
                         {"arguments": {"url": media_url, "store": False}},
                         policy,
+                        maximum_in_memory_bytes=8 * 1_024 * 1_024,
                     )
                 except Exception as exc:
                     journal.append(
@@ -497,7 +524,7 @@ class CpuSourceAcquisitionWorker:
                     )
                     continue
                 media_type = str(media_fetch.get("content_type", ""))
-                kind: Literal["photo", "video"]
+                kind: Literal["photo", "video", "audio"]
                 if media_type in {
                     "image/avif",
                     "image/jpeg",
@@ -507,6 +534,16 @@ class CpuSourceAcquisitionWorker:
                     kind = "photo"
                 elif media_type in {"video/mp4", "video/quicktime", "video/webm"}:
                     kind = "video"
+                elif media_type in {
+                    "audio/aac",
+                    "audio/flac",
+                    "audio/m4a",
+                    "audio/mpeg",
+                    "audio/ogg",
+                    "audio/wav",
+                    "audio/webm",
+                }:
+                    kind = "audio"
                 else:
                     continue
                 digest = str(media_fetch.get("sha256", ""))
@@ -529,7 +566,11 @@ class CpuSourceAcquisitionWorker:
                         "size_bytes": int(media_fetch.get("size_bytes", 0)),
                     }
                 )
-                if kind == "photo" and len(transient_images) < 4:
+                if (
+                    kind == "photo"
+                    and transient_bytes is not None
+                    and len(transient_images) < 4
+                ):
                     transient_images.append(
                         TransientEvidenceImage(
                             media_id=media_id,
@@ -602,17 +643,37 @@ class CpuSourceAcquisitionWorker:
         if progress is not None and (
             progress.plan_id != plan.plan_id or progress.plan_revision != plan.revision
         ):
-            raise ValueError("EventEvidence already contains another research plan")
+            if not (
+                durable.research_target_kind == "incident_day"
+                and progress.completed
+                and plan.wave_number == progress.wave_number + 1
+                and (
+                    not progress.converged
+                    or (
+                        durable.incident_day_coverage is not None
+                        and not durable.incident_day_coverage.documentary_ready
+                    )
+                )
+            ):
+                raise ValueError("EventEvidence already contains another research plan")
+            progress = None
         if progress is not None and progress.completed:
             return SourceAcquisitionRunReceipt(
                 candidate_id=plan.candidate_id,
                 plan_id=plan.plan_id,
                 plan_revision=plan.revision,
+                wave_number=plan.wave_number,
+                wave_focus=plan.wave_focus,
                 pages_published=0,
                 source_count=len(durable.event.sources),
                 claim_count=len(durable.event.claims),
                 media_count=len(durable.event.media),
                 completed=True,
+                media_ticket_limit=plan.media_ticket_limit,
+                safety_limit_reached=progress.safety_limit_reached,
+                converged=progress.converged,
+                zero_yield_wave_streak=progress.zero_yield_wave_streak,
+                coverage_ready=progress.coverage_ready,
                 source_revision_sha256=durable.source_revision_sha256,
             )
 
@@ -645,6 +706,11 @@ class CpuSourceAcquisitionWorker:
         next_cursor: str | None = None
         last_receipt: BackendResearchEvidenceReceipt | None = None
         multimodal_analyses = 0
+        zero_yield_wave_streak = (
+            progress.zero_yield_wave_streak if progress is not None else 0
+        )
+        safety_limit_reached = False
+        converged = False
         try:
             while pages_published < plan.max_pages_per_run:
                 if query_index >= len(plan.queries):
@@ -680,6 +746,10 @@ class CpuSourceAcquisitionWorker:
                         )
                         multimodal_analyses += page_multimodal_analyses
                         research_media_count += len(media)
+                        if sources or claims or media:
+                            zero_yield_wave_streak = 0
+                        else:
+                            zero_yield_wave_streak += 1
                     except Exception as exc:
                         occurred_at = self._clock()
                         sources, claims, media = [], [], []
@@ -708,8 +778,9 @@ class CpuSourceAcquisitionWorker:
                         for item in journal_entries
                         if item["outcome"] in {"failed", "partial", "missing", "not_provided"}
                     )
-                    if research_media_count >= plan.target_media:
+                    if research_media_count >= plan.media_ticket_limit:
                         completed = True
+                        safety_limit_reached = True
                         next_cursor = None
                     elif provider_next is not None:
                         next_cursor = _encode_cursor(query_index, str(provider_next))
@@ -718,22 +789,30 @@ class CpuSourceAcquisitionWorker:
                     else:
                         completed = True
                         next_cursor = None
-                if completed and research_media_count < plan.target_media:
+                if completed:
+                    converged = (
+                        not safety_limit_reached
+                        and zero_yield_wave_streak
+                        >= plan.convergence_zero_yield_waves
+                    )
+                if completed and not converged:
                     journal_entries.append(
                         {
                             "entry_id": _stable_id(
                                 "JOURNAL-WEB",
-                                f"target:partial:{plan.revision}:{page_number}:"
-                                f"{research_media_count}:{plan.target_media}",
+                                f"coverage:partial:{plan.revision}:{page_number}:"
+                                f"{zero_yield_wave_streak}:{safety_limit_reached}",
                             ),
                             "stage": "planning",
-                            "outcome": (
-                                "partial" if research_media_count > 0 else "missing"
+                            "outcome": "partial",
+                            "error_code": (
+                                "media_ticket_safety_limit_reached"
+                                if safety_limit_reached
+                                else "collection_not_converged"
                             ),
-                            "error_code": "target_media_not_reached",
                             "detail": (
-                                f"Collected {research_media_count} of the requested "
-                                f"{plan.target_media} public media tickets."
+                                "The adaptive query wave ended before two consecutive "
+                                "zero-yield searches confirmed collection convergence."
                             ),
                             "source_url": None,
                             "occurred_at": self._clock().isoformat(),
@@ -753,6 +832,8 @@ class CpuSourceAcquisitionWorker:
                     "source_revision_sha256": revision,
                     "plan_id": plan.plan_id,
                     "plan_revision": plan.revision,
+                    "wave_number": plan.wave_number,
+                    "wave_focus": list(plan.wave_focus),
                     "page_id": page_id,
                     "page_number": page_number,
                     "cursor": (
@@ -762,6 +843,11 @@ class CpuSourceAcquisitionWorker:
                     ),
                     "next_cursor": next_cursor,
                     "completed": completed,
+                    "media_ticket_limit": plan.media_ticket_limit,
+                    "safety_limit_reached": safety_limit_reached,
+                    "converged": converged,
+                    "zero_yield_wave_streak": zero_yield_wave_streak,
+                    "coverage_ready": completed and converged,
                     "sources": sources,
                     "claims": claims,
                     "media": media,
@@ -790,11 +876,18 @@ class CpuSourceAcquisitionWorker:
             candidate_id=plan.candidate_id,
             plan_id=plan.plan_id,
             plan_revision=plan.revision,
+            wave_number=plan.wave_number,
+            wave_focus=plan.wave_focus,
             pages_published=pages_published,
             source_count=last_receipt.source_count,
             claim_count=last_receipt.claim_count,
             media_count=last_receipt.media_count,
             completed=last_receipt.completed,
+            media_ticket_limit=last_receipt.media_ticket_limit,
+            safety_limit_reached=last_receipt.safety_limit_reached,
+            converged=last_receipt.converged,
+            zero_yield_wave_streak=last_receipt.zero_yield_wave_streak,
+            coverage_ready=last_receipt.coverage_ready,
             next_cursor=last_receipt.next_cursor,
             source_revision_sha256=last_receipt.source_revision_sha256,
             errors=tuple(errors[:200]),

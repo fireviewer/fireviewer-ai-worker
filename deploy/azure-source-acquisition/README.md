@@ -1,9 +1,14 @@
 # FireViewer source acquisition CPU worker
 
 The worker performs bounded HTTPS search, pagination, URL/SHA deduplication and direct
-page-by-page publication to backend `EventEvidence`. It accepts only a real `candidate_id`.
-Queries, domain policies and the 20-media target are built deterministically from the durable
-candidate; callers cannot submit a manual acquisition plan.
+page-by-page publication to backend `EventEvidence`. It accepts either a real event candidate or
+an immutable incident-day analysis window. Queries and domain policies are built automatically
+from that durable target; callers cannot submit a manual acquisition plan.
+
+Production collection has no fixed media-count target. It continues in evidence-gap waves until
+the incident lifecycle, temporal coverage, source independence and visual/satellite dimensions
+converge, or until an explicit safety ceiling is reached. The historic 20-media corpus remains a
+local benchmark convention only.
 
 Public page text and up to four public images may be sent transiently to the configured
 `MultimodalEvidenceProvider`. The first provider is Pixtral Large on Amazon Bedrock through the
@@ -27,10 +32,16 @@ static AWS credential in the app configuration. Keep `FIREVIEWER_MULTIMODAL_ENAB
 the first paid inference is explicitly authorized. This permits health, durable candidate reads,
 automatic planning and the Azure-to-AWS STS exchange to be checked without invoking the model.
 
-The authenticated endpoint is `POST /v1/event-evidence/research` with this complete body:
+The event-candidate endpoint is `POST /v1/event-evidence/research`:
 
 ```json
 {"candidate_id":"EC-..."}
+```
+
+The incident-day endpoint is `POST /v1/incident-day/research`:
+
+```json
+{"analysis_id":"AN-..."}
 ```
 
 The backend checksum is the precondition for each durable research page. The generated plan is

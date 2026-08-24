@@ -298,6 +298,28 @@ def _backend_snapshot_payload() -> dict[str, object]:
                     },
                     "resolution_m": 375,
                     "confidence": 0.76,
+                },
+                {
+                    "observation_id": "CLMS-BURN-SCAR-1",
+                    "artifact_revision_id": "CLMS-REV-1",
+                    "lineage_family_id": "CLMS-FAMILY-1",
+                    "semantic_role": "interpreted_observation",
+                    "phenomenon": "burned_area",
+                    "observed_at": "2026-08-22T15:00:00+00:00",
+                    "geometry_geojson": {
+                        "type": "Polygon",
+                        "coordinates": [
+                            [
+                                [5.36, 44.74],
+                                [5.38, 44.74],
+                                [5.38, 44.76],
+                                [5.36, 44.76],
+                                [5.36, 44.74],
+                            ]
+                        ],
+                    },
+                    "resolution_m": 300,
+                    "confidence": 0.82,
                 }
             ],
         },
@@ -849,8 +871,12 @@ def test_azure_backend_adapter_validates_revision_and_maps_durable_evidence() ->
     assert {item.reference_kind for item in durable.geographic_references} == {
         "prior_active_point",
         "satellite_hotspot",
+        "satellite_active_area",
     }
-    assert durable.event.satellite_observations[0].observation_id == ("SATELLITE-EXTERNAL-1")
+    assert {item.observation_id for item in durable.event.satellite_observations} == {
+        "SATELLITE-EXTERNAL-1",
+        "CLMS-BURN-SCAR-1",
+    }
     assert durable.upload_locations[0].location_origin == "user_declared"
     assert durable.prior_fire_states[0].read_only is True
     assert {check.check_type for check in durable.checks_for("CANDIDATE-1")} == {
