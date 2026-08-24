@@ -45,10 +45,12 @@ strict contracts and failure semantics.
 - bounded HTTP acquisition, domain policies, automatic research planning,
   media-candidate collection, deduplication, and source tickets;
 - in-memory multimodal extraction from a page and a bounded public-image set;
-- CPU video keyframe selection and a provisional CPU YOLO visual stage;
+- durable CPU video-keyframe extraction followed by the replaceable CPU YOLO
+  smoke detector;
 - upload-location, camera, map, terrain, visibility, uncertainty, and
   history-aware geographic hypothesis services;
-- durable read adapters for backend evidence and terrain references;
+- durable read/write adapters for backend evidence, derived keyframes,
+  geographic hypotheses, and terrain references;
 - provider boundaries for optional cross-view and satellite acceleration;
 - spatio-temporal event retrieval and compact evidence-bundle assembly;
 - managed and simulated multimodal supervisors with strict JSON output;

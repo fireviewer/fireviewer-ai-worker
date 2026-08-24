@@ -13,6 +13,7 @@ from firewarning_worker.mvp.localization.geographic_cpu_service import (
 )
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     AzureBackendEventEvidenceConfig,
+    BackendGeographicEvidenceReceipt,
     DurableEventEvidence,
 )
 
@@ -100,16 +101,41 @@ def test_runner_returns_abstention_without_mutation() -> None:
                 ],
             }
 
+    class Publisher:
+        payload: dict[str, Any] | None = None
+
+        def publish(
+            self,
+            *,
+            candidate_id: str,
+            payload: dict[str, Any],
+        ) -> BackendGeographicEvidenceReceipt:
+            assert candidate_id == "EC-REAL-1"
+            self.payload = payload
+            return BackendGeographicEvidenceReceipt(
+                candidate_id=candidate_id,
+                source_revision_sha256="b" * 64,
+                request_sha256="c" * 64,
+                hypothesis_count=0,
+                abstention_count=1,
+                replayed=False,
+            )
+
+    publisher = Publisher()
+
     result = GeographicCpuRunner(
         repository=Repository(),
         geographic_service=Geographic(),  # type: ignore[arg-type]
         azure_maps=None,
+        publisher=publisher,
     ).run_candidate("EC-REAL-1")
 
     assert result["source_event_evidence_sha256"] == "a" * 64
     hypotheses = result["geographic_hypotheses"]
     assert isinstance(hypotheses, dict)
     assert hypotheses["status"] == "abstained"
+    assert publisher.payload is hypotheses
+    assert result["persistence"]["abstention_count"] == 1
     assert result["coordinates_generated_by_visual_model"] is False
     assert result["map_mutation_allowed"] is False
     assert result["perimeter_mutation_allowed"] is False

@@ -39,8 +39,15 @@ from firewarning_worker.mvp.supervision.point_supervisor import PointSupervisorI
 _SNAPSHOT_SCHEMA = "event-evidence-read-1.0"
 _SNAPSHOT_PATH = "/api/v1/internal/event-evidence/{candidate_id}"
 _ASSET_PATH = "/api/v1/internal/event-evidence/{candidate_id}/assets/{asset_id}/content"
+_KEYFRAME_PATH = (
+    "/api/v1/internal/event-evidence/{candidate_id}/keyframes/{keyframe_id}/content"
+)
+_KEYFRAME_UPLOAD_PATH = "/api/v1/internal/derived-keyframes/{candidate_id}/{keyframe_id}"
 _VISUAL_EVIDENCE_PATH = "/api/v1/internal/event-evidence/{candidate_id}/visual-observations"
 _RESEARCH_EVIDENCE_PATH = "/api/v1/internal/event-evidence/{candidate_id}/research-pages"
+_GEOGRAPHIC_EVIDENCE_PATH = (
+    "/api/v1/internal/event-evidence/{candidate_id}/geographic-hypotheses"
+)
 _POINT_ASSESSMENT_PATH = "/api/v1/internal/event-evidence/{candidate_id}/point-assessments"
 _DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 
@@ -87,6 +94,31 @@ class BackendEvidenceAsset(StrictModel):
     detected_media_type: str | None = Field(default=None, max_length=128)
     size_bytes: int = Field(gt=0)
     sha256: Sha256HexV2
+
+
+class BackendDerivedKeyframe(StrictModel):
+    keyframe_id: SafeIdentifierV2
+    parent_media_id: SafeIdentifierV2
+    frame_index: int = Field(ge=0)
+    timestamp_seconds: float = Field(ge=0, allow_inf_nan=False)
+    captured_at: datetime | None = None
+    media_type: Literal["image/png"]
+    size_bytes: int = Field(gt=0, le=104_857_600)
+    sha256: Sha256HexV2
+    content_path: str = Field(
+        pattern=(
+            r"^/api/v1/internal/event-evidence/[A-Za-z0-9._:-]+/"
+            r"keyframes/KF-[A-Za-z0-9._:-]+/content$"
+        ),
+        max_length=512,
+    )
+
+    @field_validator("captured_at")
+    @classmethod
+    def aware_capture_time(cls, value: datetime | None) -> datetime | None:
+        if value is not None and not is_timezone_aware(value):
+            raise ValueError("derived keyframe capture time must include a timezone")
+        return value
 
 
 class BackendConsent(StrictModel):
@@ -330,6 +362,7 @@ class BackendEventEvidenceSnapshot(StrictModel):
     bundle: BackendEventBundle
     visual_evidence: BackendVisualEvidence | None = None
     research_evidence: BackendResearchEvidence | None = None
+    derived_keyframes: tuple[BackendDerivedKeyframe, ...] = Field(default=(), max_length=480)
     localization_attempts: tuple[BackendLocalizationAttempt, ...] = Field(
         default=(),
         max_length=512,
@@ -365,6 +398,11 @@ class BackendEventEvidenceSnapshot(StrictModel):
         asset_ids = [item.evidence_asset_id for item in self.bundle.evidence_assets]
         if len(asset_ids) != len(set(asset_ids)):
             raise ValueError("duplicate backend EventEvidence asset")
+        keyframe_ids = [item.keyframe_id for item in self.derived_keyframes]
+        if len(keyframe_ids) != len(set(keyframe_ids)):
+            raise ValueError("duplicate backend derived keyframe")
+        if any(item.parent_media_id not in asset_ids for item in self.derived_keyframes):
+            raise ValueError("derived keyframe references an unknown parent media")
         attempt_ids = [item.attempt_id for item in self.localization_attempts]
         if len(attempt_ids) != len(set(attempt_ids)):
             raise ValueError("duplicate backend localization attempt")
@@ -448,6 +486,18 @@ class BackendVisualEvidenceTransport(Protocol):
         *,
         headers: Mapping[str, str],
         payload: Mapping[str, Any],
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> BackendJsonResponse: ...
+
+
+class BackendKeyframeEvidenceTransport(Protocol):
+    def put_bytes(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str],
+        content: bytes,
         timeout_seconds: float,
         max_response_bytes: int,
     ) -> BackendJsonResponse: ...
@@ -598,6 +648,46 @@ class UrllibBackendEventEvidenceTransport:
             raise BackendEventEvidenceError("backend response must be a JSON object")
         return BackendJsonResponse(payload=decoded, headers=response_headers)
 
+    def put_bytes(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str],
+        content: bytes,
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> BackendJsonResponse:
+        request = Request(  # noqa: S310
+            url,
+            data=content,
+            headers={**headers, "Content-Type": "image/png"},
+            method="PUT",
+        )
+        try:
+            with build_opener(_NoRedirectHandler()).open(
+                request,
+                timeout=timeout_seconds,
+            ) as response:
+                if response.headers.get_content_type() != "application/json":
+                    raise BackendEventEvidenceError("backend response is not JSON")
+                body = response.read(max_response_bytes + 1)
+                if len(body) > max_response_bytes:
+                    raise BackendEventEvidenceError("backend response exceeds the size limit")
+                response_headers = {
+                    key.casefold(): value for key, value in response.headers.items()
+                }
+        except HTTPError as exc:
+            raise BackendEventEvidenceError(f"backend returned HTTP {exc.code}") from exc
+        except (OSError, URLError, ValueError) as exc:
+            raise BackendEventEvidenceError("backend keyframe write request failed") from exc
+        try:
+            decoded = json.loads(body)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise BackendEventEvidenceError("backend returned invalid JSON") from exc
+        if not isinstance(decoded, dict):
+            raise BackendEventEvidenceError("backend response must be a JSON object")
+        return BackendJsonResponse(payload=decoded, headers=response_headers)
+
 
 @dataclass(frozen=True, slots=True)
 class DurableResearchProgress:
@@ -692,6 +782,23 @@ class BackendVisualEvidenceReceipt(StrictModel):
     source_revision_sha256: Sha256HexV2
 
 
+class BackendDerivedKeyframeReceipt(StrictModel):
+    candidate_id: SafeIdentifierV2
+    keyframe_id: SafeIdentifierV2
+    source_revision_sha256: Sha256HexV2
+    receipt_sha256: Sha256HexV2
+    replayed: bool
+
+
+class BackendGeographicEvidenceReceipt(StrictModel):
+    candidate_id: SafeIdentifierV2
+    source_revision_sha256: Sha256HexV2
+    request_sha256: Sha256HexV2
+    hypothesis_count: int = Field(ge=0)
+    abstention_count: int = Field(ge=0)
+    replayed: bool
+
+
 class BackendResearchEvidenceReceipt(StrictModel):
     candidate_id: SafeIdentifierV2
     plan_id: SafeIdentifierV2
@@ -781,6 +888,21 @@ def _snapshot_to_durable(
         )
         for asset in snapshot.bundle.evidence_assets
     )
+    parent_media = {item.media_id: item for item in media}
+    for keyframe in snapshot.derived_keyframes:
+        parent = parent_media[keyframe.parent_media_id]
+        media.append(
+            EvidenceMedia(
+                media_id=keyframe.keyframe_id,
+                source_id=parent.source_id,
+                media_group_id=parent.media_group_id,
+                origin_id=keyframe.keyframe_id,
+                kind="keyframe",
+                sha256=keyframe.sha256,
+                captured_at=keyframe.captured_at,
+                parent_media_id=keyframe.parent_media_id,
+            )
+        )
     if snapshot.research_evidence is not None:
         sources.extend(
             EvidenceSource.model_validate(
@@ -1067,16 +1189,25 @@ def _snapshot_to_durable(
         )
     return DurableEventEvidence(
         event=event,
-        media_locations=tuple(
-            BackendEvidenceMediaLocation(
-                media_id=asset.evidence_asset_id,
-                working_file_url=base_url
-                + _ASSET_PATH.format(
-                    candidate_id=quote(snapshot.candidate_id, safe=""),
-                    asset_id=quote(asset.evidence_asset_id, safe=""),
-                ),
+        media_locations=(
+            tuple(
+                BackendEvidenceMediaLocation(
+                    media_id=asset.evidence_asset_id,
+                    working_file_url=base_url
+                    + _ASSET_PATH.format(
+                        candidate_id=quote(snapshot.candidate_id, safe=""),
+                        asset_id=quote(asset.evidence_asset_id, safe=""),
+                    ),
+                )
+                for asset in snapshot.bundle.evidence_assets
             )
-            for asset in snapshot.bundle.evidence_assets
+            + tuple(
+                BackendEvidenceMediaLocation(
+                    media_id=keyframe.keyframe_id,
+                    working_file_url=base_url + keyframe.content_path,
+                )
+                for keyframe in snapshot.derived_keyframes
+            )
         ),
         vision_artifacts=tuple(vision_artifacts),
         upload_locations=upload_locations,
@@ -1160,10 +1291,17 @@ class AzureBackendEventEvidenceAdapter:
             raise ValueError("backend media identity is invalid")
         if maximum_bytes <= 0 or maximum_bytes > 8 * 1_024 * 1_024:
             raise ValueError("backend media byte limit is invalid")
-        url = self._config.base_url + _ASSET_PATH.format(
-            candidate_id=quote(event_id, safe=""),
-            asset_id=quote(media_id, safe=""),
-        )
+        if media_id.startswith("KF-"):
+            path = _KEYFRAME_PATH.format(
+                candidate_id=quote(event_id, safe=""),
+                keyframe_id=quote(media_id, safe=""),
+            )
+        else:
+            path = _ASSET_PATH.format(
+                candidate_id=quote(event_id, safe=""),
+                asset_id=quote(media_id, safe=""),
+            )
+        url = self._config.base_url + path
         response = self._media_transport.get_bytes(
             url,
             headers={
@@ -1264,6 +1402,112 @@ class BackendVisualEvidencePublisher:
             or response.headers.get("etag") != f'"{checksum}"'
         ):
             raise BackendEventEvidenceError("backend visual evidence revision headers mismatch")
+        return receipt
+
+
+class BackendKeyframeEvidencePublisher:
+    """Persist one derived PNG and advance the immutable EventEvidence revision."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendKeyframeEvidenceTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        source_revision_sha256: str,
+        media: EvidenceMedia,
+        frame_index: int,
+        timestamp_seconds: float,
+        content: bytes,
+    ) -> BackendDerivedKeyframeReceipt:
+        if media.kind != "keyframe" or media.parent_media_id is None:
+            raise BackendEventEvidenceError("derived keyframe lineage is missing")
+        digest = sha256(content).hexdigest()
+        if digest != media.sha256:
+            raise BackendEventEvidenceError("derived keyframe content hash mismatch")
+        headers = {
+            "Accept": "application/json",
+            "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            "X-Parent-Media-Id": str(media.parent_media_id),
+            "X-Source-Revision-Sha256": source_revision_sha256,
+            "X-Content-Sha256": digest,
+            "X-Frame-Index": str(frame_index),
+            "X-Timestamp-Seconds": format(timestamp_seconds, ".9g"),
+        }
+        if media.captured_at is not None:
+            headers["X-Captured-At"] = media.captured_at.isoformat()
+        response = self._transport.put_bytes(
+            self._config.base_url
+            + _KEYFRAME_UPLOAD_PATH.format(
+                candidate_id=quote(candidate_id, safe=""),
+                keyframe_id=quote(media.media_id, safe=""),
+            ),
+            headers=headers,
+            content=content,
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        receipt = BackendDerivedKeyframeReceipt.model_validate(response.payload)
+        if receipt.candidate_id != candidate_id or receipt.keyframe_id != media.media_id:
+            raise BackendEventEvidenceError("backend keyframe receipt mismatch")
+        checksum = receipt.source_revision_sha256
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError("backend keyframe revision headers mismatch")
+        return receipt
+
+
+class BackendGeographicEvidencePublisher:
+    """Persist deterministic hypotheses without any publication or map authority."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendVisualEvidenceTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        payload: Mapping[str, Any],
+    ) -> BackendGeographicEvidenceReceipt:
+        if payload.get("event_id") != candidate_id:
+            raise BackendEventEvidenceError("geographic evidence candidate mismatch")
+        response = self._transport.post_json(
+            self._config.base_url
+            + _GEOGRAPHIC_EVIDENCE_PATH.format(
+                candidate_id=quote(candidate_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            payload=payload,
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        receipt = BackendGeographicEvidenceReceipt.model_validate(response.payload)
+        if receipt.candidate_id != candidate_id:
+            raise BackendEventEvidenceError("backend geographic evidence receipt mismatch")
+        checksum = receipt.source_revision_sha256
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError("backend geographic revision headers mismatch")
         return receipt
 
 
@@ -1377,13 +1621,18 @@ __all__ = [
     "AzureBackendEventEvidenceAdapter",
     "AzureBackendEventEvidenceConfig",
     "BackendBinaryResponse",
+    "BackendDerivedKeyframeReceipt",
     "BackendEventEvidenceError",
     "BackendEventEvidenceNotFoundError",
     "BackendEventEvidenceSnapshot",
     "BackendEventEvidenceTransport",
     "BackendEvidenceMediaLocation",
     "BackendEvidenceMediaTransport",
+    "BackendGeographicEvidencePublisher",
+    "BackendGeographicEvidenceReceipt",
     "BackendJsonResponse",
+    "BackendKeyframeEvidencePublisher",
+    "BackendKeyframeEvidenceTransport",
     "BackendPointAssessmentPublisher",
     "BackendPointAssessmentReceipt",
     "BackendResearchEvidence",

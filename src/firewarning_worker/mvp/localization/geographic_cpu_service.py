@@ -23,6 +23,8 @@ from firewarning_worker.mvp.localization.geographic_endpoint import (
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     AzureBackendEventEvidenceAdapter,
     AzureBackendEventEvidenceConfig,
+    BackendGeographicEvidencePublisher,
+    BackendGeographicEvidenceReceipt,
     DurableEventEvidence,
     EventEvidenceRepository,
 )
@@ -44,6 +46,15 @@ class GeographicCpuRequest(StrictModel):
 
 class GeographicRunner(Protocol):
     def run_candidate(self, candidate_id: str) -> dict[str, Any]: ...
+
+
+class GeographicEvidencePublisher(Protocol):
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        payload: dict[str, Any],
+    ) -> BackendGeographicEvidenceReceipt: ...
 
 
 class GeographicCpuSettings(StrictModel):
@@ -118,10 +129,12 @@ class GeographicCpuRunner:
         repository: EventEvidenceRepository,
         geographic_service: DurableGeographicHypothesisService,
         azure_maps: AzureMapsGeoEnrichmentProvider | None,
+        publisher: GeographicEvidencePublisher,
     ) -> None:
         self._repository = repository
         self._geographic_service = geographic_service
         self._azure_maps = azure_maps
+        self._publisher = publisher
 
     def run_candidate(self, candidate_id: str) -> dict[str, Any]:
         durable = self._repository.read(candidate_id)
@@ -155,12 +168,17 @@ class GeographicCpuRunner:
                 ],
             }
         geographic = self._geographic_service.locate_payload({"event_id": candidate_id})
+        persistence = self._publisher.publish(
+            candidate_id=candidate_id,
+            payload=geographic,
+        )
         return {
             "schema": "fireviewer.geographic-worker-response.v1",
             "candidate_id": candidate_id,
             "source_event_evidence_sha256": durable.source_revision_sha256,
             "azure_maps": maps_payload,
             "geographic_hypotheses": geographic,
+            "persistence": persistence.model_dump(mode="json"),
             "coordinates_generated_by_visual_model": False,
             "map_mutation_allowed": False,
             "perimeter_mutation_allowed": False,
@@ -193,6 +211,7 @@ class GeographicCpuService:
                     if settings.azure_maps_enabled
                     else None
                 ),
+                publisher=BackendGeographicEvidencePublisher(settings.backend),
             )
         self.runner = runner
 

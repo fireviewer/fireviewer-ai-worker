@@ -13,6 +13,7 @@ eve-point-supervisor/.output
 **/*.egg-info
 tests/*
 !tests/test_mvp_video_keyframes.py
+!tests/test_mvp_keyframe_cpu_service.py
 benchmark-results
 checkpoints
 data

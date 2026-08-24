@@ -14,10 +14,10 @@ The service exposes:
 - authenticated `POST /v1/event-evidence/keyframes` with only `{"candidate_id":"EC-..."}`.
 
 It reads retained user videos from backend `EventEvidence`, downloads them to an isolated
-temporary directory, checks their SHA-256, emits 5 to 15 scene-aware keyframe tickets and deletes
-all temporary frame bytes at the end of the request.
+temporary directory, checks their SHA-256 and selects 5 to 15 scene-aware keyframes. Every PNG is
+then written to the backend's immutable derived-keyframe sink before the worker returns. Temporary
+video and frame bytes are deleted at the end of the request.
 
-The image is ready but is not deployed. The current backend has no durable derived-keyframe sink,
-so the service deliberately reports `requires_durable_sink_before_yolo=true` and does not pretend
-that YOLO can consume unpublished keyframe identifiers. That sink must be added before wiring this
-service to the existing YOLO CPU Container App.
+Each successful write advances the `EventEvidence` revision. Retries regenerate deterministic
+keyframe identifiers and replay the same writes safely. The next YOLO CPU stage reads the persisted
+keyframes through the normal backend snapshot and never relies on worker-local files.

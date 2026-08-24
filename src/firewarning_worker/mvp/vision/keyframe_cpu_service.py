@@ -12,7 +12,7 @@ from hmac import compare_digest
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 from urllib.parse import urlsplit
 
 import httpx
@@ -23,6 +23,8 @@ from firewarning_worker.mvp.contracts import EvidenceMedia
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     AzureBackendEventEvidenceAdapter,
     AzureBackendEventEvidenceConfig,
+    BackendDerivedKeyframeReceipt,
+    BackendKeyframeEvidencePublisher,
     EventEvidenceRepository,
 )
 from firewarning_worker.mvp.vision.video_keyframes import (
@@ -59,6 +61,19 @@ class KeyframeExtractionReceipt(StrictModel):
 
 class VideoDownloadError(RuntimeError):
     pass
+
+
+class KeyframeEvidencePublisher(Protocol):
+    def publish(
+        self,
+        *,
+        candidate_id: str,
+        source_revision_sha256: str,
+        media: EvidenceMedia,
+        frame_index: int,
+        timestamp_seconds: float,
+        content: bytes,
+    ) -> BackendDerivedKeyframeReceipt: ...
 
 
 class HttpEvidenceVideoMaterializer:
@@ -148,6 +163,7 @@ class KeyframeCpuWorker:
         allowed_hosts: frozenset[str],
         backend_origin: str,
         backend_token: str,
+        publisher: KeyframeEvidencePublisher,
         maximum_video_bytes: int = 512 * 1_024 * 1_024,
         materializer_client: httpx.Client | None = None,
         config: VideoKeyframeConfig | None = None,
@@ -156,6 +172,7 @@ class KeyframeCpuWorker:
         self._allowed_hosts = allowed_hosts
         self._backend_origin = backend_origin.rstrip("/")
         self._backend_token = backend_token
+        self._publisher = publisher
         self._maximum_video_bytes = maximum_video_bytes
         self._materializer_client = materializer_client
         self._config = config
@@ -169,6 +186,8 @@ class KeyframeCpuWorker:
                 source_revision_sha256=durable.source_revision_sha256,
                 video_count=0,
                 artifact_count=0,
+                raw_keyframes_stored=True,
+                requires_durable_sink_before_yolo=False,
             )
         locations = {item.media_id: item.working_file_url for item in durable.media_locations}
         materializer = HttpEvidenceVideoMaterializer(
@@ -185,14 +204,41 @@ class KeyframeCpuWorker:
                 paths[video.media_id] = materializer.materialize(
                     video, temporary / f"video-{index:03d}.bin"
                 )
+            existing_keyframe_ids = {
+                item.media_id for item in durable.event.media if item.kind == "keyframe"
+            }
+            extraction_input = durable.event.model_copy(
+                update={
+                    "media": tuple(
+                        item for item in durable.event.media if item.kind != "keyframe"
+                    ),
+                    "visual_observations": tuple(
+                        item
+                        for item in durable.event.visual_observations
+                        if item.media_id not in existing_keyframe_ids
+                    ),
+                }
+            )
             run = VideoKeyframeExtractor(
                 decoder=OpenCvVideoFrameDecoder(
                     path_resolver=lambda media: paths[media.media_id]
                 ),
                 config=self._config,
-            ).run(durable.event)
-            tickets = tuple(
-                KeyframeArtifactTicket(
+            ).run(extraction_input)
+            revision = durable.source_revision_sha256
+            tickets: list[KeyframeArtifactTicket] = []
+            for artifact in run.artifacts:
+                receipt = self._publisher.publish(
+                    candidate_id=candidate_id,
+                    source_revision_sha256=revision,
+                    media=artifact.media,
+                    frame_index=artifact.frame_index,
+                    timestamp_seconds=artifact.timestamp_seconds,
+                    content=artifact.data,
+                )
+                revision = receipt.source_revision_sha256
+                tickets.append(
+                    KeyframeArtifactTicket(
                     media_id=artifact.media.media_id,
                     parent_media_id=str(artifact.media.parent_media_id),
                     frame_index=artifact.frame_index,
@@ -200,14 +246,15 @@ class KeyframeCpuWorker:
                     sha256=artifact.media.sha256,
                     size_bytes=len(artifact.data),
                 )
-                for artifact in run.artifacts
-            )
+                )
         return KeyframeExtractionReceipt(
             candidate_id=candidate_id,
-            source_revision_sha256=durable.source_revision_sha256,
+            source_revision_sha256=revision,
             video_count=len(videos),
             artifact_count=len(tickets),
-            keyframes=tickets,
+            keyframes=tuple(tickets),
+            raw_keyframes_stored=True,
+            requires_durable_sink_before_yolo=False,
         )
 
 
@@ -269,6 +316,7 @@ class KeyframeCpuService:
             allowed_hosts=settings.allowed_hosts,
             backend_origin=settings.backend.base_url,
             backend_token=settings.backend.bearer_token.get_secret_value(),
+            publisher=BackendKeyframeEvidencePublisher(settings.backend),
             maximum_video_bytes=settings.maximum_video_bytes,
         )
 
@@ -303,8 +351,8 @@ def _handler_for(service: KeyframeCpuService) -> type[BaseHTTPRequestHandler]:
                     "status": "ok",
                     "runtime": "linux-cpu",
                     "opencv_version": cv2.__version__,
-                    "raw_keyframes_stored": False,
-                    "durable_sink_connected": False,
+                    "raw_keyframes_stored": True,
+                    "durable_sink_connected": True,
                 },
             )
 

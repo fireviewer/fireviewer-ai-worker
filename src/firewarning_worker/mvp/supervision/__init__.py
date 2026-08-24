@@ -1,14 +1,21 @@
 """Read-only point supervision over EventEvidence without perimeter generation."""
 
+from importlib import import_module
+from typing import Any
+
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     AzureBackendEventEvidenceAdapter,
     AzureBackendEventEvidenceConfig,
     BackendBinaryResponse,
+    BackendDerivedKeyframeReceipt,
     BackendEventEvidenceError,
     BackendEventEvidenceNotFoundError,
     BackendEventEvidenceSnapshot,
     BackendEvidenceMediaLocation,
+    BackendGeographicEvidencePublisher,
+    BackendGeographicEvidenceReceipt,
     BackendJsonResponse,
+    BackendKeyframeEvidencePublisher,
     BackendPointAssessmentPublisher,
     BackendPointAssessmentReceipt,
     BackendResearchEvidencePublisher,
@@ -19,11 +26,6 @@ from firewarning_worker.mvp.supervision.backend_event_evidence import (
     DurableResearchProgress,
     DurableTerrainReference,
     EventEvidenceRepository,
-)
-from firewarning_worker.mvp.supervision.bedrock_supervisor import (
-    BedrockPixtralPointSupervisor,
-    BedrockPixtralPointSupervisorConfig,
-    BedrockPointSupervisorError,
 )
 from firewarning_worker.mvp.supervision.durable_endpoint import (
     DurablePointSupervisionService,
@@ -58,16 +60,37 @@ from firewarning_worker.mvp.supervision.publication_policy import (
 )
 from firewarning_worker.mvp.supervision.simulated_supervisor import SimulatedPointSupervisor
 
+_BEDROCK_EXPORTS = frozenset(
+    {
+        "BedrockPixtralPointSupervisor",
+        "BedrockPixtralPointSupervisorConfig",
+        "BedrockPointSupervisorError",
+    }
+)
+
+
+def __getattr__(name: str) -> Any:
+    if name not in _BEDROCK_EXPORTS:
+        raise AttributeError(name)
+    module = import_module("firewarning_worker.mvp.supervision.bedrock_supervisor")
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
 __all__ = [
     "MISTRAL_SMALL_4_MODEL_ID",
     "AzureBackendEventEvidenceAdapter",
     "AzureBackendEventEvidenceConfig",
     "BackendBinaryResponse",
+    "BackendDerivedKeyframeReceipt",
     "BackendEventEvidenceError",
     "BackendEventEvidenceNotFoundError",
     "BackendEventEvidenceSnapshot",
     "BackendEvidenceMediaLocation",
+    "BackendGeographicEvidencePublisher",
+    "BackendGeographicEvidenceReceipt",
     "BackendJsonResponse",
+    "BackendKeyframeEvidencePublisher",
     "BackendPointAssessmentPublisher",
     "BackendPointAssessmentReceipt",
     "BackendResearchEvidencePublisher",
