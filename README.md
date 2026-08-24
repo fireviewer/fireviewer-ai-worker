@@ -122,6 +122,9 @@ npm run build
 
 ## Contracts and project documentation
 
+- [Source acquisition method](docs/SOURCE_ACQUISITION_METHOD.md) defines the
+  incident/day acquisition loop, media and satellite handling, coverage gates,
+  retention boundary, and evaluation isolation.
 - [`contracts/point-supervisor/v1`](contracts/point-supervisor/v1/README.md)
   documents the public point-supervision schemas.
 - [`contracts/geographic-hypotheses/v1`](contracts/geographic-hypotheses/v1/geographic-hypotheses.schema.json)
