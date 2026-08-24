@@ -352,6 +352,7 @@ class YoloEventService:
             artifacts=artifacts,
         )
         response = self._response(run)
+        response["candidate_id"] = request.candidate_id
         response["persistence"] = receipt.model_dump(mode="json")
         response["geographic_output"] = {
             "location_candidates_before": len(before_candidates),

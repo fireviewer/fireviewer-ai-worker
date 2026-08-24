@@ -251,6 +251,7 @@ def test_backend_yolo_persists_visual_observation_without_geographic_output(
         YoloBackendEventRequest(candidate_id="EVENT-YOLO-SERVICE")
     )
 
+    assert result["candidate_id"] == "EVENT-YOLO-SERVICE"
     assert result["evidence"]["visual_observations"][0]["observation_type"] == "detection"
     assert result["artifacts"][0]["result"]["status"] == "smoke"
     assert result["persistence"]["observation_count"] == 1
