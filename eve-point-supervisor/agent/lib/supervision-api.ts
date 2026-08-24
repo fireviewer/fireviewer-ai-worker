@@ -21,7 +21,7 @@ export async function postSupervisionApi(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(120_000),
   });
   const result: unknown = await response.json();
   if (!response.ok) {

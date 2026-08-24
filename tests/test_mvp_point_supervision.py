@@ -203,9 +203,7 @@ def _checks(*, hard_contradiction: bool = False) -> tuple[GeospatialConsistencyC
             status=bearing_status,
             score=0.91 if not hard_contradiction else 0.02,
             reason_code=(
-                "camera_bearing_impossible"
-                if hard_contradiction
-                else "camera_bearing_plausible"
+                "camera_bearing_impossible" if hard_contradiction else "camera_bearing_plausible"
             ),
             evidence_ids=("CANDIDATE-1", "MEDIA-PHOTO-1"),
             hard_constraint=True,
@@ -355,10 +353,7 @@ def _backend_snapshot_payload() -> dict[str, object]:
             "media_type": "application/vnd.fireviewer.terrain",
             "crs": "EPSG:2154",
             "resolution_m": 25,
-            "content_path": (
-                "/api/v1/internal/event-evidence/"
-                "EVENT-SUPERVISION-1/terrain/content"
-            ),
+            "content_path": ("/api/v1/internal/event-evidence/EVENT-SUPERVISION-1/terrain/content"),
         },
         "analysis_result_sha256": "f" * 64,
     }
@@ -690,9 +685,7 @@ def test_simulated_supervisor_never_promotes_and_rejects_hard_contradictions() -
 
 
 def test_publication_policy_requires_calibrated_confidence_strictly_above_85() -> None:
-    payload = SimulatedPointSupervisor().assess(_bundle(), generated_at=NOW).model_dump(
-        mode="json"
-    )
+    payload = SimulatedPointSupervisor().assess(_bundle(), generated_at=NOW).model_dump(mode="json")
     payload.update(
         {
             "verdict": "accept",
@@ -724,9 +717,7 @@ def test_publication_policy_requires_calibrated_confidence_strictly_above_85() -
 
 
 def test_publication_policy_never_promotes_a_simulated_supervisor() -> None:
-    payload = SimulatedPointSupervisor().assess(_bundle(), generated_at=NOW).model_dump(
-        mode="json"
-    )
+    payload = SimulatedPointSupervisor().assess(_bundle(), generated_at=NOW).model_dump(mode="json")
     payload.update(
         {
             "verdict": "accept",
@@ -749,9 +740,7 @@ def test_publication_policy_never_promotes_a_simulated_supervisor() -> None:
 
 def test_point_assessment_publisher_routes_eligible_source_bundle_to_event_v2() -> None:
     bundle = _bundle()
-    payload = SimulatedPointSupervisor().assess(bundle, generated_at=NOW).model_dump(
-        mode="json"
-    )
+    payload = SimulatedPointSupervisor().assess(bundle, generated_at=NOW).model_dump(mode="json")
     payload.update(
         {
             "verdict": "accept",
@@ -793,9 +782,7 @@ def test_point_assessment_publisher_routes_eligible_source_bundle_to_event_v2() 
     point_bundle = sent_payload["point_bundle"]
     assert isinstance(point_bundle, dict)
     assert point_bundle["point"]["phenomenon"] == "active_fire_point"
-    assert sent_payload["assessment"]["release_status"] == (
-        "eligible_for_automatic_publication"
-    )
+    assert sent_payload["assessment"]["release_status"] == ("eligible_for_automatic_publication")
 
 
 def test_correction_is_a_concurrent_json_and_cannot_replace_its_source() -> None:
@@ -863,9 +850,7 @@ def test_azure_backend_adapter_validates_revision_and_maps_durable_evidence() ->
         "prior_active_point",
         "satellite_hotspot",
     }
-    assert durable.event.satellite_observations[0].observation_id == (
-        "SATELLITE-EXTERNAL-1"
-    )
+    assert durable.event.satellite_observations[0].observation_id == ("SATELLITE-EXTERNAL-1")
     assert durable.upload_locations[0].location_origin == "user_declared"
     assert durable.prior_fire_states[0].read_only is True
     assert {check.check_type for check in durable.checks_for("CANDIDATE-1")} == {
@@ -874,8 +859,7 @@ def test_azure_backend_adapter_validates_revision_and_maps_durable_evidence() ->
         "history_progression",
     }
     assert transport.calls[0]["url"] == (
-        "https://backend.fireviewer.test/api/v1/internal/event-evidence/"
-        "EVENT-SUPERVISION-1"
+        "https://backend.fireviewer.test/api/v1/internal/event-evidence/EVENT-SUPERVISION-1"
     )
     assert transport.calls[0]["headers"] == {
         "Accept": "application/json",
@@ -1039,10 +1023,7 @@ def test_azure_backend_adapter_maps_persisted_yolo_as_visual_only() -> None:
 
     durable = adapter.read("EVENT-SUPERVISION-1")
 
-    assert any(
-        item.observation_id == "OBS-YOLO-1"
-        for item in durable.event.visual_observations
-    )
+    assert any(item.observation_id == "OBS-YOLO-1" for item in durable.event.visual_observations)
     assert durable.vision_artifacts[0].status == "smoke"
     assert len(durable.event.location_candidates) == 1
 
@@ -1196,6 +1177,18 @@ def test_loopback_endpoint_reads_backend_searches_bundles_and_assesses() -> None
         assert status == 200
         assert assessment["schema"] == "fireviewer.point-assessment.v1"
         assert assessment["verdict"] == "abstain"
+
+        status, batch = post(
+            "/v1/events/supervise",
+            {"event_id": "EVENT-SUPERVISION-1"},
+        )
+        assert status == 200
+        assert batch["schema"] == "fireviewer.event-point-supervision-receipt.v1"
+        assert batch["candidate_id"] == "EVENT-SUPERVISION-1"
+        assert batch["location_candidate_count"] == 1
+        assert batch["assessment_count"] == 1
+        assert batch["abstained_count"] == 1
+        assert batch["raw_content_stored"] is False
     finally:
         server.shutdown()
         server.server_close()

@@ -31,6 +31,9 @@ source pages / authorised images / video / satellite references
                               |
                               v
                     guarded backend receipt
+                              |
+                              v
+         deterministic backend Part.4 perimeter candidate
 ```
 
 The worker follows a provider architecture: external search, multimodal
@@ -77,6 +80,10 @@ correction is a competing JSON object with its own evidence references.
 Automatic-publication eligibility requires calibrated confidence strictly
 above 0.85, an accepted managed-provider result, and no hard contradiction or
 missing required evidence. Simulated outputs are always held for review.
+
+The worker never draws the final perimeter. It supplies dated, referenced
+evidence to backend Part.4, where georeferenced observed masks are compiled
+deterministically. Media are evidence inputs, not the pipeline deliverable.
 
 ## Data boundary
 

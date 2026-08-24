@@ -48,7 +48,7 @@ class DurablePointSupervisionService:
         self._supervisor = supervisor or SimulatedPointSupervisor()
 
     @property
-    def publication_enabled(self) -> bool:
+    def assessment_sink_enabled(self) -> bool:
         return self._publisher is not None
 
     @property
@@ -109,8 +109,7 @@ class DurablePointSupervisionService:
             images = selected_supervisor_images(
                 bundle=bundle,
                 durable_media={
-                    media.media_id: (media.kind, media.sha256)
-                    for media in durable.event.media
+                    media.media_id: (media.kind, media.sha256) for media in durable.event.media
                 },
                 repository=media_repository,
                 maximum_images=self._supervisor.max_images,
@@ -127,6 +126,49 @@ class DurablePointSupervisionService:
                 assessment=assessment,
             )
         return assessment.model_dump(mode="json")
+
+    def supervise_event_payload(self, payload: dict[str, Any]) -> dict[str, object]:
+        """Assess every immutable geographic candidate currently attached to an event."""
+
+        event_id = str(payload.get("event_id", ""))
+        if not event_id or len(event_id) > 128:
+            raise ValueError("event_id is invalid")
+        durable = self._repository.read(event_id)
+        candidate_ids = tuple(
+            sorted(item.candidate_id for item in durable.event.location_candidates)
+        )
+        assessments: list[dict[str, object]] = []
+        for candidate_id in candidate_ids:
+            # Re-read before each bundle. Persisting the previous assessment advances
+            # the durable EventEvidence revision and stale bundles must fail closed.
+            bundle = self.bundle_payload(
+                {
+                    "event_id": event_id,
+                    "candidate_id": candidate_id,
+                    "query_text": (
+                        "preuves visuelles satellite geographiques et historique du feu"
+                    ),
+                    "max_context_documents": 12,
+                }
+            )
+            assessments.append(self.assess_payload(bundle))
+        return {
+            "schema": "fireviewer.event-point-supervision-receipt.v1",
+            "candidate_id": event_id,
+            "location_candidate_count": len(candidate_ids),
+            "assessment_count": len(assessments),
+            "accepted_count": sum(item.get("verdict") == "accept" for item in assessments),
+            "abstained_count": sum(item.get("verdict") == "abstain" for item in assessments),
+            "rejected_count": sum(item.get("verdict") == "reject" for item in assessments),
+            "status": "abstained" if not candidate_ids else "completed",
+            "reason": "no_geographic_candidate" if not candidate_ids else None,
+            "assessment_ids": [
+                str(item["assessment_id"])
+                for item in assessments
+                if isinstance(item.get("assessment_id"), str)
+            ],
+            "raw_content_stored": False,
+        }
 
 
 def _handler_for(service: DurablePointSupervisionService) -> type[BaseHTTPRequestHandler]:
@@ -172,10 +214,8 @@ def _handler_for(service: DurablePointSupervisionService) -> type[BaseHTTPReques
                     "status": "ok",
                     "model_mode": service.supervisor_mode,
                     "evidence_mode": "azure_backend_read_only",
-                    "publication_mode": (
-                        "event_2_0_policy"
-                        if service.publication_enabled
-                        else "disabled"
+                    "assessment_sink": (
+                        "azure_backend_enabled" if service.assessment_sink_enabled else "disabled"
                     ),
                     "gpu": False,
                     "cost_usd": 0,
@@ -186,6 +226,7 @@ def _handler_for(service: DurablePointSupervisionService) -> type[BaseHTTPReques
         def do_POST(self) -> None:
             routes: dict[str, Callable[[dict[str, Any]], dict[str, object]]] = {
                 "/v1/events/search": service.search_payload,
+                "/v1/events/supervise": service.supervise_event_payload,
                 "/v1/points/bundle": service.bundle_payload,
                 "/v1/point-assessments": service.assess_payload,
             }

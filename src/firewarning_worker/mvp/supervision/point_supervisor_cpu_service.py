@@ -43,7 +43,7 @@ class PointSupervisorCpuSettings(StrictModel):
     host: Literal["127.0.0.1"] = "127.0.0.1"
     port: int = Field(default=8091, ge=1, le=65_535)
     supervisor_mode: Literal["managed_vl", "simulated"] = "managed_vl"
-    publication_enabled: bool = False
+    assessment_sink_enabled: bool = False
     managed_identity_client_id: str | None = Field(default=None, min_length=36, max_length=36)
     aws_role_arn: str | None = Field(
         default=None,
@@ -66,8 +66,9 @@ class PointSupervisorCpuSettings(StrictModel):
         return cls(
             port=int(os.getenv("FIREVIEWER_SUPERVISION_PORT", "8091")),
             supervisor_mode=cast(Literal["managed_vl", "simulated"], raw_mode),
-            publication_enabled=_env_bool(
-                "FIREVIEWER_POINT_PUBLICATION_ENABLED", False
+            assessment_sink_enabled=_env_bool(
+                "FIREVIEWER_POINT_ASSESSMENT_SINK_ENABLED",
+                _env_bool("FIREVIEWER_POINT_PUBLICATION_ENABLED", False),
             ),
             managed_identity_client_id=os.getenv("AZURE_CLIENT_ID"),
             aws_role_arn=os.getenv("FIREVIEWER_BEDROCK_ROLE_ARN"),
@@ -80,9 +81,7 @@ class PointSupervisorCpuSettings(StrictModel):
             backend=AzureBackendEventEvidenceConfig(
                 base_url=os.environ["FIREVIEWER_BACKEND_BASE_URL"],
                 bearer_token=SecretStr(os.environ["FIREVIEWER_BACKEND_TOKEN"]),
-                timeout_seconds=float(
-                    os.getenv("FIREVIEWER_BACKEND_TIMEOUT_SECONDS", "20")
-                ),
+                timeout_seconds=float(os.getenv("FIREVIEWER_BACKEND_TIMEOUT_SECONDS", "20")),
             ),
         )
 
@@ -123,7 +122,7 @@ def main() -> int:
     )
     publisher = (
         BackendPointAssessmentPublisher(settings.backend)
-        if settings.publication_enabled
+        if settings.assessment_sink_enabled
         else None
     )
     server = create_point_supervisor_server(
@@ -137,7 +136,7 @@ def main() -> int:
         "point-supervision-api ready "
         f"http://{settings.host}:{settings.port} "
         f"supervisor={settings.supervisor_mode} "
-        f"publication={settings.publication_enabled}",
+        f"assessment_sink={settings.assessment_sink_enabled}",
         flush=True,
     )
     try:
