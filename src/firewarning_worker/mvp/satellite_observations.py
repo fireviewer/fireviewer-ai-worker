@@ -35,7 +35,7 @@ _CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.0.0"
 _CLMS_COLLECTION = "clms_ba_global_300m_daily_v4_cog"
 _CLMS_ASSETS = ("ba300_dob_nrt", "ba300_cp_nrt", "ba300_bf_nrt")
 _S2_PROCESSOR = "sentinel2_nbr_change_v1"
-_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.1"
+_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.2"
 _S2_COLLECTION = "sentinel-2-l2a"
 _S2_ASSETS = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
 _S1_PROCESSOR = "sentinel1_vvvh_change_v1"
@@ -623,7 +623,7 @@ class CdseS3ObservationAssetReader:
         import rasterio
         from rasterio.enums import Resampling
         from rasterio.session import AWSSession
-        from rasterio.warp import reproject, transform_bounds
+        from rasterio.warp import transform_bounds
         from rasterio.windows import Window, from_bounds
 
         if (
@@ -690,20 +690,19 @@ class CdseS3ObservationAssetReader:
                             dataset.crs is None
                             or str(dataset.crs) != asset.proj_code
                             or dataset.count != 1
+                            or dataset.crs != target.crs
+                            or dataset.transform != target.transform
+                            or dataset.width != target.width
+                            or dataset.height != target.height
                         ):
                             raise SatelliteCpuError(
                                 "sentinel2_change_grid_mismatch", retryable=False
                             )
-                        destination = np.zeros((height, width), dtype=np.float32)
-                        reproject(
-                            source=rasterio.band(dataset, 1),
-                            destination=destination,
-                            src_transform=dataset.transform,
-                            src_crs=dataset.crs,
-                            src_nodata=dataset.nodata,
-                            dst_transform=transform,
-                            dst_crs=target.crs,
-                            dst_nodata=0,
+                        destination = dataset.read(
+                            1,
+                            window=window,
+                            out_shape=(height, width),
+                            out_dtype="float32",
                             resampling=(
                                 Resampling.nearest
                                 if asset_name == "SCL_20m"

@@ -989,7 +989,7 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     assert receipt.status == "completed"
     payload = publisher.payloads[0]
     assert payload["processor"] == "sentinel2_nbr_change_v1"
-    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.0.1"
+    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.0.2"
     assert len(payload["processing_context_sha256"]) == 64
     assert payload["result_id"].startswith("SATOBS-")
     assert payload["reference_artifact_revision_id"] == reference.artifact_revision_id
