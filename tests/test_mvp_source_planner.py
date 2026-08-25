@@ -39,7 +39,9 @@ def test_automatic_planner_builds_stable_queries_without_a_media_completeness_ta
 
     assert first == replay
     assert first.plan_id.startswith("PLAN-AUTO-")
-    assert first.media_ticket_limit == 2_048
+    assert first.media_ticket_limit == 100
+    assert first.video_ticket_limit == 30
+    assert first.max_source_pages == 200
     assert len(first.source_policies) >= 20
     assert len(first.queries) == 9
     assert all("Massif des Maures" in query for query in first.queries)

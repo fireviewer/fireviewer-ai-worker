@@ -74,7 +74,12 @@ class BackendViewpoint(StrictModel):
     altitude_m: float | None = None
     label: str | None = None
     yaw_deg: float | None = Field(default=None, ge=0, lt=360)
+    pitch_deg: float | None = Field(default=None, ge=-90, le=90)
+    roll_deg: float | None = Field(default=None, ge=-180, le=180)
     fov_deg: float | None = Field(default=None, gt=0, lt=180)
+    vertical_fov_deg: float | None = Field(default=None, gt=0, lt=180)
+    image_width_px: int | None = Field(default=None, ge=1, le=100_000)
+    image_height_px: int | None = Field(default=None, ge=1, le=100_000)
     origin: str = Field(min_length=1, max_length=64)
 
 
@@ -94,6 +99,19 @@ class BackendObservedTime(StrictModel):
         return self
 
 
+class BackendMediaCaptureContext(StrictModel):
+    evidence_asset_id: SafeIdentifierV2
+    viewpoint: BackendViewpoint
+    captured_at: datetime
+
+    @field_validator("captured_at")
+    @classmethod
+    def validate_captured_at(cls, value: datetime) -> datetime:
+        if not is_timezone_aware(value):
+            raise ValueError("media capture time must include a timezone")
+        return value
+
+
 class BackendEvidenceAsset(StrictModel):
     evidence_asset_id: SafeIdentifierV2
     kind: str = Field(pattern=r"^(image|video)$")
@@ -101,6 +119,16 @@ class BackendEvidenceAsset(StrictModel):
     detected_media_type: str | None = Field(default=None, max_length=128)
     size_bytes: int = Field(gt=0)
     sha256: Sha256HexV2
+    capture_context: BackendMediaCaptureContext | None = None
+
+    @model_validator(mode="after")
+    def validate_capture_context(self) -> BackendEvidenceAsset:
+        if (
+            self.capture_context is not None
+            and self.capture_context.evidence_asset_id != self.evidence_asset_id
+        ):
+            raise ValueError("media capture context references another evidence asset")
+        return self
 
 
 class BackendDerivedKeyframe(StrictModel):
@@ -639,17 +667,25 @@ class BackendSatelliteObservationBatch(StrictModel):
     artifact_revision_id: SafeIdentifierV2
     sink_request_sha256: Sha256HexV2
     status: Literal["completed", "no_observation"]
-    processor: Literal["clms_burned_area_daily_v1", "sentinel3_frp_v1"]
+    processor: Literal[
+        "clms_burned_area_daily_v1",
+        "sentinel1_vvvh_change_v1",
+        "sentinel2_nbr_change_v1",
+        "sentinel3_frp_v1",
+    ]
     processor_revision: str = Field(min_length=8, max_length=255)
     claim_ids: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=2_048)
+    observed_at: datetime | None = None
+    valid_coverage_geojson: dict[str, Any] | None = None
+    coverage_metrics: dict[str, float | int] = Field(default_factory=dict, max_length=16)
     asset_receipt_sha256: Sha256HexV2
     raw_content_stored: Literal[False]
     persisted_at: datetime
 
-    @field_validator("persisted_at")
+    @field_validator("observed_at", "persisted_at")
     @classmethod
-    def validate_persisted_at(cls, value: datetime) -> datetime:
-        if not is_timezone_aware(value):
+    def validate_persisted_at(cls, value: datetime | None) -> datetime | None:
+        if value is not None and not is_timezone_aware(value):
             raise ValueError("satellite observation persistence time must include a timezone")
         return value
 
@@ -1141,6 +1177,7 @@ class DurableEventEvidence:
     incident_day_coverage: BackendIncidentDayCoverage | None = None
     satellite_artifact_tickets: tuple[BackendIncidentDaySatelliteArtifact, ...] = ()
     spatial_observation_tickets: tuple[BackendIncidentDaySpatialObservation, ...] = ()
+    research_sources: tuple[BackendResearchSource, ...] = ()
     research_media_tickets: tuple[BackendResearchMedia, ...] = ()
     research_media_analysis_batches: tuple[BackendResearchMediaAnalysisBatch, ...] = ()
     satellite_analysis_batches: tuple[BackendSatelliteAnalysisBatch, ...] = ()
@@ -1467,42 +1504,61 @@ def _snapshot_to_durable(
                     confidence=reference.confidence,
                 )
             )
-    upload_locations = tuple(
-        UploadLocationEvidence(
+
+    def upload_location(asset: BackendEvidenceAsset) -> UploadLocationEvidence:
+        capture_context = asset.capture_context
+        viewpoint = (
+            capture_context.viewpoint if capture_context is not None else snapshot.bundle.viewpoint
+        )
+        captured_at = (
+            capture_context.captured_at
+            if capture_context is not None
+            else snapshot.bundle.observed_time.start_at
+        )
+        return UploadLocationEvidence(
             location_id=_stable_id("UPLOAD-LOCATION", asset.evidence_asset_id),
             media_id=asset.evidence_asset_id,
-            longitude=snapshot.bundle.viewpoint.longitude,
-            latitude=snapshot.bundle.viewpoint.latitude,
-            accuracy_m=snapshot.bundle.viewpoint.horizontal_accuracy_m,
-            location_origin=(
-                "metadata" if snapshot.bundle.viewpoint.origin == "DEVICE_GPS" else "user_declared"
-            ),
-            captured_at=snapshot.bundle.observed_time.start_at,
-            heading_deg=snapshot.bundle.viewpoint.yaw_deg,
-            horizontal_fov_deg=snapshot.bundle.viewpoint.fov_deg,
+            longitude=viewpoint.longitude,
+            latitude=viewpoint.latitude,
+            accuracy_m=viewpoint.horizontal_accuracy_m,
+            location_origin=("metadata" if viewpoint.origin == "DEVICE_GPS" else "user_declared"),
+            captured_at=captured_at,
+            heading_deg=viewpoint.yaw_deg,
+            pitch_deg=viewpoint.pitch_deg,
+            roll_deg=viewpoint.roll_deg,
+            horizontal_fov_deg=viewpoint.fov_deg,
+            vertical_fov_deg=viewpoint.vertical_fov_deg,
+            image_width_px=viewpoint.image_width_px,
+            image_height_px=viewpoint.image_height_px,
             heading_uncertainty_deg=(
-                min(snapshot.bundle.viewpoint.fov_deg / 2, 180)
-                if snapshot.bundle.viewpoint.yaw_deg is not None
-                and snapshot.bundle.viewpoint.fov_deg is not None
+                min(viewpoint.fov_deg / 2, 180)
+                if viewpoint.yaw_deg is not None and viewpoint.fov_deg is not None
                 else None
             ),
-            altitude_m=snapshot.bundle.viewpoint.altitude_m,
+            altitude_m=viewpoint.altitude_m,
             altitude_uncertainty_m=(
-                snapshot.bundle.viewpoint.horizontal_accuracy_m
-                if snapshot.bundle.viewpoint.altitude_m is not None
-                else None
+                viewpoint.horizontal_accuracy_m if viewpoint.altitude_m is not None else None
             ),
             source_record_sha256=_canonical_sha256(
                 {
                     "candidate_id": snapshot.candidate_id,
-                    "viewpoint": snapshot.bundle.viewpoint.model_dump(mode="json"),
-                    "observed_time": snapshot.bundle.observed_time.model_dump(mode="json"),
+                    "capture_context": (
+                        capture_context.model_dump(mode="json")
+                        if capture_context is not None
+                        else None
+                    ),
+                    "legacy_viewpoint": (
+                        snapshot.bundle.viewpoint.model_dump(mode="json")
+                        if capture_context is None
+                        else None
+                    ),
+                    "captured_at": captured_at.isoformat(),
                     "asset_sha256": asset.sha256,
                 }
             ),
         )
-        for asset in snapshot.bundle.evidence_assets
-    )
+
+    upload_locations = tuple(upload_location(asset) for asset in snapshot.bundle.evidence_assets)
 
     for rank, attempt in enumerate(snapshot.localization_attempts, start=1):
         perception = _anchor_perception(attempt)
@@ -1710,6 +1766,9 @@ def _snapshot_to_durable(
         ),
         incident_id=snapshot.bundle.incident_id,
         viewpoint_label=snapshot.bundle.viewpoint.label,
+        research_sources=(
+            snapshot.research_evidence.sources if snapshot.research_evidence is not None else ()
+        ),
     )
 
 
@@ -1861,6 +1920,7 @@ def _incident_day_to_durable(
         incident_day_coverage=context.coverage,
         satellite_artifact_tickets=context.satellite_artifacts,
         spatial_observation_tickets=context.spatial_observations,
+        research_sources=research.sources if research is not None else (),
         research_media_tickets=research.media if research is not None else (),
         research_media_analysis_batches=(
             research.media_analysis_batches if research is not None else ()

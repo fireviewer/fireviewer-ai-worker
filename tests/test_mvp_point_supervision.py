@@ -272,6 +272,25 @@ def _backend_snapshot_payload() -> dict[str, object]:
                     "detected_media_type": "image/png",
                     "size_bytes": 1024,
                     "sha256": "a" * 64,
+                    "capture_context": {
+                        "evidence_asset_id": "MEDIA-PHOTO-1",
+                        "captured_at": "2026-08-22T16:42:00+00:00",
+                        "viewpoint": {
+                            "longitude": 5.351,
+                            "latitude": 44.741,
+                            "horizontal_accuracy_m": 12,
+                            "altitude_m": 510,
+                            "label": "Per-media viewpoint",
+                            "yaw_deg": 87,
+                            "pitch_deg": -6,
+                            "roll_deg": 2,
+                            "fov_deg": 54,
+                            "vertical_fov_deg": 36,
+                            "image_width_px": 1920,
+                            "image_height_px": 1080,
+                            "origin": "USER_PLACED",
+                        },
+                    },
                 }
             ],
             "consent": {
@@ -320,7 +339,7 @@ def _backend_snapshot_payload() -> dict[str, object]:
                     },
                     "resolution_m": 300,
                     "confidence": 0.82,
-                }
+                },
             ],
         },
         "localization_attempts": [
@@ -860,8 +879,13 @@ def test_azure_backend_adapter_validates_revision_and_maps_durable_evidence() ->
         "EVENT-SUPERVISION-1/assets/MEDIA-PHOTO-1/content"
     )
     assert durable.vision_artifacts == ()
-    assert durable.upload_locations[0].horizontal_fov_deg == 30
-    assert durable.upload_locations[0].heading_deg == 42
+    assert durable.upload_locations[0].horizontal_fov_deg == 54
+    assert durable.upload_locations[0].vertical_fov_deg == 36
+    assert durable.upload_locations[0].heading_deg == 87
+    assert durable.upload_locations[0].pitch_deg == -6
+    assert durable.upload_locations[0].roll_deg == 2
+    assert durable.upload_locations[0].image_width_px == 1920
+    assert durable.upload_locations[0].captured_at == datetime(2026, 8, 22, 16, 42, tzinfo=UTC)
     assert durable.terrain_reference is not None
     assert durable.terrain_reference.content_url == (
         "https://backend.fireviewer.test/api/v1/internal/event-evidence/"

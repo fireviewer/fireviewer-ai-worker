@@ -204,6 +204,33 @@ class BedrockConverseClient(Protocol):
     def converse(self, **kwargs: Any) -> Mapping[str, Any]: ...
 
 
+class InvocationLimitedBedrockClient:
+    """Process-local fail-closed reservation for an explicitly authorized paid call lot."""
+
+    def __init__(self, client: BedrockConverseClient, *, maximum_invocations: int) -> None:
+        if maximum_invocations < 1:
+            raise ValueError("Bedrock invocation budget must be positive")
+        self._client = client
+        self._maximum_invocations = maximum_invocations
+        self._reserved_invocations = 0
+        self._lock = threading.Lock()
+
+    @property
+    def remaining_invocations(self) -> int:
+        with self._lock:
+            return self._maximum_invocations - self._reserved_invocations
+
+    def converse(self, **kwargs: Any) -> Mapping[str, Any]:
+        with self._lock:
+            if self._reserved_invocations >= self._maximum_invocations:
+                raise MultimodalEvidenceProviderError(
+                    "bedrock_paid_invocation_budget_exhausted",
+                    retryable=False,
+                )
+            self._reserved_invocations += 1
+        return self._client.converse(**kwargs)
+
+
 class AzureManagedIdentityWebTokenProvider:
     """Read an Azure Container Apps managed-identity token from its loopback broker."""
 
@@ -358,8 +385,7 @@ def _validated_extraction(
     if any(claim.claim_type not in allowed_set for claim in parsed.claims):
         raise MultimodalEvidenceProviderError("multimodal_claim_type_rejected")
     if any(
-        not set(claim.evidence_media_ids).issubset(supplied_media_ids)
-        for claim in parsed.claims
+        not set(claim.evidence_media_ids).issubset(supplied_media_ids) for claim in parsed.claims
     ):
         raise MultimodalEvidenceProviderError("multimodal_media_reference_rejected")
     unique: dict[tuple[str, str, str, tuple[str, ...]], ExtractedMultimodalClaim] = {}
@@ -414,9 +440,7 @@ class BedrockPixtralMultimodalProvider:
         allowed = tuple(dict.fromkeys(allowed_claim_types))
         if not allowed or len(allowed) > 32:
             raise MultimodalEvidenceProviderError("multimodal_claim_policy_invalid")
-        visible_text = _transient_visible_text(
-            document, self.config.maximum_input_characters
-        )
+        visible_text = _transient_visible_text(document, self.config.maximum_input_characters)
         selected_images = document.images[: self.config.maximum_images]
         content: list[dict[str, Any]] = [
             {
@@ -500,6 +524,7 @@ __all__ = [
     "BedrockPixtralConfig",
     "BedrockPixtralMultimodalProvider",
     "ExtractedMultimodalClaim",
+    "InvocationLimitedBedrockClient",
     "MultimodalEvidenceDocument",
     "MultimodalEvidenceExtraction",
     "MultimodalEvidenceProvider",

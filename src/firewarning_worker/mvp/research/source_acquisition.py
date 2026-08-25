@@ -79,7 +79,9 @@ class SourceAcquisitionPlan(StrictModel):
     source_policies: dict[str, SourceDomainPolicy]
     search_provider_domain: str = Field(min_length=1, max_length=255)
     search_template: str = Field(min_length=16, max_length=2_048)
-    media_ticket_limit: int = Field(default=2_048, ge=1, le=2_048)
+    media_ticket_limit: int = Field(default=100, ge=1, le=2_048)
+    video_ticket_limit: int = Field(default=30, ge=0, le=512)
+    max_source_pages: int = Field(default=200, ge=1, le=10_000)
     convergence_zero_yield_waves: int = Field(default=2, ge=2, le=5)
     results_per_page: int = Field(default=20, ge=1, le=50)
     media_per_source: int = Field(default=8, ge=1, le=20)
@@ -102,6 +104,8 @@ class SourceAcquisitionPlan(StrictModel):
             raise ValueError("every source acquisition domain requires a policy")
         if self.max_media_fetch_bytes < self.max_fetch_bytes:
             raise ValueError("media fetch limit cannot be smaller than the page fetch limit")
+        if self.video_ticket_limit > self.media_ticket_limit:
+            raise ValueError("video ticket limit cannot exceed the total media ticket limit")
         provider = self.search_provider_domain.casefold().rstrip(".")
         if provider in normalized_domains:
             raise ValueError("the search provider must be separate from source domains")
@@ -180,9 +184,7 @@ def _decode_cursor(value: str | None) -> tuple[int, str | None]:
         provider_cursor = payload.get("provider_cursor")
     except (KeyError, TypeError, ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError("durable research cursor is invalid") from exc
-    if query_index < 0 or (
-        provider_cursor is not None and not isinstance(provider_cursor, str)
-    ):
+    if query_index < 0 or (provider_cursor is not None and not isinstance(provider_cursor, str)):
         raise ValueError("durable research cursor is invalid")
     return query_index, provider_cursor
 
@@ -314,9 +316,7 @@ class CpuSourceAcquisitionWorker:
                     "evidence_media_ids": list(claim.evidence_media_ids),
                 }
             )
-        outcome: Literal["success", "partial"] = (
-            "partial" if extraction.partial else "success"
-        )
+        outcome: Literal["success", "partial"] = "partial" if extraction.partial else "success"
         journal_entry = {
             "entry_id": _stable_id(
                 "JOURNAL-TEXT",
@@ -361,8 +361,10 @@ class CpuSourceAcquisitionWorker:
         query: str,
         provider_cursor: str | None,
         known_source_urls: set[str],
+        known_source_content_hashes: set[str],
         known_media_hashes: set[str],
         research_media_count: int,
+        research_video_count: int,
         remaining_multimodal_analyses: int,
     ) -> tuple[
         list[dict[str, Any]],
@@ -458,6 +460,47 @@ class CpuSourceAcquisitionWorker:
                     }
                 )
                 continue
+            content_sha256 = str(fetched.get("sha256", ""))
+            if len(content_sha256) != 64:
+                journal.append(
+                    {
+                        "entry_id": _stable_id(
+                            "JOURNAL-WEB",
+                            f"page_parse:hash_invalid:{page_url}:{content_sha256}",
+                        ),
+                        "stage": "page_parse",
+                        "outcome": "rejected",
+                        "error_code": "source_content_hash_invalid",
+                        "detail": "The source page did not provide a valid immutable content hash.",
+                        "source_url": page_url,
+                        "occurred_at": retrieved_at.isoformat(),
+                        "retryable": False,
+                        "provider_id": None,
+                        "model_revision": None,
+                        "prompt_revision": plan.revision,
+                    }
+                )
+                continue
+            if content_sha256 in known_source_content_hashes:
+                journal.append(
+                    {
+                        "entry_id": _stable_id(
+                            "JOURNAL-WEB",
+                            f"page_parse:syndicated:{page_url}:{content_sha256}",
+                        ),
+                        "stage": "page_parse",
+                        "outcome": "rejected",
+                        "error_code": "syndicated_or_republished_content",
+                        "detail": "An identical article body already belongs to this evidence set.",
+                        "source_url": page_url,
+                        "occurred_at": retrieved_at.isoformat(),
+                        "retryable": False,
+                        "provider_id": None,
+                        "model_revision": None,
+                        "prompt_revision": plan.revision,
+                    }
+                )
+                continue
             final_url = str(fetched.get("url") or page_url)
             host = (urlsplit(final_url).hostname or "").casefold().rstrip(".")
             source_policy = _policy_for(host, plan)
@@ -480,10 +523,11 @@ class CpuSourceAcquisitionWorker:
                     "retrieved_at": retrieved_at.isoformat(),
                     "source_type": source_policy.source_type,
                     "independence_weight": source_policy.independence_weight,
-                    "content_sha256": str(fetched["sha256"]),
+                    "content_sha256": content_sha256,
                 }
             )
             known_source_urls.add(final_url)
+            known_source_content_hashes.add(content_sha256)
             source_media = 0
             transient_images: list[TransientEvidenceImage] = []
             raw_media_links = fetched.get("media_links")
@@ -546,6 +590,11 @@ class CpuSourceAcquisitionWorker:
                     kind = "audio"
                 else:
                     continue
+                if kind == "video" and (
+                    research_video_count + sum(item["kind"] == "video" for item in media)
+                    >= plan.video_ticket_limit
+                ):
+                    continue
                 digest = str(media_fetch.get("sha256", ""))
                 if len(digest) != 64 or digest in known_media_hashes:
                     continue
@@ -566,11 +615,7 @@ class CpuSourceAcquisitionWorker:
                         "size_bytes": int(media_fetch.get("size_bytes", 0)),
                     }
                 )
-                if (
-                    kind == "photo"
-                    and transient_bytes is not None
-                    and len(transient_images) < 4
-                ):
+                if kind == "photo" and transient_bytes is not None and len(transient_images) < 4:
                     transient_images.append(
                         TransientEvidenceImage(
                             media_id=media_id,
@@ -685,12 +730,22 @@ class CpuSourceAcquisitionWorker:
         known_source_urls = {
             str(item.source_url) for item in durable.event.sources if item.source_url is not None
         }
+        known_source_content_hashes = {
+            item.content_sha256
+            for item in durable.research_sources
+            if item.content_sha256 is not None
+        }
         known_media_hashes = {item.sha256 for item in durable.event.media}
         public_source_ids = {
             item.source_id for item in durable.event.sources if item.source_url is not None
         }
         research_media_count = sum(
             1 for item in durable.event.media if item.source_id in public_source_ids
+        )
+        research_video_count = sum(
+            1
+            for item in durable.event.media
+            if item.source_id in public_source_ids and item.kind == "video"
         )
         configured = self._broker.configure(
             {
@@ -706,9 +761,7 @@ class CpuSourceAcquisitionWorker:
         next_cursor: str | None = None
         last_receipt: BackendResearchEvidenceReceipt | None = None
         multimodal_analyses = 0
-        zero_yield_wave_streak = (
-            progress.zero_yield_wave_streak if progress is not None else 0
-        )
+        zero_yield_wave_streak = progress.zero_yield_wave_streak if progress is not None else 0
         safety_limit_reached = False
         converged = False
         try:
@@ -729,23 +782,23 @@ class CpuSourceAcquisitionWorker:
                             provider_next,
                             journal_entries,
                             page_multimodal_analyses,
-                        ) = (
-                            self._collect_search_page(
-                                plan=plan,
-                                policy=policy,
-                                query=plan.queries[query_index],
-                                provider_cursor=provider_cursor,
-                                known_source_urls=known_source_urls,
-                                known_media_hashes=known_media_hashes,
-                                research_media_count=research_media_count,
-                                remaining_multimodal_analyses=(
-                                    plan.max_multimodal_analyses_per_run
-                                    - multimodal_analyses
-                                ),
-                            )
+                        ) = self._collect_search_page(
+                            plan=plan,
+                            policy=policy,
+                            query=plan.queries[query_index],
+                            provider_cursor=provider_cursor,
+                            known_source_urls=known_source_urls,
+                            known_source_content_hashes=known_source_content_hashes,
+                            known_media_hashes=known_media_hashes,
+                            research_media_count=research_media_count,
+                            research_video_count=research_video_count,
+                            remaining_multimodal_analyses=(
+                                plan.max_multimodal_analyses_per_run - multimodal_analyses
+                            ),
                         )
                         multimodal_analyses += page_multimodal_analyses
                         research_media_count += len(media)
+                        research_video_count += sum(item["kind"] == "video" for item in media)
                         if sources or claims or media:
                             zero_yield_wave_streak = 0
                         else:
@@ -778,7 +831,10 @@ class CpuSourceAcquisitionWorker:
                         for item in journal_entries
                         if item["outcome"] in {"failed", "partial", "missing", "not_provided"}
                     )
-                    if research_media_count >= plan.media_ticket_limit:
+                    if (
+                        research_media_count >= plan.media_ticket_limit
+                        or page_number >= plan.max_source_pages
+                    ):
                         completed = True
                         safety_limit_reached = True
                         next_cursor = None
@@ -792,8 +848,7 @@ class CpuSourceAcquisitionWorker:
                 if completed:
                     converged = (
                         not safety_limit_reached
-                        and zero_yield_wave_streak
-                        >= plan.convergence_zero_yield_waves
+                        and zero_yield_wave_streak >= plan.convergence_zero_yield_waves
                     )
                 if completed and not converged:
                     journal_entries.append(

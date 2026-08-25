@@ -17,7 +17,10 @@ from firewarning_worker.mvp.contracts import (
     PointEvidenceBundleV1,
     ProviderRun,
 )
-from firewarning_worker.mvp.research.multimodal_evidence import BedrockConverseClient
+from firewarning_worker.mvp.research.multimodal_evidence import (
+    BedrockConverseClient,
+    MultimodalEvidenceProviderError,
+)
 from firewarning_worker.mvp.supervision.mistral_supervisor import (
     PROMPT_VERSION,
     MistralPointDecision,
@@ -134,10 +137,10 @@ class BedrockPixtralPointSupervisor:
                     "temperature": 0,
                 },
             )
+        except MultimodalEvidenceProviderError as exc:
+            raise BedrockPointSupervisorError(str(exc)) from exc
         except (BotoCoreError, ClientError) as exc:
-            raise BedrockPointSupervisorError(
-                "bedrock_point_supervisor_request_failed"
-            ) from exc
+            raise BedrockPointSupervisorError("bedrock_point_supervisor_request_failed") from exc
         runtime_ms = max(0, round((perf_counter() - started) * 1_000))
         try:
             blocks = response["output"]["message"]["content"]
@@ -151,9 +154,7 @@ class BedrockPixtralPointSupervisor:
         except BedrockPointSupervisorError:
             raise
         except (KeyError, TypeError, ValueError) as exc:
-            raise BedrockPointSupervisorError(
-                "bedrock_point_supervisor_invalid_response"
-            ) from exc
+            raise BedrockPointSupervisorError("bedrock_point_supervisor_invalid_response") from exc
         if stop_reason not in {"end_turn", "stop_sequence"}:
             raise BedrockPointSupervisorError(
                 f"bedrock_point_supervisor_incomplete:{stop_reason or 'unknown'}"
@@ -166,9 +167,7 @@ class BedrockPixtralPointSupervisor:
         if decision.competing_point is not None:
             returned_ids.update(decision.competing_point.evidence_ids)
         if not returned_ids.issubset(evidence_by_id):
-            raise BedrockPointSupervisorError(
-                "bedrock_point_supervisor_unknown_evidence"
-            )
+            raise BedrockPointSupervisorError("bedrock_point_supervisor_unknown_evidence")
 
         deterministic_hard_codes = {
             check.reason_code
@@ -193,9 +192,7 @@ class BedrockPixtralPointSupervisor:
                 draft.point.point_id == bundle.point.point_id
                 or draft.point.source_candidate_ids != bundle.point.source_candidate_ids
             ):
-                raise BedrockPointSupervisorError(
-                    "bedrock_competing_point_source_invalid"
-                )
+                raise BedrockPointSupervisorError("bedrock_competing_point_source_invalid")
             correction_digest = sha256(
                 json.dumps(
                     draft.model_dump(mode="json"),
@@ -226,8 +223,7 @@ class BedrockPixtralPointSupervisor:
                     usage_config[key] = value
         assessment_digest = sha256(
             (
-                f"{bundle_sha256}|{verdict}|{self.config.inference_profile_id}|"
-                f"{response_sha256}"
+                f"{bundle_sha256}|{verdict}|{self.config.inference_profile_id}|{response_sha256}"
             ).encode()
         ).hexdigest()
         return PointAssessmentV1(

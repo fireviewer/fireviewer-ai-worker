@@ -55,8 +55,11 @@ strict contracts and failure semantics.
 - durable read/write adapters for backend evidence, derived keyframes,
   geographic hypotheses, and terrain references;
 - provider boundaries for optional cross-view and satellite acceleration;
+- bounded Sentinel-2 optical-change and Sentinel-1 radar-change observation
+  paths, with explicit credentials, invocation, and paid-provider gates;
 - spatio-temporal event retrieval and compact evidence-bundle assembly;
-- managed and simulated multimodal supervisors with strict JSON output;
+- managed and simulated multimodal supervisors with strict JSON output and
+  bounded managed-model invocation counts;
 - calibrated publication policy, contradiction handling, competing-point JSON,
   and explicit abstention;
 - CPU and optional GPU container entry points for independently scalable stages.

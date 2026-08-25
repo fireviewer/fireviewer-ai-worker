@@ -18,6 +18,7 @@ from firewarning_worker.mvp.research.multimodal_evidence import (
     AzureManagedIdentityWebTokenProvider,
     BedrockPixtralConfig,
     BedrockPixtralMultimodalProvider,
+    InvocationLimitedBedrockClient,
 )
 from firewarning_worker.mvp.research.source_acquisition import (
     CpuSourceAcquisitionWorker,
@@ -184,6 +185,9 @@ class SourceAcquisitionServiceSettings(StrictModel):
         max_length=256,
     )
     multimodal_enabled: bool = False
+    bedrock_paid_invocation_enabled: bool = False
+    authorized_bedrock_invocations_per_run: int = Field(default=0, ge=0, le=4)
+    bedrock_maximum_output_tokens: int = Field(default=2_048, ge=256, le=4_096)
     max_incident_cycles: int = Field(default=1, ge=1, le=8)
     max_incident_runtime_seconds: int = Field(default=180, ge=60, le=210)
     max_pages_per_run: int = Field(default=1, ge=1, le=5)
@@ -195,6 +199,19 @@ class SourceAcquisitionServiceSettings(StrictModel):
         default="https://html.duckduckgo.com/html/?q={query}", min_length=16
     )
     backend: AzureBackendEventEvidenceConfig
+
+    @model_validator(mode="after")
+    def validate_paid_multimodal_gate(self) -> SourceAcquisitionServiceSettings:
+        if self.multimodal_enabled and not self.bedrock_paid_invocation_enabled:
+            raise ValueError("multimodal Bedrock calls require the explicit paid invocation gate")
+        if self.multimodal_enabled and self.authorized_bedrock_invocations_per_run < 1:
+            raise ValueError("multimodal Bedrock calls require a positive invocation budget")
+        if (
+            self.multimodal_enabled
+            and self.max_multimodal_analyses_per_run > self.authorized_bedrock_invocations_per_run
+        ):
+            raise ValueError("multimodal run limit exceeds the authorized Bedrock budget")
+        return self
 
     @classmethod
     def from_env(cls) -> SourceAcquisitionServiceSettings:
@@ -212,6 +229,15 @@ class SourceAcquisitionServiceSettings(StrictModel):
                 "eu.mistral.pixtral-large-2502-v1:0",
             ),
             multimodal_enabled=_env_bool("FIREVIEWER_MULTIMODAL_ENABLED", False),
+            bedrock_paid_invocation_enabled=_env_bool(
+                "FIREVIEWER_BEDROCK_PAID_INVOCATION_ENABLED", False
+            ),
+            authorized_bedrock_invocations_per_run=int(
+                os.getenv("FIREVIEWER_BEDROCK_AUTHORIZED_INVOCATIONS_PER_RUN", "0")
+            ),
+            bedrock_maximum_output_tokens=int(
+                os.getenv("FIREVIEWER_BEDROCK_MAX_OUTPUT_TOKENS", "2048")
+            ),
             max_incident_cycles=int(os.getenv("FIREVIEWER_SOURCE_MAX_INCIDENT_CYCLES", "1")),
             max_incident_runtime_seconds=int(
                 os.getenv("FIREVIEWER_SOURCE_MAX_RUNTIME_SECONDS", "180")
@@ -253,16 +279,20 @@ class SourceAcquisitionService:
                 config = BedrockPixtralConfig(
                     region_name=settings.aws_region,
                     model_id=settings.bedrock_model_id,
+                    maximum_output_tokens=settings.bedrock_maximum_output_tokens,
                 )
                 provider = BedrockPixtralMultimodalProvider(
                     config,
-                    client=AzureFederatedBedrockClient(
-                        role_arn=settings.aws_role_arn,
-                        region_name=settings.aws_region,
-                        web_token_provider=AzureManagedIdentityWebTokenProvider(
-                            audience=settings.aws_oidc_audience,
-                            managed_identity_client_id=settings.managed_identity_client_id,
+                    client=InvocationLimitedBedrockClient(
+                        AzureFederatedBedrockClient(
+                            role_arn=settings.aws_role_arn,
+                            region_name=settings.aws_region,
+                            web_token_provider=AzureManagedIdentityWebTokenProvider(
+                                audience=settings.aws_oidc_audience,
+                                managed_identity_client_id=settings.managed_identity_client_id,
+                            ),
                         ),
+                        maximum_invocations=(settings.authorized_bedrock_invocations_per_run),
                     ),
                 )
             control_token = settings.broker_control_token.get_secret_value()
@@ -342,6 +372,10 @@ def _handler_for(service: SourceAcquisitionService) -> type[BaseHTTPRequestHandl
                     "multimodal_provider": "aws-bedrock-pixtral",
                     "multimodal_model": service.settings.bedrock_model_id,
                     "multimodal_enabled": service.settings.multimodal_enabled,
+                    "paid_invocation_enabled": (service.settings.bedrock_paid_invocation_enabled),
+                    "authorized_invocations_per_run": (
+                        service.settings.authorized_bedrock_invocations_per_run
+                    ),
                     "multimodal_input_scope": "public-web-only",
                     "raw_scraped_content_stored": False,
                     "transcripts_stored": False,

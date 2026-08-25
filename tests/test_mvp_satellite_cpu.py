@@ -8,10 +8,13 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+import httpx
 import numpy as np
 import pytest
 import rasterio
 from botocore.exceptions import ClientError
+from pydantic import SecretStr
+from rasterio.io import MemoryFile
 from rasterio.transform import from_origin
 from rasterio.warp import transform_bounds
 
@@ -28,9 +31,13 @@ from firewarning_worker.mvp.satellite_cpu import (
     build_prithvi_request,
 )
 from firewarning_worker.mvp.satellite_observations import (
+    CdseObservationS3Config,
+    CdseS3ObservationAssetReader,
     ClmsRasterWindow,
     SatelliteAssetReceipt,
     SatelliteObservationCpuWorker,
+    Sentinel1ChangeWindow,
+    Sentinel2ChangeWindow,
     _frp_sample_count,
     _validate_clms_window_size,
 )
@@ -238,9 +245,13 @@ class _LocalObservationReader:
         *,
         clms_paths: dict[str, Path] | None = None,
         frp_path: Path | None = None,
+        sentinel1_window: Sentinel1ChangeWindow | None = None,
+        sentinel2_window: Sentinel2ChangeWindow | None = None,
     ) -> None:
         self.clms_paths = clms_paths
         self.frp_path = frp_path
+        self.sentinel1_window = sentinel1_window
+        self.sentinel2_window = sentinel2_window
         self.frp_ephemeral_path: Path | None = None
 
     def read_clms_window(self, *, assets, bbox):
@@ -289,6 +300,28 @@ class _LocalObservationReader:
             derived_content_sha256=sha256(content).hexdigest(),
             bytes_read=len(content),
         )
+
+    def read_sentinel2_change_window(self, *, reference_assets, observation_assets, bbox):
+        assert tuple(item.asset_name for item in reference_assets) == (
+            "B04_20m",
+            "B8A_20m",
+            "B11_20m",
+            "B12_20m",
+            "SCL_20m",
+        )
+        assert tuple(item.asset_name for item in observation_assets) == tuple(
+            item.asset_name for item in reference_assets
+        )
+        assert self.sentinel2_window is not None
+        return self.sentinel2_window
+
+    def read_sentinel1_change_window(
+        self, *, reference_artifact, observation_artifact, bbox
+    ):
+        assert reference_artifact.quality_flags["temporal_role"] == "pre_fire_reference"
+        assert observation_artifact.quality_flags["temporal_role"] == "post_fire_observation"
+        assert self.sentinel1_window is not None
+        return self.sentinel1_window
 
 
 def test_builder_aligns_six_bands_on_b11_grid(tmp_path: Path) -> None:
@@ -529,10 +562,13 @@ def _observation_artifact(
     assets: list[dict[str, Any]],
     acquired_at: datetime,
     resolution_m: float,
+    artifact_revision_id: str | None = None,
+    temporal_role: str | None = None,
 ) -> BackendIncidentDaySatelliteArtifact:
     return BackendIncidentDaySatelliteArtifact.model_validate(
         {
-            "artifact_revision_id": f"EAR-{sha256(collection_key.encode()).hexdigest()[:24]}",
+            "artifact_revision_id": artifact_revision_id
+            or f"EAR-{sha256(collection_key.encode()).hexdigest()[:24]}",
             "provider_key": "copernicus-cdse",
             "collection_key": collection_key,
             "semantic_role": "interpreted_observation",
@@ -549,6 +585,7 @@ def _observation_artifact(
             "quality_flags": {
                 "satellite_observation_processor": processor,
                 "satellite_observation_assets": assets,
+                **({"temporal_role": temporal_role} if temporal_role is not None else {}),
             },
             "license": "Copernicus data policy",
             "attribution": "European Union Copernicus programme",
@@ -559,6 +596,7 @@ def _observation_artifact(
 
 def _observation_durable(
     artifact: BackendIncidentDaySatelliteArtifact,
+    *additional_artifacts: BackendIncidentDaySatelliteArtifact,
 ) -> DurableEventEvidence:
     return DurableEventEvidence(
         event=EventEvidenceV1(
@@ -577,7 +615,7 @@ def _observation_durable(
         source_revision_sha256="b" * 64,
         incident_id="FR-26-00001",
         research_target_kind="incident_day",
-        satellite_artifact_tickets=(artifact,),
+        satellite_artifact_tickets=(artifact, *additional_artifacts),
         incident_day_episode_id="E01",
         incident_day_local_date=date(2026, 7, 9),
         incident_day_timezone="Europe/Paris",
@@ -665,6 +703,285 @@ def test_clms_daily_cogs_produce_a_clipped_burn_scar_without_raw_rasters(
     assert observation["metrics"]["pixel_count"] == 3
     assert observation["metrics"]["target_day_of_year"] == target_day
     assert "object_uri" not in str(payload)
+
+
+def test_sentinel1_prefire_postfire_vvvh_change_is_low_confidence_second_opinion() -> None:
+    asset_payload = {
+        "asset_name": "openeo_vv_vh",
+        "object_uri": "s3://eodata/openeo-sentinel1/test/source-item.json",
+        "media_type": "application/geo+json",
+        "file_size_bytes": 1_024,
+        "file_checksum": "a" * 64,
+    }
+    reference = _observation_artifact(
+        collection_key="sentinel-1-grd",
+        processor="sentinel1_vvvh_change_v1",
+        assets=[asset_payload],
+        acquired_at=datetime(2026, 7, 1, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S1-PREFIRE-DIE-20260701",
+        temporal_role="pre_fire_reference",
+    )
+    observation = _observation_artifact(
+        collection_key="sentinel-1-grd",
+        processor="sentinel1_vvvh_change_v1",
+        assets=[asset_payload],
+        acquired_at=datetime(2026, 7, 9, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S1-POSTFIRE-DIE-20260709",
+        temporal_role="post_fire_observation",
+    )
+    pre = {
+        "VV": np.full((4, 4), 0.1, dtype=np.float32),
+        "VH": np.full((4, 4), 0.04, dtype=np.float32),
+    }
+    post = {key: value.copy() for key, value in pre.items()}
+    post["VV"][1:3, 1:3] = 0.01
+    post["VH"][1:3, 1:3] = 0.004
+    transform = from_origin(5.36, 44.76, 0.005, 0.005)
+
+    def receipt(seed: str) -> SatelliteAssetReceipt:
+        return SatelliteAssetReceipt(
+            asset_name="openeo_vv_vh",
+            source_checksum="a" * 64,
+            derived_content_sha256=sha256(seed.encode()).hexdigest(),
+            bytes_read=1_024,
+        )
+
+    window = Sentinel1ChangeWindow(
+        pre=pre,
+        post=post,
+        transform=transform,
+        crs="EPSG:4326",
+        receipts_pre=(receipt("pre"),),
+        receipts_post=(receipt("post"),),
+    )
+    durable = _observation_durable(observation, reference)
+    publisher = _ObservationPublisher()
+
+    result = SatelliteObservationCpuWorker(
+        repository=_Repository(durable),
+        asset_reader=_LocalObservationReader(sentinel1_window=window),
+        publisher=publisher,
+        sentinel1_vv_change_threshold_db=1.5,
+        sentinel1_vh_change_threshold_db=1.5,
+        openeo_maximum_authorized_credits=1,
+    ).run(durable.event.event_id, observation.artifact_revision_id)
+
+    assert result.status == "completed"
+    payload = publisher.payloads[0]
+    assert payload["processor"] == "sentinel1_vvvh_change_v1"
+    assert payload["reference_artifact_revision_id"] == reference.artifact_revision_id
+    assert len(payload["asset_receipts"]) == 2
+    assert payload["coverage_metrics"] == {
+        "valid_pixel_count": 16,
+        "invalid_fraction": 0.0,
+        "changed_pixel_count": 4,
+    }
+    observation_payload = payload["observations"][0]
+    assert observation_payload["metrics"]["changed_pixel_count"] == 4
+    assert observation_payload["confidence"] <= 0.45
+    assert observation_payload["geometry_geojson"]["type"] in {"Polygon", "MultiPolygon"}
+
+
+def test_openeo_sentinel1_reader_is_bounded_and_never_exposes_its_token() -> None:
+    captured: list[dict[str, Any]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "https://openeosh.dataspace.copernicus.eu/1.2/result"
+        assert request.headers["authorization"] == "Bearer token-" + ("t" * 40)
+        payload = json.loads(request.content)
+        captured.append(payload)
+        load = payload["process"]["process_graph"]["load"]
+        extent = load["arguments"]["spatial_extent"]
+        assert load["arguments"]["bands"] == ["VV", "VH"]
+        assert payload["process"]["process_graph"]["backscatter"]["arguments"][
+            "coefficient"
+        ] == "sigma0-ellipsoid"
+        assert "token-" not in json.dumps(payload)
+        memory = MemoryFile()
+        with memory.open(
+            driver="GTiff",
+            width=extent["width"],
+            height=extent["height"],
+            count=2,
+            dtype="float32",
+            crs="EPSG:4326",
+            transform=from_origin(5.36, 44.76, 0.0001, 0.0001),
+        ) as dataset:
+            dataset.write(
+                np.full((extent["height"], extent["width"]), 0.1, dtype=np.float32),
+                1,
+            )
+            dataset.write(
+                np.full((extent["height"], extent["width"]), 0.04, dtype=np.float32),
+                2,
+            )
+        content = memory.read()
+        memory.close()
+        return httpx.Response(200, content=content, headers={"Content-Type": "image/tiff"})
+
+    reference = _observation_artifact(
+        collection_key="sentinel-1-grd",
+        processor="sentinel1_vvvh_change_v1",
+        assets=[],
+        acquired_at=datetime(2026, 7, 1, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S1-OPENEO-PRE",
+        temporal_role="pre_fire_reference",
+    )
+    observation = _observation_artifact(
+        collection_key="sentinel-1-grd",
+        processor="sentinel1_vvvh_change_v1",
+        assets=[],
+        acquired_at=datetime(2026, 7, 9, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S1-OPENEO-POST",
+        temporal_role="post_fire_observation",
+    )
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        reader = CdseS3ObservationAssetReader(
+            CdseObservationS3Config(
+                access_key=SecretStr("access-key"),
+                secret_key=SecretStr("secret-key-" + ("s" * 24)),
+                openeo_invocation_enabled=True,
+                openeo_access_token=SecretStr("token-" + ("t" * 40)),
+                openeo_maximum_authorized_credits=1,
+            ),
+            s3_client=object(),
+            http_client=client,
+        )
+        result = reader.read_sentinel1_change_window(
+            reference_artifact=reference,
+            observation_artifact=observation,
+            bbox=(5.36, 44.74, 5.3604, 44.7404),
+        )
+
+    assert len(captured) == 2
+    assert result.pre["VV"].shape == result.post["VV"].shape
+    assert result.receipts_pre[0].source_checksum == reference.content_hash
+    assert result.receipts_post[0].source_checksum == observation.content_hash
+
+
+def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> None:
+    asset_names = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
+    transform = from_origin(5.36, 44.76, 0.005, 0.005)
+    assets = [
+        {
+            "asset_name": asset_name,
+            "object_uri": (
+                "s3://eodata/Sentinel-2/MSI/L2A/2026/07/09/PRODUCT.SAFE/"
+                f"GRANULE/TEST/IMG_DATA/R20m/TEST_{asset_name}.jp2"
+            ),
+            "media_type": "image/jp2",
+            "file_size_bytes": 32_768,
+            "file_checksum": f"{index:x}" * 64,
+            "proj_code": "EPSG:4326",
+            "proj_shape": [4, 4],
+            "proj_transform": list(transform.to_gdal()),
+            "nodata": 0,
+            "data_type": "uint16",
+            "raster_scale": 1,
+        }
+        for index, asset_name in enumerate(asset_names, start=1)
+    ]
+    reference = _observation_artifact(
+        collection_key="sentinel-2-l2a",
+        processor="sentinel2_nbr_change_v1",
+        assets=assets,
+        acquired_at=datetime(2026, 7, 1, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S2-PREFIRE-DIE-20260701",
+        temporal_role="pre_fire_reference",
+    )
+    observation = _observation_artifact(
+        collection_key="sentinel-2-l2a",
+        processor="sentinel2_nbr_change_v1",
+        assets=assets,
+        acquired_at=datetime(2026, 7, 9, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S2-POSTFIRE-DIE-20260709",
+        temporal_role="post_fire_observation",
+    )
+    pre = {
+        "B04_20m": np.full((4, 4), 2_000, dtype=np.float32),
+        "B8A_20m": np.full((4, 4), 8_000, dtype=np.float32),
+        "B11_20m": np.full((4, 4), 2_500, dtype=np.float32),
+        "B12_20m": np.full((4, 4), 2_000, dtype=np.float32),
+        "SCL_20m": np.full((4, 4), 4, dtype=np.float32),
+    }
+    post = {key: value.copy() for key, value in pre.items()}
+    post["B8A_20m"][1:3, 1:3] = 2_000
+    post["B12_20m"][1:3, 1:3] = 6_000
+
+    def receipts(seed: str) -> tuple[SatelliteAssetReceipt, ...]:
+        return tuple(
+            SatelliteAssetReceipt(
+                asset_name=asset_name,
+                source_checksum=f"{index:x}" * 64,
+                derived_content_sha256=sha256(f"{seed}:{asset_name}".encode()).hexdigest(),
+                bytes_read=64,
+            )
+            for index, asset_name in enumerate(asset_names, start=1)
+        )
+
+    raster_window = Sentinel2ChangeWindow(
+        pre=pre,
+        post=post,
+        transform=transform,
+        crs="EPSG:4326",
+        receipts_pre=receipts("pre"),
+        receipts_post=receipts("post"),
+    )
+    durable = _observation_durable(observation, reference)
+    publisher = _ObservationPublisher()
+    receipt = SatelliteObservationCpuWorker(
+        repository=_Repository(durable),
+        asset_reader=_LocalObservationReader(sentinel2_window=raster_window),
+        publisher=publisher,
+    ).run(durable.event.event_id, observation.artifact_revision_id)
+
+    assert receipt.status == "completed"
+    payload = publisher.payloads[0]
+    assert payload["processor"] == "sentinel2_nbr_change_v1"
+    assert payload["reference_artifact_revision_id"] == reference.artifact_revision_id
+    assert len(payload["asset_receipts"]) == 10
+    assert {item["source_artifact_revision_id"] for item in payload["asset_receipts"]} == {
+        reference.artifact_revision_id,
+        observation.artifact_revision_id,
+    }
+    result = payload["observations"][0]
+    assert result["metrics"]["burned_pixel_count"] == 4
+    assert result["metrics"]["valid_pixel_count"] == 16
+    assert payload["valid_coverage_geojson"]["type"] == "Polygon"
+    assert payload["coverage_metrics"] == {
+        "valid_pixel_count": 16,
+        "cloud_fraction": 0.0,
+        "burned_pixel_count": 4,
+    }
+    assert result["coverage_geojson"]["type"] == "Polygon"
+    assert result["geometry_geojson"]["type"] in {"Polygon", "MultiPolygon"}
+
+    no_change_publisher = _ObservationPublisher()
+    no_change_window = Sentinel2ChangeWindow(
+        pre=pre,
+        post={key: value.copy() for key, value in pre.items()},
+        transform=transform,
+        crs="EPSG:4326",
+        receipts_pre=receipts("no-change-pre"),
+        receipts_post=receipts("no-change-post"),
+    )
+    no_change = SatelliteObservationCpuWorker(
+        repository=_Repository(durable),
+        asset_reader=_LocalObservationReader(sentinel2_window=no_change_window),
+        publisher=no_change_publisher,
+    ).run(durable.event.event_id, observation.artifact_revision_id)
+    assert no_change.status == "no_observation"
+    no_change_payload = no_change_publisher.payloads[0]
+    assert no_change_payload["observations"] == []
+    assert no_change_payload["valid_coverage_geojson"]["type"] == "Polygon"
+    assert no_change_payload["coverage_metrics"]["valid_pixel_count"] == 16
+    assert no_change_payload["coverage_metrics"]["burned_pixel_count"] == 0
 
 
 @pytest.mark.parametrize(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
@@ -13,6 +14,7 @@ from typing import Any, Literal, Protocol, cast
 from urllib.parse import urlsplit
 
 import boto3
+import httpx
 import numpy as np
 from botocore.config import Config as BotocoreConfig
 from botocore.exceptions import BotoCoreError, ClientError
@@ -31,6 +33,14 @@ _CLMS_PROCESSOR = "clms_burned_area_daily_v1"
 _CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.0.0"
 _CLMS_COLLECTION = "clms_ba_global_300m_daily_v4_cog"
 _CLMS_ASSETS = ("ba300_dob_nrt", "ba300_cp_nrt", "ba300_bf_nrt")
+_S2_PROCESSOR = "sentinel2_nbr_change_v1"
+_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.0"
+_S2_COLLECTION = "sentinel-2-l2a"
+_S2_ASSETS = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
+_S1_PROCESSOR = "sentinel1_vvvh_change_v1"
+_S1_REVISION = "fireviewer-sentinel1-vvvh-change-openeo-1.0.0"
+_S1_COLLECTION = "sentinel-1-grd"
+_S1_ASSETS = ("openeo_vv_vh",)
 _FRP_PROCESSOR = "sentinel3_frp_v1"
 _FRP_REVISION = "fireviewer-sentinel3-frp-cpu-1.1.0"
 _FRP_COLLECTIONS = {"sentinel-3-sl-2-frp-nrt", "sentinel-3-sl-2-frp-ntc"}
@@ -64,9 +74,15 @@ class SatelliteObservationAsset(StrictModel):
             self.data_type,
             self.raster_scale,
         )
-        if self.asset_name in _CLMS_ASSETS:
-            if any(value is None for value in grid_values) or self.proj_code != "EPSG:4326":
+        if self.asset_name in set(_CLMS_ASSETS) | set(_S2_ASSETS):
+            if any(value is None for value in grid_values):
+                raise ValueError("raster processing asset has no complete grid")
+            if self.asset_name in _CLMS_ASSETS and self.proj_code != "EPSG:4326":
                 raise ValueError("CLMS processing asset has no complete EPSG:4326 grid")
+            if self.asset_name in _S2_ASSETS and not self.object_uri.startswith(
+                "s3://eodata/Sentinel-2/MSI/L2A/"
+            ):
+                raise ValueError("Sentinel-2 processing asset has an invalid object path")
         elif any(value is not None for value in grid_values):
             raise ValueError("non-raster satellite asset unexpectedly exposes a grid")
         if self.asset_name in {"FRP_in", "FRP_MWIR1km_STANDARD"} and (
@@ -91,6 +107,25 @@ class CdseObservationS3Config(StrictModel):
     secret_key: SecretStr = Field(min_length=16, max_length=512)
     region_name: str = Field(default="eu-central-1", min_length=3, max_length=64)
     maximum_window_pixels: int = Field(default=4_000_000, ge=256, le=25_000_000)
+    openeo_invocation_enabled: bool = False
+    openeo_access_token: SecretStr | None = Field(default=None, min_length=32, max_length=8_192)
+    openeo_maximum_authorized_credits: float = Field(default=0, ge=0, le=100)
+    openeo_timeout_seconds: float = Field(default=120, ge=10, le=300)
+    openeo_maximum_response_bytes: int = Field(
+        default=128 * 1_024 * 1_024,
+        ge=1_024,
+        le=512 * 1_024 * 1_024,
+    )
+
+    @model_validator(mode="after")
+    def validate_openeo_gate(self) -> CdseObservationS3Config:
+        if self.openeo_invocation_enabled and (
+            self.openeo_access_token is None or self.openeo_maximum_authorized_credits <= 0
+        ):
+            raise ValueError("openEO invocation requires a token and a positive credit ceiling")
+        if not self.openeo_invocation_enabled and self.openeo_maximum_authorized_credits != 0:
+            raise ValueError("disabled openEO invocation cannot authorize credits")
+        return self
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,13 +135,16 @@ class SatelliteAssetReceipt:
     derived_content_sha256: str
     bytes_read: int
 
-    def as_payload(self) -> dict[str, Any]:
-        return {
+    def as_payload(self, *, source_artifact_revision_id: str | None = None) -> dict[str, Any]:
+        payload = {
             "asset_name": self.asset_name,
             "source_checksum": self.source_checksum,
             "derived_content_sha256": self.derived_content_sha256,
             "bytes_read": self.bytes_read,
         }
+        if source_artifact_revision_id is not None:
+            payload["source_artifact_revision_id"] = source_artifact_revision_id
+        return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,6 +155,40 @@ class ClmsRasterWindow:
     valid_masks: tuple[np.ndarray[Any, Any], np.ndarray[Any, Any], np.ndarray[Any, Any]]
     transform: Any
     receipts: tuple[SatelliteAssetReceipt, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Sentinel2ChangeWindow:
+    pre: Mapping[str, np.ndarray[Any, Any]]
+    post: Mapping[str, np.ndarray[Any, Any]]
+    transform: Any
+    crs: str
+    receipts_pre: tuple[SatelliteAssetReceipt, ...]
+    receipts_post: tuple[SatelliteAssetReceipt, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Sentinel1ChangeWindow:
+    pre: Mapping[str, np.ndarray[Any, Any]]
+    post: Mapping[str, np.ndarray[Any, Any]]
+    transform: Any
+    crs: str
+    receipts_pre: tuple[SatelliteAssetReceipt, ...]
+    receipts_post: tuple[SatelliteAssetReceipt, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class Sentinel2ObservationOutcome:
+    observations: tuple[dict[str, Any], ...]
+    valid_coverage_geojson: dict[str, Any] | None
+    coverage_metrics: dict[str, float | int]
+
+
+@dataclass(frozen=True, slots=True)
+class Sentinel1ObservationOutcome:
+    observations: tuple[dict[str, Any], ...]
+    valid_coverage_geojson: dict[str, Any] | None
+    coverage_metrics: dict[str, float | int]
 
 
 class SatelliteObservationAssetReader(Protocol):
@@ -133,6 +205,22 @@ class SatelliteObservationAssetReader(Protocol):
         asset: SatelliteObservationAsset,
         output_path: Path,
     ) -> SatelliteAssetReceipt: ...
+
+    def read_sentinel2_change_window(
+        self,
+        *,
+        reference_assets: tuple[SatelliteObservationAsset, ...],
+        observation_assets: tuple[SatelliteObservationAsset, ...],
+        bbox: tuple[float, float, float, float],
+    ) -> Sentinel2ChangeWindow: ...
+
+    def read_sentinel1_change_window(
+        self,
+        *,
+        reference_artifact: BackendIncidentDaySatelliteArtifact,
+        observation_artifact: BackendIncidentDaySatelliteArtifact,
+        bbox: tuple[float, float, float, float],
+    ) -> Sentinel1ChangeWindow: ...
 
 
 def _window_digest(
@@ -159,7 +247,13 @@ def _validate_clms_window_size(*, width: float, height: float, maximum_pixels: i
 class CdseS3ObservationAssetReader:
     """Read bounded COG windows and one small FRP NetCDF from official CDSE S3."""
 
-    def __init__(self, config: CdseObservationS3Config, *, s3_client: Any | None = None) -> None:
+    def __init__(
+        self,
+        config: CdseObservationS3Config,
+        *,
+        s3_client: Any | None = None,
+        http_client: httpx.Client | None = None,
+    ) -> None:
         self.config = config
         session = boto3.Session(
             aws_access_key_id=config.access_key.get_secret_value(),
@@ -177,6 +271,214 @@ class CdseS3ObservationAssetReader:
                 connect_timeout=10,
                 read_timeout=120,
             ),
+        )
+        self._owns_http_client = http_client is None
+        self._http = http_client or httpx.Client()
+
+    def close(self) -> None:
+        """Release the internally owned HTTP client used for openEO calls."""
+
+        if self._owns_http_client:
+            self._http.close()
+
+    @staticmethod
+    def _openeo_process_graph(
+        *,
+        bbox: tuple[float, float, float, float],
+        temporal_extent: tuple[datetime, datetime],
+        width: int,
+        height: int,
+    ) -> dict[str, Any]:
+        west, south, east, north = bbox
+        start_at, end_at = temporal_extent
+        return {
+            "process_graph": {
+                "load": {
+                    "process_id": "load_collection",
+                    "arguments": {
+                        "id": "sentinel-1-grd",
+                        "spatial_extent": {
+                            "west": west,
+                            "south": south,
+                            "east": east,
+                            "north": north,
+                            "width": width,
+                            "height": height,
+                        },
+                        "temporal_extent": [
+                            start_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+                            end_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+                        ],
+                        "bands": ["VV", "VH"],
+                    },
+                },
+                "backscatter": {
+                    "process_id": "sar_backscatter",
+                    "arguments": {
+                        "data": {"from_node": "load"},
+                        "coefficient": "sigma0-ellipsoid",
+                        "elevation_model": "COPERNICUS_30",
+                        "local_incidence_angle": False,
+                    },
+                },
+                "median": {
+                    "process_id": "reduce_dimension",
+                    "arguments": {
+                        "data": {"from_node": "backscatter"},
+                        "dimension": "t",
+                        "reducer": {
+                            "process_graph": {
+                                "median": {
+                                    "process_id": "median",
+                                    "arguments": {"data": {"from_parameter": "data"}},
+                                    "result": True,
+                                }
+                            }
+                        },
+                    },
+                },
+                "save": {
+                    "process_id": "save_result",
+                    "arguments": {
+                        "data": {"from_node": "median"},
+                        "format": "GTiff",
+                    },
+                    "result": True,
+                },
+            }
+        }
+
+    def _openeo_raster(
+        self,
+        *,
+        artifact: BackendIncidentDaySatelliteArtifact,
+        bbox: tuple[float, float, float, float],
+        width: int,
+        height: int,
+    ) -> tuple[dict[str, np.ndarray[Any, Any]], Any, str, SatelliteAssetReceipt]:
+        from rasterio.io import MemoryFile
+
+        if not self.config.openeo_invocation_enabled or self.config.openeo_access_token is None:
+            raise SatelliteCpuError("cdse_openeo_invocation_disabled", retryable=True)
+        start_at = artifact.acquisition_start_at
+        if start_at is None:
+            raise SatelliteCpuError("sentinel1_acquisition_time_missing", retryable=False)
+        end_at = artifact.acquisition_end_at or (start_at + timedelta(minutes=10))
+        if end_at <= start_at or end_at - start_at > timedelta(days=1):
+            raise SatelliteCpuError("sentinel1_acquisition_window_invalid", retryable=False)
+        payload = {
+            "process": self._openeo_process_graph(
+                bbox=bbox,
+                temporal_extent=(start_at, end_at),
+                width=width,
+                height=height,
+            )
+        }
+        try:
+            response = self._http.post(
+                "https://openeosh.dataspace.copernicus.eu/1.2/result",
+                json=payload,
+                headers={
+                    "Accept": "image/tiff",
+                    "Accept-Encoding": "identity",
+                    "Authorization": (
+                        "Bearer " + self.config.openeo_access_token.get_secret_value()
+                    ),
+                    "User-Agent": "FireViewer-satellite-cpu/1",
+                },
+                timeout=self.config.openeo_timeout_seconds,
+                follow_redirects=False,
+            )
+        except httpx.TimeoutException as exc:
+            raise SatelliteCpuError("cdse_openeo_timeout", retryable=True) from exc
+        except httpx.HTTPError as exc:
+            raise SatelliteCpuError("cdse_openeo_network_error", retryable=True) from exc
+        if response.status_code in {401, 403}:
+            raise SatelliteCpuError("cdse_openeo_authentication_failed", retryable=True)
+        if response.status_code == 429:
+            raise SatelliteCpuError("cdse_openeo_rate_limited", retryable=True)
+        if not 200 <= response.status_code < 300:
+            raise SatelliteCpuError("cdse_openeo_processing_failed", retryable=True)
+        media_type = response.headers.get("content-type", "").partition(";")[0].casefold()
+        if media_type not in {"image/tiff", "image/geotiff"}:
+            raise SatelliteCpuError("cdse_openeo_content_type_invalid", retryable=False)
+        content = response.content
+        if not content or len(content) > self.config.openeo_maximum_response_bytes:
+            raise SatelliteCpuError("cdse_openeo_response_size_invalid", retryable=False)
+        try:
+            with MemoryFile(content) as memory, memory.open() as dataset:
+                if (
+                    dataset.count != 2
+                    or dataset.width != width
+                    or dataset.height != height
+                    or dataset.crs is None
+                ):
+                    raise SatelliteCpuError("cdse_openeo_raster_contract_invalid", retryable=False)
+                arrays = {
+                    "VV": np.asarray(dataset.read(1), dtype=np.float64),
+                    "VH": np.asarray(dataset.read(2), dtype=np.float64),
+                }
+                transform = dataset.transform
+                crs = str(dataset.crs)
+        except SatelliteCpuError:
+            raise
+        except Exception as exc:
+            raise SatelliteCpuError("cdse_openeo_raster_invalid", retryable=False) from exc
+        return (
+            arrays,
+            transform,
+            crs,
+            SatelliteAssetReceipt(
+                asset_name="openeo_vv_vh",
+                source_checksum=artifact.content_hash,
+                derived_content_sha256=sha256(content).hexdigest(),
+                bytes_read=len(content),
+            ),
+        )
+
+    def read_sentinel1_change_window(
+        self,
+        *,
+        reference_artifact: BackendIncidentDaySatelliteArtifact,
+        observation_artifact: BackendIncidentDaySatelliteArtifact,
+        bbox: tuple[float, float, float, float],
+    ) -> Sentinel1ChangeWindow:
+        west, south, east, north = bbox
+        mean_latitude = (south + north) / 2
+        width = max(
+            1,
+            math.ceil(
+                (east - west) * 111_320 * math.cos(math.radians(mean_latitude)) / 20
+            ),
+        )
+        height = max(1, math.ceil((north - south) * 110_540 / 20))
+        if (
+            width > 2_500
+            or height > 2_500
+            or width * height > self.config.maximum_window_pixels
+        ):
+            raise SatelliteCpuError("cdse_openeo_window_too_large", retryable=False)
+        pre, pre_transform, pre_crs, pre_receipt = self._openeo_raster(
+            artifact=reference_artifact,
+            bbox=bbox,
+            width=width,
+            height=height,
+        )
+        post, post_transform, post_crs, post_receipt = self._openeo_raster(
+            artifact=observation_artifact,
+            bbox=bbox,
+            width=width,
+            height=height,
+        )
+        if pre_transform != post_transform or pre_crs != post_crs:
+            raise SatelliteCpuError("cdse_openeo_grid_mismatch", retryable=False)
+        return Sentinel1ChangeWindow(
+            pre=pre,
+            post=post,
+            transform=pre_transform,
+            crs=pre_crs,
+            receipts_pre=(pre_receipt,),
+            receipts_post=(post_receipt,),
         )
 
     def read_clms_window(
@@ -304,23 +606,159 @@ class CdseS3ObservationAssetReader:
             bytes_read=size,
         )
 
+    def read_sentinel2_change_window(
+        self,
+        *,
+        reference_assets: tuple[SatelliteObservationAsset, ...],
+        observation_assets: tuple[SatelliteObservationAsset, ...],
+        bbox: tuple[float, float, float, float],
+    ) -> Sentinel2ChangeWindow:
+        import rasterio
+        from rasterio.enums import Resampling
+        from rasterio.session import AWSSession
+        from rasterio.warp import reproject, transform_bounds
+        from rasterio.windows import Window, from_bounds
+
+        if (
+            tuple(item.asset_name for item in reference_assets) != _S2_ASSETS
+            or tuple(item.asset_name for item in observation_assets) != _S2_ASSETS
+        ):
+            raise SatelliteCpuError("sentinel2_change_asset_set_invalid", retryable=False)
+        aws_session = AWSSession(session=self._session, requester_pays=False)
+        endpoint_host = urlsplit(self.config.endpoint_url).hostname
+        try:
+            with (
+                rasterio.Env(
+                    aws_session,
+                    AWS_S3_ENDPOINT=endpoint_host,
+                    AWS_HTTPS="YES",
+                    AWS_VIRTUAL_HOSTING="FALSE",
+                    GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+                ),
+                ExitStack() as stack,
+            ):
+                reference = {
+                    item.asset_name: stack.enter_context(
+                        rasterio.open(f"/vsis3/eodata/{item.s3_key}")
+                    )
+                    for item in reference_assets
+                }
+                observation = {
+                    item.asset_name: stack.enter_context(
+                        rasterio.open(f"/vsis3/eodata/{item.s3_key}")
+                    )
+                    for item in observation_assets
+                }
+                target = observation["B11_20m"]
+                if target.crs is None:
+                    raise SatelliteCpuError("sentinel2_target_crs_missing", retryable=False)
+                target_bounds = transform_bounds("EPSG:4326", target.crs, *bbox, densify_pts=21)
+                requested = from_bounds(*target_bounds, transform=target.transform)
+                requested = requested.round_offsets().round_lengths()
+                try:
+                    window = requested.intersection(Window(0, 0, target.width, target.height))
+                except rasterio.errors.WindowError as exc:
+                    raise SatelliteCpuError(
+                        "incident_outside_sentinel2_product", retryable=False
+                    ) from exc
+                _validate_clms_window_size(
+                    width=window.width,
+                    height=window.height,
+                    maximum_pixels=self.config.maximum_window_pixels,
+                )
+                width, height = int(window.width), int(window.height)
+                transform = target.window_transform(window)
+
+                def aligned(
+                    datasets: Mapping[str, Any],
+                    assets: tuple[SatelliteObservationAsset, ...],
+                ) -> tuple[dict[str, np.ndarray[Any, Any]], tuple[SatelliteAssetReceipt, ...]]:
+                    arrays: dict[str, np.ndarray[Any, Any]] = {}
+                    receipts: list[SatelliteAssetReceipt] = []
+                    assets_by_name = {item.asset_name: item for item in assets}
+                    for asset_name in _S2_ASSETS:
+                        dataset = datasets[asset_name]
+                        asset = assets_by_name[asset_name]
+                        if (
+                            dataset.crs is None
+                            or str(dataset.crs) != asset.proj_code
+                            or dataset.count != 1
+                        ):
+                            raise SatelliteCpuError(
+                                "sentinel2_change_grid_mismatch", retryable=False
+                            )
+                        destination = np.zeros((height, width), dtype=np.float32)
+                        reproject(
+                            source=rasterio.band(dataset, 1),
+                            destination=destination,
+                            src_transform=dataset.transform,
+                            src_crs=dataset.crs,
+                            src_nodata=dataset.nodata,
+                            dst_transform=transform,
+                            dst_crs=target.crs,
+                            dst_nodata=0,
+                            resampling=(
+                                Resampling.nearest
+                                if asset_name == "SCL_20m"
+                                else Resampling.bilinear
+                            ),
+                        )
+                        arrays[asset_name] = destination
+                        receipts.append(
+                            SatelliteAssetReceipt(
+                                asset_name=asset_name,
+                                source_checksum=asset.file_checksum,
+                                derived_content_sha256=_window_digest(
+                                    asset=asset, array=destination, transform=transform
+                                ),
+                                bytes_read=int(destination.nbytes),
+                            )
+                        )
+                    return arrays, tuple(receipts)
+
+                pre, receipts_pre = aligned(reference, reference_assets)
+                post, receipts_post = aligned(observation, observation_assets)
+        except SatelliteCpuError:
+            raise
+        except (BotoCoreError, ClientError, OSError, rasterio.errors.RasterioError) as exc:
+            raise SatelliteCpuError("cdse_sentinel2_read_failed", retryable=True) from exc
+        return Sentinel2ChangeWindow(
+            pre=pre,
+            post=post,
+            transform=transform,
+            crs=str(target.crs),
+            receipts_pre=receipts_pre,
+            receipts_post=receipts_post,
+        )
+
 
 def _artifact_assets(
     artifact: BackendIncidentDaySatelliteArtifact,
 ) -> tuple[str, tuple[SatelliteObservationAsset, ...]]:
     processor = artifact.quality_flags.get("satellite_observation_processor")
     raw_assets = artifact.quality_flags.get("satellite_observation_assets")
-    if processor not in {_CLMS_PROCESSOR, _FRP_PROCESSOR} or not isinstance(raw_assets, list):
+    if processor not in {
+        _CLMS_PROCESSOR,
+        _S1_PROCESSOR,
+        _S2_PROCESSOR,
+        _FRP_PROCESSOR,
+    } or not isinstance(
+        raw_assets, list
+    ):
         raise SatelliteCpuError("satellite_observation_manifest_missing", retryable=False)
     try:
         assets = tuple(SatelliteObservationAsset.model_validate(item) for item in raw_assets)
     except ValueError as exc:
         raise SatelliteCpuError("satellite_observation_manifest_invalid", retryable=False) from exc
-    expected = (
-        _CLMS_ASSETS
-        if processor == _CLMS_PROCESSOR
-        else _FRP_ASSETS_BY_COLLECTION.get(artifact.collection_key, ())
-    )
+    expected: tuple[str, ...]
+    if processor == _CLMS_PROCESSOR:
+        expected = _CLMS_ASSETS
+    elif processor == _S1_PROCESSOR:
+        expected = _S1_ASSETS
+    elif processor == _S2_PROCESSOR:
+        expected = _S2_ASSETS
+    else:
+        expected = _FRP_ASSETS_BY_COLLECTION.get(artifact.collection_key, ())
     if tuple(item.asset_name for item in assets) != expected:
         raise SatelliteCpuError("satellite_observation_asset_set_invalid", retryable=False)
     return str(processor), assets
@@ -342,6 +780,273 @@ def _observation_time(
     if acquired is not None and start <= acquired < end:
         return acquired
     return start + ((end - start) / 2)
+
+
+def _sentinel1_vvvh_observations(
+    *,
+    durable: DurableEventEvidence,
+    artifact: BackendIncidentDaySatelliteArtifact,
+    window: Sentinel1ChangeWindow,
+    vv_change_threshold_db: float,
+    vh_change_threshold_db: float,
+) -> Sentinel1ObservationOutcome:
+    from rasterio.features import shapes
+    from rasterio.warp import transform_geom
+    from shapely.geometry import box, mapping, shape
+    from shapely.ops import unary_union
+
+    if durable.incident_day_bbox is None:
+        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
+    pre_vv = np.asarray(window.pre["VV"], dtype=np.float64)
+    pre_vh = np.asarray(window.pre["VH"], dtype=np.float64)
+    post_vv = np.asarray(window.post["VV"], dtype=np.float64)
+    post_vh = np.asarray(window.post["VH"], dtype=np.float64)
+    if not (pre_vv.shape == pre_vh.shape == post_vv.shape == post_vh.shape):
+        raise SatelliteCpuError("sentinel1_change_shape_mismatch", retryable=False)
+    valid = (
+        np.isfinite(pre_vv)
+        & np.isfinite(pre_vh)
+        & np.isfinite(post_vv)
+        & np.isfinite(post_vh)
+        & (pre_vv > 0)
+        & (pre_vh > 0)
+        & (post_vv > 0)
+        & (post_vh > 0)
+    )
+    valid_pixel_count = int(np.count_nonzero(valid))
+    if valid_pixel_count == 0:
+        return Sentinel1ObservationOutcome(
+            observations=(),
+            valid_coverage_geojson=None,
+            coverage_metrics={"valid_pixel_count": 0, "invalid_fraction": 1.0},
+        )
+    incident_extent = box(*durable.incident_day_bbox)
+    coverage_polygons = []
+    for raw_geometry, value in shapes(
+        valid.astype(np.uint8), mask=valid, transform=window.transform
+    ):
+        if int(value) != 1:
+            continue
+        projected = transform_geom(window.crs, "EPSG:4326", raw_geometry, precision=7)
+        clipped = shape(projected).intersection(incident_extent)
+        if not clipped.is_empty:
+            coverage_polygons.append(clipped)
+    valid_coverage = unary_union(coverage_polygons) if coverage_polygons else None
+    if valid_coverage is not None and valid_coverage.geom_type not in {"Polygon", "MultiPolygon"}:
+        raise SatelliteCpuError("sentinel1_coverage_geometry_invalid", retryable=False)
+    coverage_geojson = mapping(valid_coverage) if valid_coverage is not None else None
+    coverage_metrics: dict[str, float | int] = {
+        "valid_pixel_count": valid_pixel_count,
+        "invalid_fraction": float(1 - (valid_pixel_count / valid.size)),
+    }
+    epsilon = np.finfo(np.float64).tiny
+    pre_vv_db = 10 * np.log10(np.maximum(pre_vv, epsilon))
+    pre_vh_db = 10 * np.log10(np.maximum(pre_vh, epsilon))
+    post_vv_db = 10 * np.log10(np.maximum(post_vv, epsilon))
+    post_vh_db = 10 * np.log10(np.maximum(post_vh, epsilon))
+    vv_change = np.abs(post_vv_db - pre_vv_db)
+    vh_change = np.abs(post_vh_db - pre_vh_db)
+    magnitude = np.hypot(vv_change, vh_change)
+    selected = (
+        valid
+        & (vv_change >= vv_change_threshold_db)
+        & (vh_change >= vh_change_threshold_db)
+    )
+    changed_pixel_count = int(np.count_nonzero(selected))
+    if changed_pixel_count == 0:
+        return Sentinel1ObservationOutcome(
+            observations=(),
+            valid_coverage_geojson=coverage_geojson,
+            coverage_metrics={**coverage_metrics, "changed_pixel_count": 0},
+        )
+    probability = np.clip(
+        0.25
+        + 0.10
+        * (
+            (vv_change / max(vv_change_threshold_db, 0.1))
+            + (vh_change / max(vh_change_threshold_db, 0.1))
+        ),
+        0,
+        0.45,
+    )
+    polygons = []
+    for raw_geometry, value in shapes(
+        probability.astype(np.float32), mask=selected, transform=window.transform
+    ):
+        if float(value) <= 0:
+            continue
+        projected = transform_geom(window.crs, "EPSG:4326", raw_geometry, precision=7)
+        clipped = shape(projected).intersection(incident_extent)
+        if not clipped.is_empty:
+            polygons.append(clipped)
+    if not polygons:
+        return Sentinel1ObservationOutcome(
+            observations=(),
+            valid_coverage_geojson=coverage_geojson,
+            coverage_metrics={**coverage_metrics, "changed_pixel_count": changed_pixel_count},
+        )
+    geometry = unary_union(polygons)
+    if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
+        raise SatelliteCpuError("sentinel1_change_geometry_invalid", retryable=False)
+    observation_digest = sha256(
+        (
+            artifact.artifact_revision_id
+            + geometry.wkb_hex
+            + f"{vv_change_threshold_db:.6f}:{vh_change_threshold_db:.6f}"
+        ).encode()
+    ).hexdigest()
+    return Sentinel1ObservationOutcome(
+        observations=(
+            {
+                "observation_id": f"S1-VVVH-{observation_digest[:24]}",
+                "observed_at": _observation_time(durable, artifact).isoformat(),
+                "geometry_geojson": mapping(geometry),
+                "coverage_geojson": coverage_geojson,
+                "horizontal_accuracy_m": max(40.0, float(artifact.resolution_m or 40)),
+                "confidence": float(np.mean(probability[selected])),
+                "metrics": {
+                    **coverage_metrics,
+                    "changed_pixel_count": changed_pixel_count,
+                    "change_probability_mean": float(np.mean(probability[selected])),
+                    "change_magnitude_mean_db": float(np.mean(magnitude[selected])),
+                    "pre_vv_db_mean": float(np.mean(pre_vv_db[selected])),
+                    "post_vv_db_mean": float(np.mean(post_vv_db[selected])),
+                    "pre_vh_db_mean": float(np.mean(pre_vh_db[selected])),
+                    "post_vh_db_mean": float(np.mean(post_vh_db[selected])),
+                    "vv_change_threshold_db": vv_change_threshold_db,
+                    "vh_change_threshold_db": vh_change_threshold_db,
+                },
+            },
+        ),
+        valid_coverage_geojson=coverage_geojson,
+        coverage_metrics={**coverage_metrics, "changed_pixel_count": changed_pixel_count},
+    )
+
+
+def _sentinel2_nbr_observations(
+    *,
+    durable: DurableEventEvidence,
+    artifact: BackendIncidentDaySatelliteArtifact,
+    window: Sentinel2ChangeWindow,
+    dnbr_threshold: float,
+    minimum_probability: float,
+) -> Sentinel2ObservationOutcome:
+    from rasterio.features import shapes
+    from rasterio.warp import transform_geom
+    from shapely.geometry import box, mapping, shape
+    from shapely.ops import unary_union
+
+    if durable.incident_day_bbox is None:
+        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
+    pre_scl = np.rint(window.pre["SCL_20m"]).astype(np.int16)
+    post_scl = np.rint(window.post["SCL_20m"]).astype(np.int16)
+    invalid_scl = np.array([0, 1, 3, 8, 9, 10, 11], dtype=np.int16)
+    valid = ~np.isin(pre_scl, invalid_scl) & ~np.isin(post_scl, invalid_scl)
+    pre_nir = np.asarray(window.pre["B8A_20m"], dtype=np.float64)
+    pre_swir = np.asarray(window.pre["B12_20m"], dtype=np.float64)
+    post_nir = np.asarray(window.post["B8A_20m"], dtype=np.float64)
+    post_swir = np.asarray(window.post["B12_20m"], dtype=np.float64)
+    pre_denominator = pre_nir + pre_swir
+    post_denominator = post_nir + post_swir
+    valid &= (
+        np.isfinite(pre_nir)
+        & np.isfinite(pre_swir)
+        & np.isfinite(post_nir)
+        & np.isfinite(post_swir)
+        & (pre_denominator > 0)
+        & (post_denominator > 0)
+    )
+    valid_pixel_count = int(np.count_nonzero(valid))
+    if valid_pixel_count == 0:
+        return Sentinel2ObservationOutcome(
+            observations=(),
+            valid_coverage_geojson=None,
+            coverage_metrics={"valid_pixel_count": 0, "cloud_fraction": 1.0},
+        )
+    incident_extent = box(*durable.incident_day_bbox)
+    coverage_polygons = []
+    for raw_geometry, value in shapes(
+        valid.astype(np.uint8), mask=valid, transform=window.transform
+    ):
+        if int(value) != 1:
+            continue
+        projected = transform_geom(window.crs, "EPSG:4326", raw_geometry, precision=7)
+        clipped = shape(projected).intersection(incident_extent)
+        if not clipped.is_empty:
+            coverage_polygons.append(clipped)
+    valid_coverage = unary_union(coverage_polygons) if coverage_polygons else None
+    if valid_coverage is not None and valid_coverage.geom_type not in {"Polygon", "MultiPolygon"}:
+        raise SatelliteCpuError("sentinel2_coverage_geometry_invalid", retryable=False)
+    coverage_geojson = mapping(valid_coverage) if valid_coverage is not None else None
+    coverage_metrics: dict[str, float | int] = {
+        "valid_pixel_count": valid_pixel_count,
+        "cloud_fraction": float(1 - (valid_pixel_count / valid.size)),
+    }
+    pre_nbr = np.zeros_like(pre_nir)
+    post_nbr = np.zeros_like(post_nir)
+    np.divide(pre_nir - pre_swir, pre_denominator, out=pre_nbr, where=valid)
+    np.divide(post_nir - post_swir, post_denominator, out=post_nbr, where=valid)
+    dnbr = pre_nbr - post_nbr
+    probability = np.clip(
+        0.5 + (dnbr - dnbr_threshold) / max(0.2, 2 * (0.66 - dnbr_threshold)),
+        0,
+        1,
+    )
+    selected = valid & (dnbr >= dnbr_threshold) & (probability >= minimum_probability)
+    burned_pixel_count = int(np.count_nonzero(selected))
+    if burned_pixel_count == 0:
+        return Sentinel2ObservationOutcome(
+            observations=(),
+            valid_coverage_geojson=coverage_geojson,
+            coverage_metrics={**coverage_metrics, "burned_pixel_count": 0},
+        )
+    polygons = []
+    for raw_geometry, value in shapes(
+        probability.astype(np.float32), mask=selected, transform=window.transform
+    ):
+        if float(value) < minimum_probability:
+            continue
+        projected = transform_geom(window.crs, "EPSG:4326", raw_geometry, precision=7)
+        clipped = shape(projected).intersection(incident_extent)
+        if not clipped.is_empty:
+            polygons.append(clipped)
+    if not polygons:
+        return Sentinel2ObservationOutcome(
+            observations=(),
+            valid_coverage_geojson=coverage_geojson,
+            coverage_metrics={**coverage_metrics, "burned_pixel_count": burned_pixel_count},
+        )
+    geometry = unary_union(polygons)
+    if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
+        raise SatelliteCpuError("sentinel2_burned_geometry_invalid", retryable=False)
+    observed_at = _observation_time(durable, artifact)
+    observation_digest = sha256(
+        (artifact.artifact_revision_id + geometry.wkb_hex + f"{dnbr_threshold:.6f}").encode()
+    ).hexdigest()
+    return Sentinel2ObservationOutcome(
+        observations=(
+            {
+                "observation_id": f"S2-DNBR-{observation_digest[:24]}",
+                "observed_at": observed_at.isoformat(),
+                "geometry_geojson": mapping(geometry),
+                "coverage_geojson": coverage_geojson,
+                "horizontal_accuracy_m": max(20.0, float(artifact.resolution_m or 20)),
+                "confidence": float(np.mean(probability[selected])),
+                "metrics": {
+                    **coverage_metrics,
+                    "burned_pixel_count": burned_pixel_count,
+                    "dnbr_mean": float(np.mean(dnbr[selected])),
+                    "dnbr_max": float(np.max(dnbr[selected])),
+                    "pre_nbr_mean": float(np.mean(pre_nbr[selected])),
+                    "post_nbr_mean": float(np.mean(post_nbr[selected])),
+                    "dnbr_threshold": dnbr_threshold,
+                    "minimum_probability": minimum_probability,
+                },
+            },
+        ),
+        valid_coverage_geojson=coverage_geojson,
+        coverage_metrics={**coverage_metrics, "burned_pixel_count": burned_pixel_count},
+    )
 
 
 def _clms_observations(
@@ -630,17 +1335,38 @@ class SatelliteObservationCpuWorker:
         publisher: BackendIncidentDaySatelliteObservationPublisher,
         probability_threshold: float = 0.5,
         fraction_threshold: float = 0.1,
+        dnbr_threshold: float = 0.1,
+        minimum_burn_probability: float = 0.5,
         minimum_frp_confidence: float = 0.3,
+        sentinel1_vv_change_threshold_db: float = 1.5,
+        sentinel1_vh_change_threshold_db: float = 1.5,
+        openeo_maximum_authorized_credits: float = 0,
     ) -> None:
-        for value in (probability_threshold, fraction_threshold, minimum_frp_confidence):
+        for value in (
+            probability_threshold,
+            fraction_threshold,
+            dnbr_threshold,
+            minimum_burn_probability,
+            minimum_frp_confidence,
+        ):
             if not 0 <= value <= 1:
                 raise ValueError("satellite observation threshold is outside [0, 1]")
+        for value in (sentinel1_vv_change_threshold_db, sentinel1_vh_change_threshold_db):
+            if not 0.1 <= value <= 50:
+                raise ValueError("Sentinel-1 dB change threshold is outside [0.1, 50]")
+        if not 0 <= openeo_maximum_authorized_credits <= 100:
+            raise ValueError("openEO credit ceiling is outside [0, 100]")
         self.repository = repository
         self.asset_reader = asset_reader
         self.publisher = publisher
         self.probability_threshold = probability_threshold
         self.fraction_threshold = fraction_threshold
+        self.dnbr_threshold = dnbr_threshold
+        self.minimum_burn_probability = minimum_burn_probability
         self.minimum_frp_confidence = minimum_frp_confidence
+        self.sentinel1_vv_change_threshold_db = sentinel1_vv_change_threshold_db
+        self.sentinel1_vh_change_threshold_db = sentinel1_vh_change_threshold_db
+        self.openeo_maximum_authorized_credits = openeo_maximum_authorized_credits
 
     def run(self, analysis_id: str, artifact_revision_id: str) -> SatelliteObservationCpuRunReceipt:
         durable = self.repository.read(analysis_id)
@@ -653,7 +1379,14 @@ class SatelliteObservationCpuWorker:
         eligible = []
         for item in durable.satellite_artifact_tickets:
             processor = item.quality_flags.get("satellite_observation_processor")
-            if processor in {_CLMS_PROCESSOR, _FRP_PROCESSOR}:
+            if processor in {
+                _CLMS_PROCESSOR,
+                _S1_PROCESSOR,
+                _S2_PROCESSOR,
+                _FRP_PROCESSOR,
+            } and (
+                item.quality_flags.get("temporal_role") != "pre_fire_reference"
+            ):
                 eligible.append(item)
         completed_ids = {
             item.artifact_revision_id for item in durable.satellite_observation_batches
@@ -679,23 +1412,117 @@ class SatelliteObservationCpuWorker:
             raise SatelliteCpuError("clms_satellite_collection_mismatch", retryable=False)
         if processor == _FRP_PROCESSOR and artifact.collection_key not in _FRP_COLLECTIONS:
             raise SatelliteCpuError("sentinel3_frp_collection_mismatch", retryable=False)
+        if processor == _S1_PROCESSOR and artifact.collection_key != _S1_COLLECTION:
+            raise SatelliteCpuError("sentinel1_change_collection_mismatch", retryable=False)
+        if processor == _S2_PROCESSOR and artifact.collection_key != _S2_COLLECTION:
+            raise SatelliteCpuError("sentinel2_change_collection_mismatch", retryable=False)
+        reference_artifact = None
+        reference_assets: tuple[SatelliteObservationAsset, ...] = ()
+        if processor in {_S1_PROCESSOR, _S2_PROCESSOR}:
+            change_collection = _S1_COLLECTION if processor == _S1_PROCESSOR else _S2_COLLECTION
+            references = [
+                item
+                for item in durable.satellite_artifact_tickets
+                if item.collection_key == change_collection
+                and item.quality_flags.get("satellite_observation_processor") == processor
+                and item.quality_flags.get("temporal_role") == "pre_fire_reference"
+            ]
+            if len(references) != 1:
+                raise SatelliteCpuError(
+                    "satellite_change_prefire_reference_unavailable", retryable=False
+                )
+            reference_artifact = references[0]
+            _reference_processor, reference_assets = _artifact_assets(reference_artifact)
+        valid_coverage_geojson: dict[str, Any] | None = None
+        coverage_metrics: dict[str, float | int] = {}
         with TemporaryDirectory(prefix="fireviewer-satellite-observation-") as directory:
             if processor == _CLMS_PROCESSOR:
-                window = self.asset_reader.read_clms_window(
+                clms_window = self.asset_reader.read_clms_window(
                     assets=assets, bbox=durable.incident_day_bbox
                 )
                 observations = _clms_observations(
                     durable=durable,
                     artifact=artifact,
-                    window=window,
+                    window=clms_window,
                     probability_threshold=self.probability_threshold,
                     fraction_threshold=self.fraction_threshold,
                 )
-                receipts = window.receipts
+                receipts = clms_window.receipts
                 revision = _CLMS_REVISION
                 parameters = {
                     "probability_threshold": self.probability_threshold,
                     "fraction_threshold": self.fraction_threshold,
+                }
+                receipt_payloads = [
+                    item.as_payload(source_artifact_revision_id=artifact_revision_id)
+                    for item in receipts
+                ]
+            elif processor == _S1_PROCESSOR:
+                assert reference_artifact is not None
+                if self.openeo_maximum_authorized_credits <= 0:
+                    raise SatelliteCpuError("cdse_openeo_credit_ceiling_missing", retryable=False)
+                sentinel1_window = self.asset_reader.read_sentinel1_change_window(
+                    reference_artifact=reference_artifact,
+                    observation_artifact=artifact,
+                    bbox=durable.incident_day_bbox,
+                )
+                sentinel1_outcome = _sentinel1_vvvh_observations(
+                    durable=durable,
+                    artifact=artifact,
+                    window=sentinel1_window,
+                    vv_change_threshold_db=self.sentinel1_vv_change_threshold_db,
+                    vh_change_threshold_db=self.sentinel1_vh_change_threshold_db,
+                )
+                observations = list(sentinel1_outcome.observations)
+                valid_coverage_geojson = sentinel1_outcome.valid_coverage_geojson
+                coverage_metrics = sentinel1_outcome.coverage_metrics
+                receipts = (*sentinel1_window.receipts_pre, *sentinel1_window.receipts_post)
+                receipt_payloads = [
+                    item.as_payload(
+                        source_artifact_revision_id=reference_artifact.artifact_revision_id
+                    )
+                    for item in sentinel1_window.receipts_pre
+                ] + [
+                    item.as_payload(source_artifact_revision_id=artifact_revision_id)
+                    for item in sentinel1_window.receipts_post
+                ]
+                revision = _S1_REVISION
+                parameters = {
+                    "vv_change_threshold_db": self.sentinel1_vv_change_threshold_db,
+                    "vh_change_threshold_db": self.sentinel1_vh_change_threshold_db,
+                    "maximum_authorized_credits": self.openeo_maximum_authorized_credits,
+                }
+            elif processor == _S2_PROCESSOR:
+                assert reference_artifact is not None
+                sentinel2_window = self.asset_reader.read_sentinel2_change_window(
+                    reference_assets=reference_assets,
+                    observation_assets=assets,
+                    bbox=durable.incident_day_bbox,
+                )
+                sentinel2_outcome = _sentinel2_nbr_observations(
+                    durable=durable,
+                    artifact=artifact,
+                    window=sentinel2_window,
+                    dnbr_threshold=self.dnbr_threshold,
+                    minimum_probability=self.minimum_burn_probability,
+                )
+                observations = list(sentinel2_outcome.observations)
+                valid_coverage_geojson = sentinel2_outcome.valid_coverage_geojson
+                coverage_metrics = sentinel2_outcome.coverage_metrics
+                receipts = (*sentinel2_window.receipts_pre, *sentinel2_window.receipts_post)
+                receipt_payloads = [
+                    item.as_payload(
+                        source_artifact_revision_id=reference_artifact.artifact_revision_id
+                    )
+                    for item in sentinel2_window.receipts_pre
+                ] + [
+                    item.as_payload(source_artifact_revision_id=artifact_revision_id)
+                    for item in sentinel2_window.receipts_post
+                ]
+                revision = _S2_REVISION
+                parameters = {
+                    "dnbr_threshold": self.dnbr_threshold,
+                    "minimum_probability": self.minimum_burn_probability,
                 }
             else:
                 output_path = Path(directory) / "sentinel3-frp.nc"
@@ -709,6 +1536,10 @@ class SatelliteObservationCpuWorker:
                 receipts = (receipt,)
                 revision = _FRP_REVISION
                 parameters = {"minimum_confidence": self.minimum_frp_confidence}
+                receipt_payloads = [
+                    item.as_payload(source_artifact_revision_id=artifact_revision_id)
+                    for item in receipts
+                ]
             status: Literal["completed", "no_observation"] = (
                 "completed" if observations else "no_observation"
             )
@@ -719,12 +1550,19 @@ class SatelliteObservationCpuWorker:
                     "analysis_id": analysis_id,
                     "source_revision_sha256": durable.source_revision_sha256,
                     "artifact_revision_id": artifact_revision_id,
+                    "reference_artifact_revision_id": (
+                        reference_artifact.artifact_revision_id
+                        if reference_artifact is not None
+                        else None
+                    ),
                     "result_id": _result_id(analysis_id, artifact_revision_id, processor),
                     "processor": processor,
                     "processor_revision": revision,
                     "status": status,
                     "observations": observations,
-                    "asset_receipts": [item.as_payload() for item in receipts],
+                    "valid_coverage_geojson": valid_coverage_geojson,
+                    "coverage_metrics": coverage_metrics,
+                    "asset_receipts": receipt_payloads,
                     "processing_parameters": parameters,
                     "raw_satellite_content_stored": False,
                 },
@@ -750,4 +1588,8 @@ __all__ = [
     "SatelliteObservationAsset",
     "SatelliteObservationCpuRunReceipt",
     "SatelliteObservationCpuWorker",
+    "Sentinel1ChangeWindow",
+    "Sentinel1ObservationOutcome",
+    "Sentinel2ChangeWindow",
+    "Sentinel2ObservationOutcome",
 ]

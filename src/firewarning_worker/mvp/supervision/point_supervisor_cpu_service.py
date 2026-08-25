@@ -5,12 +5,13 @@ from __future__ import annotations
 import os
 from typing import Literal, cast
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 from firewarning_worker.contracts import StrictModel
 from firewarning_worker.mvp.research.multimodal_evidence import (
     AzureFederatedBedrockClient,
     AzureManagedIdentityWebTokenProvider,
+    InvocationLimitedBedrockClient,
 )
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     AzureBackendEventEvidenceAdapter,
@@ -42,8 +43,11 @@ def _env_bool(name: str, default: bool = False) -> bool:
 class PointSupervisorCpuSettings(StrictModel):
     host: Literal["127.0.0.1"] = "127.0.0.1"
     port: int = Field(default=8091, ge=1, le=65_535)
-    supervisor_mode: Literal["managed_vl", "simulated"] = "managed_vl"
+    supervisor_mode: Literal["managed_vl", "simulated"] = "simulated"
     assessment_sink_enabled: bool = False
+    bedrock_paid_invocation_enabled: bool = False
+    authorized_bedrock_invocations: int = Field(default=0, ge=0, le=10_000)
+    bedrock_maximum_output_tokens: int = Field(default=2_048, ge=256, le=4_096)
     managed_identity_client_id: str | None = Field(default=None, min_length=36, max_length=36)
     aws_role_arn: str | None = Field(
         default=None,
@@ -58,9 +62,17 @@ class PointSupervisorCpuSettings(StrictModel):
     )
     backend: AzureBackendEventEvidenceConfig
 
+    @model_validator(mode="after")
+    def validate_paid_supervisor_gate(self) -> PointSupervisorCpuSettings:
+        if self.supervisor_mode == "managed_vl" and not self.bedrock_paid_invocation_enabled:
+            raise ValueError("managed VL requires the explicit paid Bedrock invocation gate")
+        if self.supervisor_mode == "managed_vl" and self.authorized_bedrock_invocations < 1:
+            raise ValueError("managed VL requires a positive invocation budget")
+        return self
+
     @classmethod
     def from_environment(cls) -> PointSupervisorCpuSettings:
-        raw_mode = os.getenv("FIREVIEWER_POINT_SUPERVISOR_MODE", "managed_vl")
+        raw_mode = os.getenv("FIREVIEWER_POINT_SUPERVISOR_MODE", "simulated")
         if raw_mode not in {"managed_vl", "simulated"}:
             raise ValueError("FIREVIEWER_POINT_SUPERVISOR_MODE is invalid")
         return cls(
@@ -69,6 +81,15 @@ class PointSupervisorCpuSettings(StrictModel):
             assessment_sink_enabled=_env_bool(
                 "FIREVIEWER_POINT_ASSESSMENT_SINK_ENABLED",
                 _env_bool("FIREVIEWER_POINT_PUBLICATION_ENABLED", False),
+            ),
+            bedrock_paid_invocation_enabled=_env_bool(
+                "FIREVIEWER_BEDROCK_PAID_INVOCATION_ENABLED", False
+            ),
+            authorized_bedrock_invocations=int(
+                os.getenv("FIREVIEWER_BEDROCK_AUTHORIZED_INVOCATIONS", "0")
+            ),
+            bedrock_maximum_output_tokens=int(
+                os.getenv("FIREVIEWER_BEDROCK_MAX_OUTPUT_TOKENS", "2048")
             ),
             managed_identity_client_id=os.getenv("AZURE_CLIENT_ID"),
             aws_role_arn=os.getenv("FIREVIEWER_BEDROCK_ROLE_ARN"),
@@ -99,15 +120,19 @@ def _managed_supervisor(settings: PointSupervisorCpuSettings) -> BedrockPixtralP
         BedrockPixtralPointSupervisorConfig(
             region_name=settings.aws_region,
             inference_profile_id=settings.bedrock_model_id,
+            maximum_output_tokens=settings.bedrock_maximum_output_tokens,
         ),
-        client=AzureFederatedBedrockClient(
-            role_arn=str(settings.aws_role_arn),
-            region_name=settings.aws_region,
-            role_session_name="fireviewer-point-supervisor",
-            web_token_provider=AzureManagedIdentityWebTokenProvider(
-                audience=str(settings.aws_oidc_audience),
-                managed_identity_client_id=str(settings.managed_identity_client_id),
+        client=InvocationLimitedBedrockClient(
+            AzureFederatedBedrockClient(
+                role_arn=str(settings.aws_role_arn),
+                region_name=settings.aws_region,
+                role_session_name="fireviewer-point-supervisor",
+                web_token_provider=AzureManagedIdentityWebTokenProvider(
+                    audience=str(settings.aws_oidc_audience),
+                    managed_identity_client_id=str(settings.managed_identity_client_id),
+                ),
             ),
+            maximum_invocations=settings.authorized_bedrock_invocations,
         ),
     )
 

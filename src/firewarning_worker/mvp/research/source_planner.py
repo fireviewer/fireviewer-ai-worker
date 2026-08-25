@@ -80,7 +80,9 @@ class AutomaticSourcePlannerConfig(StrictModel):
     source_policies: dict[str, SourceDomainPolicy] = Field(
         default_factory=lambda: dict(DEFAULT_SOURCE_POLICIES)
     )
-    media_ticket_limit: int = Field(default=2_048, ge=1, le=2_048)
+    media_ticket_limit: int = Field(default=100, ge=1, le=2_048)
+    video_ticket_limit: int = Field(default=30, ge=0, le=512)
+    max_source_pages: int = Field(default=200, ge=1, le=10_000)
     results_per_page: int = Field(default=20, ge=1, le=50)
     media_per_source: int = Field(default=8, ge=1, le=20)
     max_pages_per_run: int = Field(default=5, ge=1, le=50)
@@ -93,6 +95,8 @@ class AutomaticSourcePlannerConfig(StrictModel):
             raise ValueError("automatic source domains must be unique")
         if self.search_provider_domain.casefold().rstrip(".") in normalized:
             raise ValueError("search provider must be separate from source domains")
+        if self.video_ticket_limit > self.media_ticket_limit:
+            raise ValueError("video ticket limit cannot exceed the total media ticket limit")
         return self
 
 
@@ -221,6 +225,8 @@ class AutomaticSourceAcquisitionPlanner:
                 "queries": queries,
                 "domains": sorted(policies),
                 "media_ticket_limit": self.config.media_ticket_limit,
+                "video_ticket_limit": self.config.video_ticket_limit,
+                "max_source_pages": self.config.max_source_pages,
             },
             ensure_ascii=False,
             separators=(",", ":"),
@@ -237,6 +243,8 @@ class AutomaticSourceAcquisitionPlanner:
             search_provider_domain=search_provider_domain,
             search_template=search_template,
             media_ticket_limit=self.config.media_ticket_limit,
+            video_ticket_limit=self.config.video_ticket_limit,
+            max_source_pages=self.config.max_source_pages,
             results_per_page=self.config.results_per_page,
             media_per_source=self.config.media_per_source,
             max_pages_per_run=self.config.max_pages_per_run,

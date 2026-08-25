@@ -47,12 +47,22 @@ class UploadLocationEvidence(StrictModel):
     location_origin: Literal["user_declared", "human_confirmed", "metadata"]
     captured_at: datetime | None = None
     heading_deg: float | None = Field(default=None, ge=0, lt=360, allow_inf_nan=False)
+    pitch_deg: float | None = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
+    roll_deg: float | None = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
     horizontal_fov_deg: float | None = Field(
         default=None,
         gt=0,
         lt=180,
         allow_inf_nan=False,
     )
+    vertical_fov_deg: float | None = Field(
+        default=None,
+        gt=0,
+        lt=180,
+        allow_inf_nan=False,
+    )
+    image_width_px: int | None = Field(default=None, ge=1, le=100_000)
+    image_height_px: int | None = Field(default=None, ge=1, le=100_000)
     heading_uncertainty_deg: float | None = Field(
         default=None,
         gt=0,
@@ -77,6 +87,14 @@ class UploadLocationEvidence(StrictModel):
             raise ValueError("heading uncertainty requires a heading")
         if self.heading_deg is None and self.horizontal_fov_deg is not None:
             raise ValueError("horizontal field of view requires a heading")
+        if (self.pitch_deg is None) != (self.roll_deg is None):
+            raise ValueError("pitch and roll must be supplied together")
+        if self.pitch_deg is not None and self.heading_deg is None:
+            raise ValueError("camera pitch and roll require a heading")
+        if self.vertical_fov_deg is not None and self.horizontal_fov_deg is None:
+            raise ValueError("vertical field of view requires horizontal field of view")
+        if (self.image_width_px is None) != (self.image_height_px is None):
+            raise ValueError("image dimensions must be supplied together")
         if self.altitude_m is None and self.altitude_uncertainty_m is not None:
             raise ValueError("altitude uncertainty requires an altitude")
         return self
@@ -209,13 +227,9 @@ class PointEvidenceBundleV1(SchemaContractModel):
     def validate_bundle(self) -> PointEvidenceBundleV1:
         collections = {
             "upload location": tuple(item.location_id for item in self.upload_locations),
-            "evidence reference": tuple(
-                item.evidence_id for item in self.evidence_references
-            ),
+            "evidence reference": tuple(item.evidence_id for item in self.evidence_references),
             "prior fire state": tuple(item.state_id for item in self.prior_fire_states),
-            "geographic reference": tuple(
-                item.reference_id for item in self.geographic_references
-            ),
+            "geographic reference": tuple(item.reference_id for item in self.geographic_references),
             "geospatial check": tuple(item.check_id for item in self.geospatial_checks),
             "RAG document": tuple(item.document_id for item in self.retrieved_context),
         }
@@ -232,20 +246,16 @@ class PointEvidenceBundleV1(SchemaContractModel):
         if not set(self.point.source_candidate_ids).issubset(candidate_reference_ids):
             raise ValueError("candidate point references missing location candidate evidence")
         media_reference_ids = {
-            item.evidence_id
-            for item in self.evidence_references
-            if item.evidence_type == "media"
+            item.evidence_id for item in self.evidence_references if item.evidence_type == "media"
         }
         if any(item.media_id not in media_reference_ids for item in self.upload_locations):
             raise ValueError("upload location references missing media evidence")
         if any(
-            not set(item.evidence_ids).issubset(evidence_ids)
-            for item in self.geospatial_checks
+            not set(item.evidence_ids).issubset(evidence_ids) for item in self.geospatial_checks
         ):
             raise ValueError("geospatial check references missing evidence")
         if any(
-            not set(item.evidence_ids).issubset(evidence_ids)
-            for item in self.retrieved_context
+            not set(item.evidence_ids).issubset(evidence_ids) for item in self.retrieved_context
         ):
             raise ValueError("RAG context references missing evidence")
         prior_reference_ids = {
@@ -263,15 +273,10 @@ class PointEvidenceBundleV1(SchemaContractModel):
         supplied_geographic_reference_ids = {
             item.reference_id for item in self.geographic_references
         }
-        if (
-            not typed_geographic_reference_ids.issubset(
-                supplied_geographic_reference_ids
-            )
-            or not supplied_geographic_reference_ids.issubset(evidence_ids)
-        ):
-            raise ValueError(
-                "geographic evidence references must match the supplied references"
-            )
+        if not typed_geographic_reference_ids.issubset(
+            supplied_geographic_reference_ids
+        ) or not supplied_geographic_reference_ids.issubset(evidence_ids):
+            raise ValueError("geographic evidence references must match the supplied references")
         if len(self.missing_evidence_codes) != len(set(self.missing_evidence_codes)):
             raise ValueError("missing evidence codes must be unique")
         return self
@@ -374,9 +379,7 @@ class PointAssessmentV1(SchemaContractModel):
                 or competing.source_point_id != self.point_id
                 or competing.source_bundle_sha256 != self.bundle_sha256
             ):
-                raise ValueError(
-                    "competing point JSON must reference the assessed source document"
-                )
+                raise ValueError("competing point JSON must reference the assessed source document")
         auto_publication = self.release_status == "eligible_for_automatic_publication"
         eligible = (
             self.verdict == "accept"
@@ -392,9 +395,7 @@ class PointAssessmentV1(SchemaContractModel):
                 "confidence strictly above 0.85"
             )
         if self.needs_human_review == auto_publication:
-            raise ValueError(
-                "human review is required unless automatic publication is eligible"
-            )
+            raise ValueError("human review is required unless automatic publication is eligible")
         return self
 
 

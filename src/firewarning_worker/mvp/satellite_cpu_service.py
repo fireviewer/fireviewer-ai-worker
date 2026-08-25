@@ -102,8 +102,15 @@ class SatelliteCpuServiceSettings(StrictModel):
             )
         cdse_access_key = os.getenv("FIREVIEWER_CDSE_S3_ACCESS_KEY")
         cdse_secret_key = os.getenv("FIREVIEWER_CDSE_S3_SECRET_KEY")
+        openeo_enabled = _env_bool("FIREVIEWER_CDSE_OPENEO_INVOCATION_ENABLED", False)
+        openeo_access_token = os.getenv("FIREVIEWER_CDSE_OPENEO_ACCESS_TOKEN")
+        openeo_credit_ceiling = float(
+            os.getenv("FIREVIEWER_CDSE_OPENEO_MAXIMUM_AUTHORIZED_CREDITS", "0")
+        )
         if bool(cdse_access_key) != bool(cdse_secret_key):
             raise ValueError("CDSE S3 credentials must be configured together")
+        if openeo_enabled and (not cdse_access_key or not cdse_secret_key):
+            raise ValueError("openEO observations require the configured CDSE satellite reader")
         cdse = (
             CdseObservationS3Config(
                 access_key=SecretStr(cdse_access_key),
@@ -113,6 +120,14 @@ class SatelliteCpuServiceSettings(StrictModel):
                         "FIREVIEWER_SATELLITE_MAX_OBSERVATION_WINDOW_PIXELS",
                         "4000000",
                     )
+                ),
+                openeo_invocation_enabled=openeo_enabled,
+                openeo_access_token=(
+                    SecretStr(openeo_access_token) if openeo_access_token else None
+                ),
+                openeo_maximum_authorized_credits=openeo_credit_ceiling,
+                openeo_timeout_seconds=float(
+                    os.getenv("FIREVIEWER_CDSE_OPENEO_TIMEOUT_SECONDS", "120")
                 ),
             )
             if cdse_access_key is not None and cdse_secret_key is not None
@@ -168,6 +183,10 @@ class SatelliteCpuHandler(BaseHTTPRequestHandler):
                 "status": "ready",
                 "cpu_preparation_ready": True,
                 "deterministic_satellite_observations_ready": self.settings.cdse is not None,
+                "sentinel1_openeo_enabled": bool(
+                    self.settings.cdse is not None
+                    and self.settings.cdse.openeo_invocation_enabled
+                ),
                 "paid_invocation_enabled": self.settings.paid_invocation_enabled,
                 "gpu_invoked": False,
             },
@@ -267,12 +286,17 @@ class SatelliteCpuHandler(BaseHTTPRequestHandler):
                 {"error": "satellite_observation_worker_busy", "retryable": True},
             )
             return
+        asset_reader: CdseS3ObservationAssetReader | None = None
         try:
             request = SatelliteObservationCpuRequest.model_validate_json(self.rfile.read(size))
+            asset_reader = CdseS3ObservationAssetReader(self.settings.cdse)
             receipt = SatelliteObservationCpuWorker(
                 repository=AzureBackendIncidentDayEvidenceAdapter(self.settings.backend),
-                asset_reader=CdseS3ObservationAssetReader(self.settings.cdse),
+                asset_reader=asset_reader,
                 publisher=BackendIncidentDaySatelliteObservationPublisher(self.settings.backend),
+                openeo_maximum_authorized_credits=(
+                    self.settings.cdse.openeo_maximum_authorized_credits
+                ),
             ).run(request.analysis_id, request.artifact_revision_id)
         except SatelliteCpuError as exc:
             self._write(
@@ -284,6 +308,8 @@ class SatelliteCpuHandler(BaseHTTPRequestHandler):
             self._write(HTTPStatus.BAD_REQUEST, {"error": "invalid_request"})
             return
         finally:
+            if asset_reader is not None:
+                asset_reader.close()
             self.observation_lock.release()
         self._write(
             HTTPStatus.OK,
