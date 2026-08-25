@@ -121,6 +121,12 @@ class SatelliteCpuServiceSettings(StrictModel):
                         "4000000",
                     )
                 ),
+                sentinel2_maximum_download_bytes=int(
+                    os.getenv(
+                        "FIREVIEWER_SENTINEL2_MAXIMUM_DOWNLOAD_BYTES",
+                        str(512 * 1_024 * 1_024),
+                    )
+                ),
                 openeo_invocation_enabled=openeo_enabled,
                 openeo_access_token=(
                     SecretStr(openeo_access_token) if openeo_access_token else None

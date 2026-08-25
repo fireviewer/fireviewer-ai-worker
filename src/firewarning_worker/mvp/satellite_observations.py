@@ -35,7 +35,7 @@ _CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.0.0"
 _CLMS_COLLECTION = "clms_ba_global_300m_daily_v4_cog"
 _CLMS_ASSETS = ("ba300_dob_nrt", "ba300_cp_nrt", "ba300_bf_nrt")
 _S2_PROCESSOR = "sentinel2_nbr_change_v1"
-_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.2"
+_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.3"
 _S2_COLLECTION = "sentinel-2-l2a"
 _S2_ASSETS = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
 _S1_PROCESSOR = "sentinel1_vvvh_change_v1"
@@ -56,6 +56,7 @@ _PROCESSOR_REVISIONS = {
     _FRP_PROCESSOR: _FRP_REVISION,
 }
 _MAX_FRP_SAMPLES = 500_000
+_DEFAULT_S2_MAXIMUM_DOWNLOAD_BYTES = 512 * 1_024 * 1_024
 
 
 class SatelliteObservationAsset(StrictModel):
@@ -114,6 +115,11 @@ class CdseObservationS3Config(StrictModel):
     secret_key: SecretStr = Field(min_length=16, max_length=512)
     region_name: str = Field(default="eu-central-1", min_length=3, max_length=64)
     maximum_window_pixels: int = Field(default=4_000_000, ge=256, le=25_000_000)
+    sentinel2_maximum_download_bytes: int = Field(
+        default=_DEFAULT_S2_MAXIMUM_DOWNLOAD_BYTES,
+        ge=1_024,
+        le=2 * 1_024 * 1_024 * 1_024,
+    )
     openeo_invocation_enabled: bool = False
     openeo_access_token: SecretStr | None = Field(default=None, min_length=32, max_length=8_192)
     openeo_maximum_authorized_credits: float = Field(default=0, ge=0, le=100)
@@ -613,6 +619,42 @@ class CdseS3ObservationAssetReader:
             bytes_read=size,
         )
 
+    def _materialize_sentinel2_asset(
+        self,
+        *,
+        asset: SatelliteObservationAsset,
+        output_path: Path,
+    ) -> None:
+        body: Any | None = None
+        size = 0
+        try:
+            response = self._s3.get_object(Bucket="eodata", Key=asset.s3_key)
+            body = response["Body"]
+            with output_path.open("xb") as stream:
+                while True:
+                    chunk = body.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > asset.file_size_bytes:
+                        raise SatelliteCpuError(
+                            "sentinel2_asset_size_exceeds_manifest",
+                            retryable=False,
+                        )
+                    stream.write(chunk)
+        except SatelliteCpuError:
+            output_path.unlink(missing_ok=True)
+            raise
+        except (BotoCoreError, ClientError, KeyError, OSError) as exc:
+            output_path.unlink(missing_ok=True)
+            raise SatelliteCpuError("cdse_sentinel2_read_failed", retryable=True) from exc
+        finally:
+            if body is not None:
+                body.close()
+        if size != asset.file_size_bytes:
+            output_path.unlink(missing_ok=True)
+            raise SatelliteCpuError("sentinel2_asset_download_incomplete", retryable=True)
+
     def read_sentinel2_change_window(
         self,
         *,
@@ -622,7 +664,6 @@ class CdseS3ObservationAssetReader:
     ) -> Sentinel2ChangeWindow:
         import rasterio
         from rasterio.enums import Resampling
-        from rasterio.session import AWSSession
         from rasterio.warp import transform_bounds
         from rasterio.windows import Window, from_bounds
 
@@ -631,99 +672,111 @@ class CdseS3ObservationAssetReader:
             or tuple(item.asset_name for item in observation_assets) != _S2_ASSETS
         ):
             raise SatelliteCpuError("sentinel2_change_asset_set_invalid", retryable=False)
-        aws_session = AWSSession(session=self._session, requester_pays=False)
-        endpoint_host = urlsplit(self.config.endpoint_url).hostname
+        requested_download_bytes = sum(
+            item.file_size_bytes for item in (*reference_assets, *observation_assets)
+        )
+        if requested_download_bytes > self.config.sentinel2_maximum_download_bytes:
+            raise SatelliteCpuError("sentinel2_download_too_large", retryable=False)
         try:
-            with (
-                rasterio.Env(
-                    aws_session,
-                    AWS_S3_ENDPOINT=endpoint_host,
-                    AWS_HTTPS="YES",
-                    AWS_VIRTUAL_HOSTING="FALSE",
-                    GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
-                ),
-                ExitStack() as stack,
-            ):
-                reference = {
-                    item.asset_name: stack.enter_context(
-                        rasterio.open(f"/vsis3/eodata/{item.s3_key}")
-                    )
-                    for item in reference_assets
-                }
-                observation = {
-                    item.asset_name: stack.enter_context(
-                        rasterio.open(f"/vsis3/eodata/{item.s3_key}")
-                    )
-                    for item in observation_assets
-                }
-                target = observation["B11_20m"]
-                if target.crs is None:
-                    raise SatelliteCpuError("sentinel2_target_crs_missing", retryable=False)
-                target_bounds = transform_bounds("EPSG:4326", target.crs, *bbox, densify_pts=21)
-                requested = from_bounds(*target_bounds, transform=target.transform)
-                requested = requested.round_offsets().round_lengths()
-                try:
-                    window = requested.intersection(Window(0, 0, target.width, target.height))
-                except rasterio.errors.WindowError as exc:
-                    raise SatelliteCpuError(
-                        "incident_outside_sentinel2_product", retryable=False
-                    ) from exc
-                _validate_clms_window_size(
-                    width=window.width,
-                    height=window.height,
-                    maximum_pixels=self.config.maximum_window_pixels,
-                )
-                width, height = int(window.width), int(window.height)
-                transform = target.window_transform(window)
+            with TemporaryDirectory(prefix="fireviewer-sentinel2-assets-") as temp_value:
+                directory = Path(temp_value)
+                paths: dict[str, dict[str, Path]] = {"pre": {}, "post": {}}
+                for temporal_role, assets in (
+                    ("pre", reference_assets),
+                    ("post", observation_assets),
+                ):
+                    for index, asset in enumerate(assets):
+                        output_path = directory / f"{temporal_role}-{index}-{asset.asset_name}.jp2"
+                        self._materialize_sentinel2_asset(asset=asset, output_path=output_path)
+                        paths[temporal_role][asset.asset_name] = output_path
 
-                def aligned(
-                    datasets: Mapping[str, Any],
-                    assets: tuple[SatelliteObservationAsset, ...],
-                ) -> tuple[dict[str, np.ndarray[Any, Any]], tuple[SatelliteAssetReceipt, ...]]:
-                    arrays: dict[str, np.ndarray[Any, Any]] = {}
-                    receipts: list[SatelliteAssetReceipt] = []
-                    assets_by_name = {item.asset_name: item for item in assets}
-                    for asset_name in _S2_ASSETS:
-                        dataset = datasets[asset_name]
-                        asset = assets_by_name[asset_name]
-                        if (
-                            dataset.crs is None
-                            or str(dataset.crs) != asset.proj_code
-                            or dataset.count != 1
-                            or dataset.crs != target.crs
-                            or dataset.transform != target.transform
-                            or dataset.width != target.width
-                            or dataset.height != target.height
-                        ):
-                            raise SatelliteCpuError(
-                                "sentinel2_change_grid_mismatch", retryable=False
-                            )
-                        destination = dataset.read(
-                            1,
-                            window=window,
-                            out_shape=(height, width),
-                            out_dtype="float32",
-                            resampling=(
-                                Resampling.nearest
-                                if asset_name == "SCL_20m"
-                                else Resampling.bilinear
-                            ),
-                        )
-                        arrays[asset_name] = destination
-                        receipts.append(
-                            SatelliteAssetReceipt(
-                                asset_name=asset_name,
-                                source_checksum=asset.file_checksum,
-                                derived_content_sha256=_window_digest(
-                                    asset=asset, array=destination, transform=transform
+                with ExitStack() as stack:
+                    reference = {
+                        asset_name: stack.enter_context(rasterio.open(path))
+                        for asset_name, path in paths["pre"].items()
+                    }
+                    observation = {
+                        asset_name: stack.enter_context(rasterio.open(path))
+                        for asset_name, path in paths["post"].items()
+                    }
+                    target = observation["B11_20m"]
+                    if target.crs is None:
+                        raise SatelliteCpuError("sentinel2_target_crs_missing", retryable=False)
+                    target_bounds = transform_bounds(
+                        "EPSG:4326", target.crs, *bbox, densify_pts=21
+                    )
+                    requested = from_bounds(*target_bounds, transform=target.transform)
+                    requested = requested.round_offsets().round_lengths()
+                    try:
+                        window = requested.intersection(Window(0, 0, target.width, target.height))
+                    except rasterio.errors.WindowError as exc:
+                        raise SatelliteCpuError(
+                            "incident_outside_sentinel2_product", retryable=False
+                        ) from exc
+                    _validate_clms_window_size(
+                        width=window.width,
+                        height=window.height,
+                        maximum_pixels=self.config.maximum_window_pixels,
+                    )
+                    width, height = int(window.width), int(window.height)
+                    transform = target.window_transform(window)
+                    target_crs = target.crs
+
+                    def aligned(
+                        datasets: Mapping[str, Any],
+                        assets: tuple[SatelliteObservationAsset, ...],
+                    ) -> tuple[
+                        dict[str, np.ndarray[Any, Any]], tuple[SatelliteAssetReceipt, ...]
+                    ]:
+                        arrays: dict[str, np.ndarray[Any, Any]] = {}
+                        receipts: list[SatelliteAssetReceipt] = []
+                        assets_by_name = {item.asset_name: item for item in assets}
+                        for asset_name in _S2_ASSETS:
+                            dataset = datasets[asset_name]
+                            asset = assets_by_name[asset_name]
+                            if (
+                                dataset.crs is None
+                                or str(dataset.crs) != asset.proj_code
+                                or dataset.count != 1
+                                or dataset.crs != target_crs
+                                or dataset.transform != target.transform
+                                or dataset.width != target.width
+                                or dataset.height != target.height
+                            ):
+                                raise SatelliteCpuError(
+                                    "sentinel2_change_grid_mismatch", retryable=False
+                                )
+                            destination = dataset.read(
+                                1,
+                                window=window,
+                                out_shape=(height, width),
+                                out_dtype="float32",
+                                resampling=(
+                                    Resampling.nearest
+                                    if asset_name == "SCL_20m"
+                                    else Resampling.bilinear
                                 ),
-                                bytes_read=int(destination.nbytes),
                             )
-                        )
-                    return arrays, tuple(receipts)
+                            if not np.isfinite(destination).all():
+                                raise SatelliteCpuError(
+                                    "sentinel2_window_contains_non_finite_values",
+                                    retryable=False,
+                                )
+                            arrays[asset_name] = destination
+                            receipts.append(
+                                SatelliteAssetReceipt(
+                                    asset_name=asset_name,
+                                    source_checksum=asset.file_checksum,
+                                    derived_content_sha256=_window_digest(
+                                        asset=asset, array=destination, transform=transform
+                                    ),
+                                    bytes_read=int(destination.nbytes),
+                                )
+                            )
+                        return arrays, tuple(receipts)
 
-                pre, receipts_pre = aligned(reference, reference_assets)
-                post, receipts_post = aligned(observation, observation_assets)
+                    pre, receipts_pre = aligned(reference, reference_assets)
+                    post, receipts_post = aligned(observation, observation_assets)
         except SatelliteCpuError:
             raise
         except (BotoCoreError, ClientError, OSError, rasterio.errors.RasterioError) as exc:
@@ -732,7 +785,7 @@ class CdseS3ObservationAssetReader:
             pre=pre,
             post=post,
             transform=transform,
-            crs=str(target.crs),
+            crs=str(target_crs),
             receipts_pre=receipts_pre,
             receipts_post=receipts_post,
         )

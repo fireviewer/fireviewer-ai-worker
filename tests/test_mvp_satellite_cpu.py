@@ -35,6 +35,7 @@ from firewarning_worker.mvp.satellite_observations import (
     CdseS3ObservationAssetReader,
     ClmsRasterWindow,
     SatelliteAssetReceipt,
+    SatelliteObservationAsset,
     SatelliteObservationCpuWorker,
     Sentinel1ChangeWindow,
     Sentinel2ChangeWindow,
@@ -908,6 +909,139 @@ def test_openeo_sentinel1_reader_is_bounded_and_never_exposes_its_token() -> Non
     assert result.receipts_post[0].source_checksum == observation.content_hash
 
 
+def test_sentinel2_reader_materializes_bounded_assets_before_reading() -> None:
+    transform = from_origin(5.36, 44.76, 0.005, 0.005)
+    objects: dict[str, bytes] = {}
+
+    def raster_bytes(value: int) -> bytes:
+        with MemoryFile() as memory:
+            with memory.open(
+                driver="GTiff",
+                width=4,
+                height=4,
+                count=1,
+                dtype="uint16",
+                crs="EPSG:4326",
+                transform=transform,
+                nodata=0,
+            ) as dataset:
+                dataset.write(np.full((4, 4), value, dtype=np.uint16), 1)
+            return memory.read()
+
+    def assets(temporal_role: str, base_value: int) -> tuple[SatelliteObservationAsset, ...]:
+        payloads = []
+        for index, asset_name in enumerate(
+            ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m"),
+            start=1,
+        ):
+            key = (
+                "Sentinel-2/MSI/L2A/2026/07/09/PRODUCT.SAFE/GRANULE/TEST/IMG_DATA/"
+                f"R20m/{temporal_role}-{asset_name}.jp2"
+            )
+            content = raster_bytes(4 if asset_name == "SCL_20m" else base_value + index)
+            objects[key] = content
+            payloads.append(
+                SatelliteObservationAsset.model_validate(
+                    {
+                        "asset_name": asset_name,
+                        "object_uri": f"s3://eodata/{key}",
+                        "media_type": "image/jp2",
+                        "file_size_bytes": len(content),
+                        "file_checksum": sha256(content).hexdigest(),
+                        "proj_code": "EPSG:4326",
+                        "proj_shape": [4, 4],
+                        "proj_transform": list(transform.to_gdal()),
+                        "nodata": 0,
+                        "data_type": "uint16",
+                        "raster_scale": 1,
+                    }
+                )
+            )
+        return tuple(payloads)
+
+    reference_assets = assets("pre", 1_000)
+    observation_assets = assets("post", 2_000)
+
+    class S3:
+        def __init__(self) -> None:
+            self.requested: list[str] = []
+
+        def get_object(self, *, Bucket, Key):
+            assert Bucket == "eodata"
+            self.requested.append(Key)
+            return {"Body": io.BytesIO(objects[Key])}
+
+    s3 = S3()
+    reader = CdseS3ObservationAssetReader(
+        CdseObservationS3Config(
+            access_key=SecretStr("access-key"),
+            secret_key=SecretStr("secret-key-" + ("s" * 24)),
+        ),
+        s3_client=s3,
+    )
+    try:
+        result = reader.read_sentinel2_change_window(
+            reference_assets=reference_assets,
+            observation_assets=observation_assets,
+            bbox=(5.36, 44.74, 5.38, 44.76),
+        )
+    finally:
+        reader.close()
+
+    assert len(s3.requested) == 10
+    assert set(s3.requested) == set(objects)
+    assert all(np.isfinite(array).all() for array in (*result.pre.values(), *result.post.values()))
+    assert result.pre["B8A_20m"].mean() == pytest.approx(1_002)
+    assert result.post["B8A_20m"].mean() == pytest.approx(2_002)
+    assert len(result.receipts_pre) == 5
+    assert len(result.receipts_post) == 5
+
+
+def test_sentinel2_reader_rejects_download_above_ephemeral_limit() -> None:
+    transform = from_origin(5.36, 44.76, 0.005, 0.005)
+    assets = tuple(
+        SatelliteObservationAsset.model_validate(
+            {
+                "asset_name": asset_name,
+                "object_uri": (
+                    "s3://eodata/Sentinel-2/MSI/L2A/2026/07/09/PRODUCT.SAFE/"
+                    f"GRANULE/TEST/IMG_DATA/R20m/{asset_name}.jp2"
+                ),
+                "media_type": "image/jp2",
+                "file_size_bytes": 1_024,
+                "file_checksum": f"{index:x}" * 64,
+                "proj_code": "EPSG:4326",
+                "proj_shape": [4, 4],
+                "proj_transform": list(transform.to_gdal()),
+                "nodata": 0,
+                "data_type": "uint16",
+                "raster_scale": 1,
+            }
+        )
+        for index, asset_name in enumerate(
+            ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m"),
+            start=1,
+        )
+    )
+    reader = CdseS3ObservationAssetReader(
+        CdseObservationS3Config(
+            access_key=SecretStr("access-key"),
+            secret_key=SecretStr("secret-key-" + ("s" * 24)),
+            sentinel2_maximum_download_bytes=9 * 1_024,
+        ),
+        s3_client=object(),
+    )
+    try:
+        with pytest.raises(SatelliteCpuError, match="sentinel2_download_too_large"):
+            reader.read_sentinel2_change_window(
+                reference_assets=assets,
+                observation_assets=assets,
+                bbox=(5.36, 44.74, 5.38, 44.76),
+            )
+    finally:
+        reader.close()
+
+
 def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> None:
     asset_names = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
     transform = from_origin(5.36, 44.76, 0.005, 0.005)
@@ -989,7 +1123,7 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     assert receipt.status == "completed"
     payload = publisher.payloads[0]
     assert payload["processor"] == "sentinel2_nbr_change_v1"
-    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.0.2"
+    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.0.3"
     assert len(payload["processing_context_sha256"]) == 64
     assert payload["result_id"].startswith("SATOBS-")
     assert payload["reference_artifact_revision_id"] == reference.artifact_revision_id
