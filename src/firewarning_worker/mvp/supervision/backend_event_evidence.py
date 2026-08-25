@@ -499,6 +499,7 @@ class BackendIncidentDaySpatialObservation(StrictModel):
     observed_at: datetime
     assertion_kind: str = Field(min_length=3, max_length=128)
     geometry_geojson: dict[str, Any]
+    coverage_geojson: dict[str, Any] | None = None
     confidence: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     horizontal_accuracy_m: float | None = Field(
         default=None,

@@ -218,6 +218,18 @@ def test_incident_day_adapter_exposes_satellite_geometry_metrics_and_provenance_
                     ]
                 ],
             },
+            "coverage_geojson": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [5.29, 44.69],
+                        [5.35, 44.69],
+                        [5.35, 44.75],
+                        [5.29, 44.75],
+                        [5.29, 44.69],
+                    ]
+                ],
+            },
             "confidence": 0.82,
             "horizontal_accuracy_m": 300.0,
             "resolution_m": 300.0,
