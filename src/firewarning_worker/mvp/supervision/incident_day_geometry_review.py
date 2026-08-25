@@ -110,9 +110,14 @@ def _geometry_summary(geometry: Mapping[str, Any]) -> dict[str, Any]:
 
 def _compact_model_value(value: object) -> object:
     if isinstance(value, Mapping):
-        if value.get("type") in {"Polygon", "MultiPolygon"} and isinstance(
-            value.get("coordinates"), list
-        ):
+        if value.get("type") in {
+            "Point",
+            "MultiPoint",
+            "LineString",
+            "MultiLineString",
+            "Polygon",
+            "MultiPolygon",
+        } and isinstance(value.get("coordinates"), list):
             return _geometry_summary(value)
         return {key: _compact_model_value(item) for key, item in value.items()}
     if isinstance(value, list | tuple):
