@@ -10,6 +10,7 @@ from firewarning_worker.mvp.supervision.backend_event_evidence import (
     BackendIncidentDayResearchPublisher,
     BackendIncidentDaySatelliteObservationPublisher,
     BackendJsonResponse,
+    BackendSatelliteObservationBatch,
 )
 
 
@@ -191,6 +192,29 @@ def test_incident_day_adapter_builds_worker_target_without_perimeter() -> None:
     assert durable.geographic_references == ()
     assert set(durable.research_source_policies or {}) == {"drome.gouv.fr"}
     assert transport.urls[0].endswith("/api/v1/internal/incident-day-research/AN-DIE-2026-07-06")
+
+
+def test_satellite_observation_batch_accepts_optional_reference_artifact() -> None:
+    parsed = BackendSatelliteObservationBatch.model_validate(
+        {
+            "result_id": "SATOBS-S3-DIE-20260706",
+            "artifact_revision_id": "EAR-S3-DIE-20260706",
+            "reference_artifact_revision_id": None,
+            "sink_request_sha256": "a" * 64,
+            "status": "completed",
+            "processor": "sentinel3_frp_v1",
+            "processor_revision": "fireviewer-sentinel3-frp-cpu-1.1.0",
+            "claim_ids": ["ECL-S3-DIE-20260706"],
+            "observed_at": "2026-07-06T10:00:00Z",
+            "valid_coverage_geojson": None,
+            "coverage_metrics": {},
+            "asset_receipt_sha256": "b" * 64,
+            "raw_content_stored": False,
+            "persisted_at": "2026-07-07T08:00:00Z",
+        }
+    )
+
+    assert parsed.reference_artifact_revision_id is None
 
 
 def test_incident_day_adapter_exposes_satellite_geometry_metrics_and_provenance_to_eve() -> None:
