@@ -11,11 +11,13 @@ from firewarning_worker.contracts import StrictModel
 from firewarning_worker.mvp.research.multimodal_evidence import (
     AzureFederatedBedrockClient,
     AzureManagedIdentityWebTokenProvider,
+    BedrockConverseClient,
     InvocationLimitedBedrockClient,
 )
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     AzureBackendEventEvidenceAdapter,
     AzureBackendEventEvidenceConfig,
+    AzureBackendIncidentDayGeometryReviewAdapter,
     BackendPointAssessmentPublisher,
 )
 from firewarning_worker.mvp.supervision.bedrock_supervisor import (
@@ -25,6 +27,13 @@ from firewarning_worker.mvp.supervision.bedrock_supervisor import (
 from firewarning_worker.mvp.supervision.durable_endpoint import (
     create_point_supervisor_server,
 )
+from firewarning_worker.mvp.supervision.incident_day_geometry_review import (
+    BedrockIncidentDayGeometryReviewer,
+    BedrockIncidentDayGeometryReviewerConfig,
+    IncidentDayGeometryReviewer,
+    SimulatedIncidentDayGeometryReviewer,
+)
+from firewarning_worker.mvp.supervision.point_supervisor import PointSupervisor
 from firewarning_worker.mvp.supervision.simulated_supervisor import SimulatedPointSupervisor
 
 
@@ -107,7 +116,7 @@ class PointSupervisorCpuSettings(StrictModel):
         )
 
 
-def _managed_supervisor(settings: PointSupervisorCpuSettings) -> BedrockPixtralPointSupervisor:
+def _managed_client(settings: PointSupervisorCpuSettings) -> BedrockConverseClient:
     if not all(
         (
             settings.managed_identity_client_id,
@@ -116,13 +125,7 @@ def _managed_supervisor(settings: PointSupervisorCpuSettings) -> BedrockPixtralP
         )
     ):
         raise ValueError("managed VL mode requires Azure-to-AWS federation settings")
-    return BedrockPixtralPointSupervisor(
-        BedrockPixtralPointSupervisorConfig(
-            region_name=settings.aws_region,
-            inference_profile_id=settings.bedrock_model_id,
-            maximum_output_tokens=settings.bedrock_maximum_output_tokens,
-        ),
-        client=InvocationLimitedBedrockClient(
+    return InvocationLimitedBedrockClient(
             AzureFederatedBedrockClient(
                 role_arn=str(settings.aws_role_arn),
                 region_name=settings.aws_region,
@@ -133,18 +136,47 @@ def _managed_supervisor(settings: PointSupervisorCpuSettings) -> BedrockPixtralP
                 ),
             ),
             maximum_invocations=settings.authorized_bedrock_invocations,
+    )
+
+
+def _managed_supervisor(
+    settings: PointSupervisorCpuSettings,
+    *,
+    client: BedrockConverseClient,
+) -> BedrockPixtralPointSupervisor:
+    return BedrockPixtralPointSupervisor(
+        BedrockPixtralPointSupervisorConfig(
+            region_name=settings.aws_region,
+            inference_profile_id=settings.bedrock_model_id,
+            maximum_output_tokens=settings.bedrock_maximum_output_tokens,
         ),
+        client=client,
     )
 
 
 def main() -> int:
     settings = PointSupervisorCpuSettings.from_environment()
     repository = AzureBackendEventEvidenceAdapter(settings.backend)
-    supervisor = (
-        _managed_supervisor(settings)
-        if settings.supervisor_mode == "managed_vl"
-        else SimulatedPointSupervisor()
-    )
+    geometry_repository = AzureBackendIncidentDayGeometryReviewAdapter(settings.backend)
+    supervisor: PointSupervisor
+    geometry_reviewer: IncidentDayGeometryReviewer
+    if settings.supervisor_mode == "managed_vl":
+        managed_client = _managed_client(settings)
+        supervisor = _managed_supervisor(settings, client=managed_client)
+        geometry_reviewer = BedrockIncidentDayGeometryReviewer(
+            BedrockIncidentDayGeometryReviewerConfig(
+                region_name=settings.aws_region,
+                inference_profile_id=settings.bedrock_model_id,
+                maximum_output_tokens=min(
+                    settings.bedrock_maximum_output_tokens,
+                    2_048,
+                ),
+            ),
+            client=managed_client,
+        )
+    else:
+        supervisor = SimulatedPointSupervisor()
+        geometry_reviewer = SimulatedIncidentDayGeometryReviewer()
     publisher = (
         BackendPointAssessmentPublisher(settings.backend)
         if settings.assessment_sink_enabled
@@ -156,6 +188,8 @@ def main() -> int:
         port=settings.port,
         supervisor=supervisor,
         publisher=publisher,
+        geometry_review_repository=geometry_repository,
+        geometry_reviewer=geometry_reviewer,
     )
     print(
         "point-supervision-api ready "

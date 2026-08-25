@@ -12,12 +12,16 @@ from pydantic import ValidationError
 
 from firewarning_worker.mvp.contracts import PointEvidenceBundleV1
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
+    AzureBackendIncidentDayGeometryReviewAdapter,
     BackendEventEvidenceError,
     BackendEventEvidenceNotFoundError,
     BackendPointAssessmentPublisher,
     EventEvidenceRepository,
 )
 from firewarning_worker.mvp.supervision.event_rag import EventRagIndex, EventRagQuery
+from firewarning_worker.mvp.supervision.incident_day_geometry_review import (
+    IncidentDayGeometryReviewer,
+)
 from firewarning_worker.mvp.supervision.point_evidence import PointEvidenceAssembler
 from firewarning_worker.mvp.supervision.point_supervisor import (
     PointSupervisor,
@@ -39,6 +43,8 @@ class DurablePointSupervisionService:
         *,
         supervisor: PointSupervisor | None = None,
         publisher: BackendPointAssessmentPublisher | None = None,
+        geometry_review_repository: AzureBackendIncidentDayGeometryReviewAdapter | None = None,
+        geometry_reviewer: IncidentDayGeometryReviewer | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._repository = repository
@@ -46,6 +52,8 @@ class DurablePointSupervisionService:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._assembler = PointEvidenceAssembler()
         self._supervisor = supervisor or SimulatedPointSupervisor()
+        self._geometry_review_repository = geometry_review_repository
+        self._geometry_reviewer = geometry_reviewer
 
     @property
     def assessment_sink_enabled(self) -> bool:
@@ -54,6 +62,10 @@ class DurablePointSupervisionService:
     @property
     def supervisor_mode(self) -> str:
         return self._supervisor.supervisor_mode
+
+    @property
+    def geometry_review_enabled(self) -> bool:
+        return self._geometry_review_repository is not None and self._geometry_reviewer is not None
 
     def search_payload(self, payload: dict[str, Any]) -> dict[str, object]:
         query = EventRagQuery.model_validate(payload)
@@ -170,6 +182,20 @@ class DurablePointSupervisionService:
             "raw_content_stored": False,
         }
 
+    def review_incident_day_payload(self, payload: dict[str, Any]) -> dict[str, object]:
+        analysis_id = str(payload.get("analysis_id", ""))
+        if not analysis_id or len(analysis_id) > 128:
+            raise ValueError("analysis_id is invalid")
+        if self._geometry_review_repository is None or self._geometry_reviewer is None:
+            raise BackendEventEvidenceError("incident-day geometry review is disabled")
+        context = self._geometry_review_repository.read(analysis_id)
+        review = self._geometry_reviewer.review(context)
+        receipt = self._geometry_review_repository.publish(
+            analysis_id=analysis_id,
+            review=review,
+        )
+        return receipt.model_dump(mode="json", by_alias=True)
+
 
 def _handler_for(service: DurablePointSupervisionService) -> type[BaseHTTPRequestHandler]:
     class PointSupervisorHandler(BaseHTTPRequestHandler):
@@ -217,6 +243,9 @@ def _handler_for(service: DurablePointSupervisionService) -> type[BaseHTTPReques
                     "assessment_sink": (
                         "azure_backend_enabled" if service.assessment_sink_enabled else "disabled"
                     ),
+                    "incident_day_geometry_review": (
+                        "enabled" if service.geometry_review_enabled else "disabled"
+                    ),
                     "gpu": False,
                     "cost_usd": 0,
                     "persistent": True,
@@ -229,6 +258,7 @@ def _handler_for(service: DurablePointSupervisionService) -> type[BaseHTTPReques
                 "/v1/events/supervise": service.supervise_event_payload,
                 "/v1/points/bundle": service.bundle_payload,
                 "/v1/point-assessments": service.assess_payload,
+                "/v1/incident-day/geometry-review": service.review_incident_day_payload,
             }
             handler = routes.get(self.path)
             if handler is None:
@@ -264,6 +294,8 @@ def create_point_supervisor_server(
     port: int = 0,
     supervisor: PointSupervisor | None = None,
     publisher: BackendPointAssessmentPublisher | None = None,
+    geometry_review_repository: AzureBackendIncidentDayGeometryReviewAdapter | None = None,
+    geometry_reviewer: IncidentDayGeometryReviewer | None = None,
     clock: Callable[[], datetime] | None = None,
 ) -> ThreadingHTTPServer:
     try:
@@ -278,6 +310,8 @@ def create_point_supervisor_server(
         repository,
         supervisor=supervisor,
         publisher=publisher,
+        geometry_review_repository=geometry_review_repository,
+        geometry_reviewer=geometry_reviewer,
         clock=clock,
     )
     return ThreadingHTTPServer((host, port), _handler_for(service))

@@ -49,14 +49,14 @@ class _Worker:
         )
 
 
-def test_service_refuses_to_mark_media_processed_with_disabled_providers() -> None:
+def test_service_runs_deterministic_media_stages_with_optional_providers_disabled() -> None:
     worker = _Worker()
     service = PublicMediaCpuService(settings=_settings(), worker=worker)  # type: ignore[arg-type]
 
-    with pytest.raises(RuntimeError, match="requires a managed VL provider"):
-        service.run({"analysis_id": "AN-DIE-2026-07-06"})
+    receipt = service.run({"analysis_id": "AN-DIE-2026-07-06"})
 
-    assert worker.calls == []
+    assert receipt.analysis_id == "AN-DIE-2026-07-06"
+    assert worker.calls == ["AN-DIE-2026-07-06"]
 
 
 def test_service_runs_with_vl_while_transcription_remains_optional() -> None:

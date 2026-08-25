@@ -1,36 +1,42 @@
-FROM node:24-bookworm-slim AS node-runtime
+FROM node:24-trixie-slim@sha256:db4f733c26868756bae92ac764d7e99bf31809ce7db886ed525960fe7d544601 AS eve-build
 
-FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134
+WORKDIR /opt/eve-point-supervisor
+COPY eve-point-supervisor/package.json eve-point-supervisor/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY eve-point-supervisor/agent ./agent
+COPY eve-point-supervisor/tsconfig.json ./
+RUN npm run build
+
+FROM python:3.13-slim-trixie@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS python-build
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /opt/firewarning-worker
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN python -m pip install .[source-acquisition] \
+    && python -m pip uninstall --yes pip setuptools wheel
+
+FROM gcr.io/distroless/python3-debian13:nonroot@sha256:6bfc400d0a6d89f50f5bbc0a4b4ff57214ae5c01647c3a74c2a0c8d830b4cc00
+
+ENV PYTHONPATH="/opt/site-packages" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     PORT=8080 \
     FIREVIEWER_SUPERVISION_PORT=8091 \
     FIREVIEWER_EVE_ROOT=/opt/eve-point-supervisor
 
-COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
-COPY --from=node-runtime /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
-
-WORKDIR /opt/firewarning-worker
-COPY pyproject.toml README.md ./
-COPY src ./src
-RUN python -m pip install .[source-acquisition]
+COPY --from=eve-build /usr/local/bin/node /usr/local/bin/node
+COPY --from=eve-build --chown=nonroot:nonroot /opt/eve-point-supervisor/.output /opt/eve-point-supervisor/.output
+COPY --from=python-build /opt/venv/lib/python3.13/site-packages /opt/site-packages
 
 WORKDIR /opt/eve-point-supervisor
-COPY eve-point-supervisor/package.json eve-point-supervisor/package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts
-COPY eve-point-supervisor/agent ./agent
-COPY eve-point-supervisor/tsconfig.json ./
-RUN npm run build \
-    && npm cache clean --force \
-    && groupadd --gid 10001 fireviewer \
-    && useradd --create-home --uid 10001 --gid fireviewer worker \
-    && chown -R worker:fireviewer /opt/eve-point-supervisor
 
-USER worker
+USER nonroot
 EXPOSE 8080
 
-ENTRYPOINT ["python", "-m", "firewarning_worker.mvp.supervision.eve_cpu_runtime"]
+ENTRYPOINT ["python3", "-m", "firewarning_worker.mvp.supervision.eve_cpu_runtime"]

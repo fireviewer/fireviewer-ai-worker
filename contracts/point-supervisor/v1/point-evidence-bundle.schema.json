@@ -655,6 +655,34 @@
           "default": null,
           "title": "Horizontal Fov Deg"
         },
+        "image_height_px": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Height Px"
+        },
+        "image_width_px": {
+          "anyOf": [
+            {
+              "maximum": 100000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Image Width Px"
+        },
         "latitude": {
           "maximum": 90,
           "minimum": -90,
@@ -686,10 +714,52 @@
           "title": "Media Id",
           "type": "string"
         },
+        "pitch_deg": {
+          "anyOf": [
+            {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pitch Deg"
+        },
+        "roll_deg": {
+          "anyOf": [
+            {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Roll Deg"
+        },
         "source_record_sha256": {
           "pattern": "^[0-9a-f]{64}$",
           "title": "Source Record Sha256",
           "type": "string"
+        },
+        "vertical_fov_deg": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 180,
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Vertical Fov Deg"
         }
       },
       "required": [

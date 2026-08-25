@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from hmac import compare_digest
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -216,17 +217,13 @@ class PublicMediaCpuService:
 
     @property
     def enabled(self) -> bool:
-        return self.settings.multimodal_enabled
+        return True
 
     def authorize(self, header: str | None) -> bool:
         expected = f"Bearer {self.settings.worker_token.get_secret_value()}"
         return header is not None and compare_digest(header, expected)
 
     def run(self, payload: object) -> PublicMediaAnalysisRunReceipt:
-        if not self.enabled:
-            raise RuntimeError(
-                "public-media processing requires a managed VL provider"
-            )
         request = PublicMediaAnalysisRequest.model_validate(payload)
         return self.worker.run_analysis(request.analysis_id)
 
@@ -252,13 +249,14 @@ def _handler_for(service: PublicMediaCpuService) -> type[BaseHTTPRequestHandler]
             self._json(
                 HTTPStatus.OK,
                 {
-                    "status": "ok" if service.enabled else "providers_disabled",
+                    "status": "ok",
                     "runtime": "azure-cpu",
                     "opencv": True,
-                    "ffmpeg": True,
+                    "ffmpeg": shutil.which("ffmpeg") is not None,
                     "yolo_sink_connected": True,
                     "transcription_enabled": service.settings.transcription_enabled,
                     "multimodal_enabled": service.settings.multimodal_enabled,
+                    "missing_optional_providers_are_journaled": True,
                     "raw_public_media_stored": False,
                     "raw_keyframes_stored": False,
                     "transcripts_stored": False,

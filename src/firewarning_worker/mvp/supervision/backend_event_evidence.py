@@ -54,6 +54,12 @@ _INCIDENT_DAY_SATELLITE_ANALYSIS_PATH = (
 _INCIDENT_DAY_SATELLITE_OBSERVATION_PATH = (
     "/api/v1/internal/incident-day-research/{analysis_id}/satellite-observations"
 )
+_INCIDENT_DAY_GEOMETRY_REVIEW_PATH = (
+    "/api/v1/internal/incident-day-supervision/{analysis_id}"
+)
+_INCIDENT_DAY_GEOMETRY_CORRECTION_PATH = (
+    "/api/v1/internal/incident-day-supervision/{analysis_id}/geometry-corrections"
+)
 _GEOGRAPHIC_EVIDENCE_PATH = "/api/v1/internal/event-evidence/{candidate_id}/geographic-hypotheses"
 _POINT_ASSESSMENT_PATH = "/api/v1/internal/event-evidence/{candidate_id}/point-assessments"
 _DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
@@ -608,6 +614,78 @@ class BackendIncidentDayResearchContext(StrictModel):
         return self
 
 
+class BackendGeometryCorrectionProposal(StrictModel):
+    schema_name: Literal["fireviewer.geometry-correction-proposal.v1"] = Field(
+        default="fireviewer.geometry-correction-proposal.v1",
+        alias="schema",
+    )
+    correction_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
+    incident_id: SafeIdentifierV2
+    local_date: date
+    source_perimeter_sha256: Sha256HexV2
+    competing_geometry_geojson: dict[str, Any]
+    reason_codes: tuple[SafeIdentifierV2, ...] = Field(min_length=1, max_length=128)
+    evidence_refs: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=512)
+    relationship: Literal["competes_with_source"] = "competes_with_source"
+    state: Literal["proposed"] = "proposed"
+    source_mutation_allowed: Literal[False] = False
+
+
+class BackendIncidentDayGeometryReviewContext(StrictModel):
+    schema_name: Literal["fireviewer.incident-day-geometry-review-context.v1"] = Field(
+        default="fireviewer.incident-day-geometry-review-context.v1",
+        alias="schema",
+    )
+    analysis_id: SafeIdentifierV2
+    fire_id: SafeIdentifierV2
+    episode_id: SafeIdentifierV2
+    local_date: date
+    deterministic_perimeter: dict[str, Any]
+    source_perimeter_sha256: Sha256HexV2
+    candidate_geometries: tuple[dict[str, Any], ...] = Field(default=(), max_length=2_048)
+    evidence_summary: dict[str, Any]
+    prior_daily_states: tuple[dict[str, Any], ...] = Field(default=(), max_length=366)
+    published_reference_accessed: Literal[False]
+    geometry_mutation_allowed: Literal[False]
+    source_sha256: Sha256HexV2
+
+
+class BackendIncidentDayGeometryReviewRequest(StrictModel):
+    schema_name: Literal["fireviewer.incident-day-geometry-review.v1"] = Field(
+        default="fireviewer.incident-day-geometry-review.v1",
+        alias="schema",
+    )
+    review_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
+    analysis_id: SafeIdentifierV2
+    source_review_sha256: Sha256HexV2
+    source_perimeter_sha256: Sha256HexV2
+    verdict: Literal["accept", "propose", "abstain"]
+    model_confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    reason_codes: tuple[SafeIdentifierV2, ...] = Field(min_length=1, max_length=128)
+    evidence_refs: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=512)
+    supervisor_mode: Literal["managed_vl", "simulated"]
+    provider_run: dict[str, Any]
+    prompt_revision: str = Field(min_length=1, max_length=255)
+    proposal: BackendGeometryCorrectionProposal | None = None
+    raw_content_stored: Literal[False] = False
+    source_mutation_allowed: Literal[False] = False
+
+
+class BackendIncidentDayGeometryReviewReceipt(StrictModel):
+    schema_name: Literal["fireviewer.incident-day-geometry-review-receipt.v1"] = Field(
+        default="fireviewer.incident-day-geometry-review-receipt.v1",
+        alias="schema",
+    )
+    analysis_id: SafeIdentifierV2
+    review_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
+    verdict: Literal["accept", "propose", "abstain"]
+    proposal_state: Literal["persisted_for_human_review"] | None = None
+    supervisor_mode: Literal["managed_vl", "simulated"]
+    source_perimeter_unchanged: Literal[True]
+    replayed: bool
+    receipt_sha256: Sha256HexV2
+
+
 class BackendResearchRetentionPolicy(StrictModel):
     raw_scraped_content_stored: Literal[False]
     articles_stored: Literal[False]
@@ -944,6 +1022,14 @@ class BackendVisualEvidenceTransport(Protocol):
         timeout_seconds: float,
         max_response_bytes: int,
     ) -> BackendJsonResponse: ...
+
+
+class BackendIncidentDayGeometryReviewTransport(
+    BackendEventEvidenceTransport,
+    BackendVisualEvidenceTransport,
+    Protocol,
+):
+    pass
 
 
 class BackendKeyframeEvidenceTransport(Protocol):
@@ -1837,7 +1923,7 @@ def _incident_day_to_durable(
             )
         )
         observation_id = _stable_id("SATELLITE-OBSERVATION", item.claim_id)
-        hotspot = item.assertion_kind in {"thermal_hotspot", "visible_front"}
+        hotspot = item.assertion_kind in {"thermal_hotspot", "thermal_footprint"}
         satellite_observations.append(
             SatelliteObservation(
                 observation_id=observation_id,
@@ -2081,6 +2167,84 @@ class AzureBackendIncidentDayEvidenceAdapter:
         if context.analysis_id != event_id:
             raise BackendEventEvidenceError("incident-day evidence target mismatch")
         return _incident_day_to_durable(context)
+
+
+class AzureBackendIncidentDayGeometryReviewAdapter:
+    """Read the frozen deterministic perimeter without evaluation truth."""
+
+    def __init__(
+        self,
+        config: AzureBackendEventEvidenceConfig,
+        *,
+        transport: BackendIncidentDayGeometryReviewTransport | None = None,
+    ) -> None:
+        self._config = config
+        self._transport = transport or UrllibBackendEventEvidenceTransport()
+
+    def read(self, analysis_id: str) -> BackendIncidentDayGeometryReviewContext:
+        if not analysis_id or len(analysis_id) > 128:
+            raise ValueError("analysis_id is invalid")
+        response = self._transport.get_json(
+            self._config.base_url
+            + _INCIDENT_DAY_GEOMETRY_REVIEW_PATH.format(
+                analysis_id=quote(analysis_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        raw_payload = dict(response.payload)
+        checksum = raw_payload.pop("source_sha256", None)
+        if not isinstance(checksum, str) or _canonical_sha256(raw_payload) != checksum:
+            raise BackendEventEvidenceError("incident-day geometry-review checksum mismatch")
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError(
+                "incident-day geometry-review revision headers mismatch"
+            )
+        context = BackendIncidentDayGeometryReviewContext.model_validate(response.payload)
+        if context.analysis_id != analysis_id:
+            raise BackendEventEvidenceError("incident-day geometry-review target mismatch")
+        return context
+
+    def publish(
+        self,
+        *,
+        analysis_id: str,
+        review: BackendIncidentDayGeometryReviewRequest,
+    ) -> BackendIncidentDayGeometryReviewReceipt:
+        if review.analysis_id != analysis_id:
+            raise BackendEventEvidenceError("incident-day geometry-review target mismatch")
+        response = self._transport.post_json(
+            self._config.base_url
+            + _INCIDENT_DAY_GEOMETRY_CORRECTION_PATH.format(
+                analysis_id=quote(analysis_id, safe=""),
+            ),
+            headers={
+                "Accept": "application/json",
+                "Authorization": f"Bearer {self._config.bearer_token.get_secret_value()}",
+            },
+            payload=review.model_dump(mode="json", by_alias=True),
+            timeout_seconds=self._config.timeout_seconds,
+            max_response_bytes=self._config.max_response_bytes,
+        )
+        receipt = BackendIncidentDayGeometryReviewReceipt.model_validate(response.payload)
+        if receipt.analysis_id != analysis_id or receipt.review_id != review.review_id:
+            raise BackendEventEvidenceError("incident-day geometry-review receipt mismatch")
+        checksum = receipt.receipt_sha256
+        if (
+            response.headers.get("x-checksum-sha256") != checksum
+            or response.headers.get("etag") != f'"{checksum}"'
+        ):
+            raise BackendEventEvidenceError(
+                "incident-day geometry-review receipt headers mismatch"
+            )
+        return receipt
 
 
 class BackendVisualEvidencePublisher:
@@ -2544,6 +2708,7 @@ __all__ = [
     "AzureBackendEventEvidenceAdapter",
     "AzureBackendEventEvidenceConfig",
     "AzureBackendIncidentDayEvidenceAdapter",
+    "AzureBackendIncidentDayGeometryReviewAdapter",
     "BackendBinaryResponse",
     "BackendDerivedKeyframeReceipt",
     "BackendEventEvidenceError",
@@ -2554,6 +2719,9 @@ __all__ = [
     "BackendEvidenceMediaTransport",
     "BackendGeographicEvidencePublisher",
     "BackendGeographicEvidenceReceipt",
+    "BackendIncidentDayGeometryReviewContext",
+    "BackendIncidentDayGeometryReviewReceipt",
+    "BackendIncidentDayGeometryReviewRequest",
     "BackendIncidentDayMediaAnalysisPublisher",
     "BackendIncidentDayResearchContext",
     "BackendIncidentDayResearchPublisher",

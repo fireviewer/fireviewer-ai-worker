@@ -28,11 +28,19 @@ def main() -> int:
     eve_root = Path(os.getenv("FIREVIEWER_EVE_ROOT", "/opt/eve-point-supervisor"))
     public_port = int(os.getenv("PORT", "8080"))
     supervision_port = int(os.getenv("FIREVIEWER_SUPERVISION_PORT", "8091"))
-    npm_executable = Path(
-        os.getenv("FIREVIEWER_NPM_EXECUTABLE", "/usr/local/bin/npm")
+    node_executable = Path(
+        os.getenv("FIREVIEWER_NODE_EXECUTABLE", "/usr/local/bin/node")
     )
-    if not npm_executable.is_absolute():
-        raise ValueError("FIREVIEWER_NPM_EXECUTABLE must be an absolute path")
+    eve_entrypoint = Path(
+        os.getenv(
+            "FIREVIEWER_EVE_ENTRYPOINT",
+            "/opt/eve-point-supervisor/.output/server/index.mjs",
+        )
+    )
+    if not node_executable.is_absolute():
+        raise ValueError("FIREVIEWER_NODE_EXECUTABLE must be an absolute path")
+    if not eve_entrypoint.is_absolute():
+        raise ValueError("FIREVIEWER_EVE_ENTRYPOINT must be an absolute path")
     supervision = subprocess.Popen(
         [
             sys.executable,
@@ -52,18 +60,16 @@ def main() -> int:
     signal.signal(signal.SIGINT, stop)
     try:
         _wait_for_loopback(supervision_port, supervision)
+        eve_environment = os.environ.copy()
+        eve_environment["HOST"] = "0.0.0.0"  # noqa: S104
+        eve_environment["PORT"] = str(public_port)
         eve = subprocess.Popen(  # noqa: S603
             [
-                str(npm_executable),
-                "run",
-                "start",
-                "--",
-                "--host",
-                "0.0.0.0",  # noqa: S104
-                "--port",
-                str(public_port),
+                str(node_executable),
+                str(eve_entrypoint),
             ],
             cwd=eve_root,
+            env=eve_environment,
         )
         while True:
             if eve.poll() is not None:

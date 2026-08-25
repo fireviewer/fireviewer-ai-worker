@@ -23,7 +23,7 @@ azure-maps = [
 source-acquisition = [
   "boto3==1.43.50",
   "httpx==0.28.1",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
 ]
 geographic-mvp = [
   "numpy==2.4.6",
@@ -34,7 +34,7 @@ runtime = [
   "einops==0.8.2",
   "huggingface-hub==1.24.0",
   "httpx==0.28.1",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
   "numpy==2.4.6",
   "opencv-python-headless==4.13.0.92",
   "runpod==1.10.1",
@@ -60,14 +60,14 @@ localization-mvp = [
   "faiss-cpu==1.15.0",
   "httpx==0.28.1",
   "numpy==2.4.6",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
   "safetensors==0.8.0",
   "torch==2.13.0",
   "torchvision==0.28.0",
   "tzdata>=2025.2; sys_platform == 'win32'",
 ]
 vision-mvp = [
-  "pillow==12.1.1",
+  "pillow==12.3.0",
   "psutil==7.2.2",
   "safetensors==0.8.0",
   "torch==2.13.0",
@@ -77,13 +77,13 @@ vision-mvp = [
 video-mvp = [
   "httpx==0.28.1",
   "opencv-python-headless==4.13.0.92",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
 ]
 public-media = [
   "boto3==1.43.50",
   "httpx==0.28.1",
   "opencv-python-headless==4.13.0.92",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
 ]
 satellite-cpu = [
   "boto3==1.43.50",
@@ -99,7 +99,7 @@ corpus = [
   "httpx==0.28.1",
   "imagehash==4.3.2",
   "openpyxl==3.1.5",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
 ]
 eo4-conversion = [
   "h5py==3.15.1",
@@ -110,7 +110,7 @@ spatial-training = [
   "huggingface-hub==0.36.2",
   "httpx==0.28.1",
   "numpy==2.4.6",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
   "pyproj==3.7.2",
   "pyyaml==6.0.3",
   "rasterio==1.4.4",
@@ -130,7 +130,7 @@ training = [
   "evaluate==0.4.6",
   "huggingface-hub==0.36.2",
   "imagehash==4.3.2",
-  "pillow==12.1.1",
+  "pillow==12.3.0",
   "pycocotools==2.0.10",
   "safetensors==0.8.0",
   "torchmetrics==1.8.2",
