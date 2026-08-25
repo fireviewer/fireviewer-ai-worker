@@ -1323,7 +1323,7 @@ class SatelliteObservationCpuRunReceipt:
     artifact_revision_id: str
     processed: int
     remaining: int
-    status: Literal["completed", "no_observation", "replayed"]
+    status: Literal["completed", "no_observation", "unavailable", "replayed"]
 
 
 class SatelliteObservationCpuWorker:
@@ -1433,6 +1433,46 @@ class SatelliteObservationCpuWorker:
                 )
             reference_artifact = references[0]
             _reference_processor, reference_assets = _artifact_assets(reference_artifact)
+        if processor == _S1_PROCESSOR and self.openeo_maximum_authorized_credits <= 0:
+            assert reference_artifact is not None
+            self.publisher.publish(
+                candidate_id=analysis_id,
+                payload={
+                    "schema_version": "incident-day-satellite-observation-1.0",
+                    "analysis_id": analysis_id,
+                    "source_revision_sha256": durable.source_revision_sha256,
+                    "artifact_revision_id": artifact_revision_id,
+                    "reference_artifact_revision_id": reference_artifact.artifact_revision_id,
+                    "result_id": _result_id(analysis_id, artifact_revision_id, processor),
+                    "processor": processor,
+                    "processor_revision": _S1_REVISION,
+                    "status": "unavailable",
+                    "unavailable_reason": "cdse_openeo_not_authorized",
+                    "observations": [],
+                    "valid_coverage_geojson": None,
+                    "coverage_metrics": {},
+                    "asset_receipts": [],
+                    "processing_parameters": {},
+                    "raw_satellite_content_stored": False,
+                },
+            )
+            return SatelliteObservationCpuRunReceipt(
+                analysis_id=analysis_id,
+                artifact_revision_id=artifact_revision_id,
+                processed=1,
+                remaining=max(
+                    0,
+                    len(
+                        [
+                            item
+                            for item in eligible
+                            if item.artifact_revision_id not in completed_ids
+                        ]
+                    )
+                    - 1,
+                ),
+                status="unavailable",
+            )
         valid_coverage_geojson: dict[str, Any] | None = None
         coverage_metrics: dict[str, float | int] = {}
         with TemporaryDirectory(prefix="fireviewer-satellite-observation-") as directory:

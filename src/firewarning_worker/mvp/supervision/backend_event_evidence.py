@@ -746,7 +746,8 @@ class BackendSatelliteObservationBatch(StrictModel):
     artifact_revision_id: SafeIdentifierV2
     reference_artifact_revision_id: SafeIdentifierV2 | None = None
     sink_request_sha256: Sha256HexV2
-    status: Literal["completed", "no_observation"]
+    status: Literal["completed", "no_observation", "unavailable"]
+    unavailable_reason: Literal["cdse_openeo_not_authorized"] | None = None
     processor: Literal[
         "clms_burned_area_daily_v1",
         "sentinel1_vvvh_change_v1",
@@ -1413,7 +1414,7 @@ class BackendIncidentDaySatelliteObservationReceipt(StrictModel):
     artifact_revision_id: SafeIdentifierV2
     result_id: SafeIdentifierV2
     replayed: bool
-    status: Literal["completed", "no_observation"]
+    status: Literal["completed", "no_observation", "unavailable"]
     claim_ids: tuple[SafeIdentifierV2, ...]
     source_revision_sha256: Sha256HexV2
 

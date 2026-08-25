@@ -784,6 +784,51 @@ def test_sentinel1_prefire_postfire_vvvh_change_is_low_confidence_second_opinion
     assert observation_payload["geometry_geojson"]["type"] in {"Polygon", "MultiPolygon"}
 
 
+def test_sentinel1_without_openeo_authorization_is_explicitly_unavailable() -> None:
+    asset_payload = {
+        "asset_name": "openeo_vv_vh",
+        "object_uri": "s3://eodata/openeo-sentinel1/test/source-item.json",
+        "media_type": "application/geo+json",
+        "file_size_bytes": 1_024,
+        "file_checksum": "a" * 64,
+    }
+    reference = _observation_artifact(
+        collection_key="sentinel-1-grd",
+        processor="sentinel1_vvvh_change_v1",
+        assets=[asset_payload],
+        acquired_at=datetime(2026, 7, 1, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S1-PREFIRE-NOT-AUTHORIZED",
+        temporal_role="pre_fire_reference",
+    )
+    observation = _observation_artifact(
+        collection_key="sentinel-1-grd",
+        processor="sentinel1_vvvh_change_v1",
+        assets=[asset_payload],
+        acquired_at=datetime(2026, 7, 9, 10, tzinfo=UTC),
+        resolution_m=20,
+        artifact_revision_id="EAR-S1-POSTFIRE-NOT-AUTHORIZED",
+        temporal_role="post_fire_observation",
+    )
+    durable = _observation_durable(observation, reference)
+    publisher = _ObservationPublisher()
+
+    result = SatelliteObservationCpuWorker(
+        repository=_Repository(durable),
+        asset_reader=_LocalObservationReader(),
+        publisher=publisher,
+    ).run(durable.event.event_id, observation.artifact_revision_id)
+
+    assert result.status == "unavailable"
+    assert result.processed == 1
+    payload = publisher.payloads[0]
+    assert payload["unavailable_reason"] == "cdse_openeo_not_authorized"
+    assert payload["observations"] == []
+    assert payload["asset_receipts"] == []
+    assert payload["processing_parameters"] == {}
+    assert payload["raw_satellite_content_stored"] is False
+
+
 def test_openeo_sentinel1_reader_is_bounded_and_never_exposes_its_token() -> None:
     captured: list[dict[str, Any]] = []
 

@@ -217,6 +217,31 @@ def test_satellite_observation_batch_accepts_optional_reference_artifact() -> No
     assert parsed.reference_artifact_revision_id is None
 
 
+def test_satellite_observation_batch_accepts_explicit_openeo_unavailability() -> None:
+    parsed = BackendSatelliteObservationBatch.model_validate(
+        {
+            "result_id": "SATOBS-S1-DIE-20260706",
+            "artifact_revision_id": "EAR-S1-DIE-20260706",
+            "reference_artifact_revision_id": "EAR-S1-DIE-20260630",
+            "sink_request_sha256": "a" * 64,
+            "status": "unavailable",
+            "unavailable_reason": "cdse_openeo_not_authorized",
+            "processor": "sentinel1_vvvh_change_v1",
+            "processor_revision": "fireviewer-sentinel1-vvvh-change-openeo-1.0.0",
+            "claim_ids": [],
+            "observed_at": "2026-07-06T10:00:00Z",
+            "valid_coverage_geojson": None,
+            "coverage_metrics": {},
+            "asset_receipt_sha256": "b" * 64,
+            "raw_content_stored": False,
+            "persisted_at": "2026-07-07T08:00:00Z",
+        }
+    )
+
+    assert parsed.status == "unavailable"
+    assert parsed.unavailable_reason == "cdse_openeo_not_authorized"
+
+
 def test_incident_day_adapter_exposes_satellite_geometry_metrics_and_provenance_to_eve() -> None:
     payload = _context()
     payload["spatial_observations"] = [
