@@ -13,12 +13,14 @@ Implemented deterministic routes:
   `FRP_MWIR1km_standard.nc` (NRT) or `FRP_in.nc` (NTC) asset to ephemeral storage; validate
   time, position, FRP, uncertainty, footprint, confidence, and the vegetation fire
   classification bit; publish sourced `thermal_hotspot` points.
-- Sentinel-2 Level-2A: prepare the separately materialised six-band input used by the optional
-  Prithvi path. Paid model invocation remains independently disabled.
+- Sentinel-2 Level-2A: download the bounded pre-fire/post-fire B04, B8A, B11, B12, and SCL
+  assets to ephemeral storage; compute NBR/dNBR on the aligned 20 m grid; exclude cloud,
+  shadow, and no-data pixels; and publish a sourced burned-probability mask plus valid coverage.
+  Paid Prithvi invocation remains a separate, independently disabled second-opinion path.
 
 NASA FIRMS MODIS and VIIRS hotspots are fetched by the backend official-source connector. Their
-reported scan/track footprints are persisted as `visible_front` observations and therefore do
-not need to pass through this worker.
+reported scan/track footprints are persisted as `thermal_footprint` observations. They can
+corroborate spatial evidence but can never be promoted directly to an active front.
 
 The worker never converts a thermal point into a perimeter. Part.4 builds geometry only from
 georeferenced observed masks. Thermal points can corroborate or contradict those masks without
@@ -28,6 +30,8 @@ being buffered.
 
 - CLMS windows are read directly from the official CDSE S3 endpoint.
 - Sentinel-3 NRT/NTC FRP files are deleted when the request finishes.
+- Sentinel-2 source assets are limited to 512 MiB per change pair by default and deleted when
+  the request finishes.
 - Derived observations contain geometry, time, accuracy, numeric metrics, immutable asset
   checksums, processor revision, and source references.
 - Raw satellite bytes and CDSE object URIs are not copied into `EventEvidence` claims.
@@ -46,6 +50,7 @@ Use Container Apps secrets for every value marked secret.
 | `FIREVIEWER_BACKEND_TOKEN` | Backend read and deterministic satellite-observation sink token. |
 | `FIREVIEWER_CDSE_S3_ACCESS_KEY` | Free CDSE S3 credential, stored only as a Container Apps secret. |
 | `FIREVIEWER_CDSE_S3_SECRET_KEY` | Matching free CDSE S3 secret. |
+| `FIREVIEWER_SENTINEL2_MAXIMUM_DOWNLOAD_BYTES` | Maximum temporary pre/post download size; defaults to 512 MiB. |
 | `FIREVIEWER_SAGEMAKER_GEO_INVOCATION_ENABLED` | Must remain `false` until a separate paid authorization. |
 
 The backend points `FV_INCIDENT_DAY_SATELLITE_WORKER_URL` to this app and automatically sends the
