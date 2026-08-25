@@ -989,6 +989,9 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     assert receipt.status == "completed"
     payload = publisher.payloads[0]
     assert payload["processor"] == "sentinel2_nbr_change_v1"
+    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.0.1"
+    assert len(payload["processing_context_sha256"]) == 64
+    assert payload["result_id"].startswith("SATOBS-")
     assert payload["reference_artifact_revision_id"] == reference.artifact_revision_id
     assert len(payload["asset_receipts"]) == 10
     assert {item["source_artifact_revision_id"] for item in payload["asset_receipts"]} == {
@@ -1023,6 +1026,10 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     ).run(durable.event.event_id, observation.artifact_revision_id)
     assert no_change.status == "no_observation"
     no_change_payload = no_change_publisher.payloads[0]
+    assert no_change_payload["result_id"] == payload["result_id"]
+    assert no_change_payload["processing_context_sha256"] == payload[
+        "processing_context_sha256"
+    ]
     assert no_change_payload["observations"] == []
     assert no_change_payload["valid_coverage_geojson"]["type"] == "Polygon"
     assert no_change_payload["coverage_metrics"]["valid_pixel_count"] == 16

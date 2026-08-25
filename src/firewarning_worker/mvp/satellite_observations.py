@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Mapping
 from contextlib import ExitStack
@@ -34,7 +35,7 @@ _CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.0.0"
 _CLMS_COLLECTION = "clms_ba_global_300m_daily_v4_cog"
 _CLMS_ASSETS = ("ba300_dob_nrt", "ba300_cp_nrt", "ba300_bf_nrt")
 _S2_PROCESSOR = "sentinel2_nbr_change_v1"
-_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.0"
+_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.1"
 _S2_COLLECTION = "sentinel-2-l2a"
 _S2_ASSETS = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
 _S1_PROCESSOR = "sentinel1_vvvh_change_v1"
@@ -47,6 +48,12 @@ _FRP_COLLECTIONS = {"sentinel-3-sl-2-frp-nrt", "sentinel-3-sl-2-frp-ntc"}
 _FRP_ASSETS_BY_COLLECTION = {
     "sentinel-3-sl-2-frp-nrt": ("FRP_MWIR1km_STANDARD",),
     "sentinel-3-sl-2-frp-ntc": ("FRP_in",),
+}
+_PROCESSOR_REVISIONS = {
+    _CLMS_PROCESSOR: _CLMS_REVISION,
+    _S1_PROCESSOR: _S1_REVISION,
+    _S2_PROCESSOR: _S2_REVISION,
+    _FRP_PROCESSOR: _FRP_REVISION,
 }
 _MAX_FRP_SAMPLES = 500_000
 
@@ -764,9 +771,98 @@ def _artifact_assets(
     return str(processor), assets
 
 
-def _result_id(analysis_id: str, artifact_id: str, processor: str) -> str:
-    digest = sha256(f"{analysis_id}:{artifact_id}:{processor}".encode()).hexdigest()
+def _processing_context_sha256(
+    *,
+    durable: DurableEventEvidence,
+    artifact_id: str,
+    reference_artifact_id: str | None,
+    processor: str,
+    processor_revision: str,
+) -> str:
+    payload = {
+        "schema": "fireviewer.satellite-observation-processing-context.v1",
+        "analysis_id": durable.event.event_id,
+        "local_date": (
+            durable.incident_day_local_date.isoformat()
+            if durable.incident_day_local_date is not None
+            else None
+        ),
+        "incident_bbox": (
+            [float(value) for value in durable.incident_day_bbox]
+            if durable.incident_day_bbox is not None
+            else None
+        ),
+        "artifact_revision_id": artifact_id,
+        "reference_artifact_revision_id": reference_artifact_id,
+        "processor": processor,
+        "processor_revision": processor_revision,
+    }
+    canonical = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+        allow_nan=False,
+    )
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _result_id(
+    analysis_id: str,
+    artifact_id: str,
+    processor: str,
+    processor_revision: str,
+    processing_context_sha256: str,
+) -> str:
+    digest = sha256(
+        (
+            f"{analysis_id}:{artifact_id}:{processor}:"
+            f"{processor_revision}:{processing_context_sha256}"
+        ).encode()
+    ).hexdigest()
     return f"SATOBS-{digest[:24]}"
+
+
+def _current_completed_artifact_ids(
+    durable: DurableEventEvidence,
+    eligible: list[BackendIncidentDaySatelliteArtifact],
+) -> set[str]:
+    completed: set[str] = set()
+    for artifact in eligible:
+        processor = artifact.quality_flags.get("satellite_observation_processor")
+        if not isinstance(processor, str):
+            continue
+        revision = _PROCESSOR_REVISIONS.get(processor)
+        if revision is None:
+            continue
+        reference_id: str | None = None
+        if processor in {_S1_PROCESSOR, _S2_PROCESSOR}:
+            references = [
+                item
+                for item in durable.satellite_artifact_tickets
+                if item.quality_flags.get("satellite_observation_processor") == processor
+                and item.quality_flags.get("temporal_role") == "pre_fire_reference"
+            ]
+            if len(references) != 1:
+                continue
+            reference_id = references[0].artifact_revision_id
+        context_sha256 = _processing_context_sha256(
+            durable=durable,
+            artifact_id=artifact.artifact_revision_id,
+            reference_artifact_id=reference_id,
+            processor=processor,
+            processor_revision=revision,
+        )
+        if any(
+            batch.artifact_revision_id == artifact.artifact_revision_id
+            and batch.reference_artifact_revision_id == reference_id
+            and batch.processor == processor
+            and batch.processor_revision == revision
+            and batch.processing_context_sha256 == context_sha256
+            for batch in durable.satellite_observation_batches
+        ):
+            completed.add(artifact.artifact_revision_id)
+    return completed
 
 
 def _observation_time(
@@ -1388,9 +1484,7 @@ class SatelliteObservationCpuWorker:
                 item.quality_flags.get("temporal_role") != "pre_fire_reference"
             ):
                 eligible.append(item)
-        completed_ids = {
-            item.artifact_revision_id for item in durable.satellite_observation_batches
-        }
+        completed_ids = _current_completed_artifact_ids(durable, eligible)
         artifact = next(
             (item for item in eligible if item.artifact_revision_id == artifact_revision_id),
             None,
@@ -1433,17 +1527,36 @@ class SatelliteObservationCpuWorker:
                 )
             reference_artifact = references[0]
             _reference_processor, reference_assets = _artifact_assets(reference_artifact)
+        processor_revision = _PROCESSOR_REVISIONS[processor]
+        processing_context_sha256 = _processing_context_sha256(
+            durable=durable,
+            artifact_id=artifact_revision_id,
+            reference_artifact_id=(
+                reference_artifact.artifact_revision_id
+                if reference_artifact is not None
+                else None
+            ),
+            processor=processor,
+            processor_revision=processor_revision,
+        )
         if processor == _S1_PROCESSOR and self.openeo_maximum_authorized_credits <= 0:
             assert reference_artifact is not None
             self.publisher.publish(
                 candidate_id=analysis_id,
                 payload={
-                    "schema_version": "incident-day-satellite-observation-1.0",
+                    "schema_version": "incident-day-satellite-observation-1.1",
                     "analysis_id": analysis_id,
                     "source_revision_sha256": durable.source_revision_sha256,
                     "artifact_revision_id": artifact_revision_id,
                     "reference_artifact_revision_id": reference_artifact.artifact_revision_id,
-                    "result_id": _result_id(analysis_id, artifact_revision_id, processor),
+                    "result_id": _result_id(
+                        analysis_id,
+                        artifact_revision_id,
+                        processor,
+                        processor_revision,
+                        processing_context_sha256,
+                    ),
+                    "processing_context_sha256": processing_context_sha256,
                     "processor": processor,
                     "processor_revision": _S1_REVISION,
                     "status": "unavailable",
@@ -1586,7 +1699,7 @@ class SatelliteObservationCpuWorker:
             self.publisher.publish(
                 candidate_id=analysis_id,
                 payload={
-                    "schema_version": "incident-day-satellite-observation-1.0",
+                    "schema_version": "incident-day-satellite-observation-1.1",
                     "analysis_id": analysis_id,
                     "source_revision_sha256": durable.source_revision_sha256,
                     "artifact_revision_id": artifact_revision_id,
@@ -1595,7 +1708,14 @@ class SatelliteObservationCpuWorker:
                         if reference_artifact is not None
                         else None
                     ),
-                    "result_id": _result_id(analysis_id, artifact_revision_id, processor),
+                    "result_id": _result_id(
+                        analysis_id,
+                        artifact_revision_id,
+                        processor,
+                        processor_revision,
+                        processing_context_sha256,
+                    ),
+                    "processing_context_sha256": processing_context_sha256,
                     "processor": processor,
                     "processor_revision": revision,
                     "status": status,

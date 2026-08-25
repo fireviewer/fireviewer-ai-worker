@@ -743,6 +743,7 @@ class BackendSatelliteAnalysisBatch(StrictModel):
 
 class BackendSatelliteObservationBatch(StrictModel):
     result_id: SafeIdentifierV2
+    processing_context_sha256: Sha256HexV2 | None = None
     artifact_revision_id: SafeIdentifierV2
     reference_artifact_revision_id: SafeIdentifierV2 | None = None
     sink_request_sha256: Sha256HexV2
