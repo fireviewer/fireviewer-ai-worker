@@ -1,19 +1,27 @@
-FROM python:3.12-slim-bookworm@sha256:a116514e19457bcb7af7efe9c3dd0b9b71e85b317694e7882a1c52aa15a78134
+FROM python:3.13-slim-trixie@sha256:ffb752e139c0a19692a43af8d8523b274222dd68eebad5d583b45c2201c6e30a AS build
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PORT=8080
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /opt/firewarning-worker
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 COPY pyproject.toml README.md ./
 COPY src ./src
-
 RUN python -m pip install .[source-acquisition] \
-    && groupadd --gid 10001 fireviewer \
-    && useradd --create-home --uid 10001 --gid fireviewer worker
+    && python -m pip uninstall --yes pip setuptools wheel
 
-USER worker
+FROM gcr.io/distroless/python3-debian13:nonroot@sha256:6bfc400d0a6d89f50f5bbc0a4b4ff57214ae5c01647c3a74c2a0c8d830b4cc00
+
+ENV PYTHONPATH="/opt/site-packages" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PORT=8080
+
+COPY --from=build /opt/venv/lib/python3.13/site-packages /opt/site-packages
+
+USER nonroot
 EXPOSE 8080
 
-ENTRYPOINT ["python", "-m", "firewarning_worker.mvp.research.source_acquisition_service"]
+ENTRYPOINT ["python3", "-m", "firewarning_worker.mvp.research.source_acquisition_service"]
