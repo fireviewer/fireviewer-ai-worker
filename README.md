@@ -85,8 +85,10 @@ above 0.85, an accepted managed-provider result, and no hard contradiction or
 missing required evidence. Simulated outputs are always held for review.
 
 The worker never draws the final perimeter. It supplies dated, referenced
-evidence to backend Part.4, where georeferenced observed masks are compiled
-deterministically. Media are evidence inputs, not the pipeline deliverable.
+spatial observations to backend Part.4, where an allowlisted, versioned profile
+drives deterministic probability-grid reconstruction. Pixels and frames from
+one product lineage remain spatially visible but cannot masquerade as independent
+sources. Media are evidence inputs, not the pipeline deliverable.
 
 ## Data boundary
 
