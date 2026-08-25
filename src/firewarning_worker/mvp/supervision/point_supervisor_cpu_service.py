@@ -70,6 +70,7 @@ class PointSupervisorCpuSettings(StrictModel):
         max_length=256,
     )
     backend: AzureBackendEventEvidenceConfig
+    geometry_backend: AzureBackendEventEvidenceConfig
 
     @model_validator(mode="after")
     def validate_paid_supervisor_gate(self) -> PointSupervisorCpuSettings:
@@ -111,6 +112,16 @@ class PointSupervisorCpuSettings(StrictModel):
             backend=AzureBackendEventEvidenceConfig(
                 base_url=os.environ["FIREVIEWER_BACKEND_BASE_URL"],
                 bearer_token=SecretStr(os.environ["FIREVIEWER_BACKEND_TOKEN"]),
+                timeout_seconds=float(os.getenv("FIREVIEWER_BACKEND_TIMEOUT_SECONDS", "20")),
+            ),
+            geometry_backend=AzureBackendEventEvidenceConfig(
+                base_url=os.environ["FIREVIEWER_BACKEND_BASE_URL"],
+                bearer_token=SecretStr(
+                    os.getenv(
+                        "FIREVIEWER_GEOMETRY_BACKEND_TOKEN",
+                        os.environ["FIREVIEWER_BACKEND_TOKEN"],
+                    )
+                ),
                 timeout_seconds=float(os.getenv("FIREVIEWER_BACKEND_TIMEOUT_SECONDS", "20")),
             ),
         )
@@ -157,7 +168,9 @@ def _managed_supervisor(
 def main() -> int:
     settings = PointSupervisorCpuSettings.from_environment()
     repository = AzureBackendEventEvidenceAdapter(settings.backend)
-    geometry_repository = AzureBackendIncidentDayGeometryReviewAdapter(settings.backend)
+    geometry_repository = AzureBackendIncidentDayGeometryReviewAdapter(
+        settings.geometry_backend
+    )
     supervisor: PointSupervisor
     geometry_reviewer: IncidentDayGeometryReviewer
     if settings.supervisor_mode == "managed_vl":

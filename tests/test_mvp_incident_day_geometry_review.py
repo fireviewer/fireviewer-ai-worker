@@ -26,6 +26,9 @@ from firewarning_worker.mvp.supervision.incident_day_geometry_review import (
     IncidentDayGeometryReviewerError,
     SimulatedIncidentDayGeometryReviewer,
 )
+from firewarning_worker.mvp.supervision.point_supervisor_cpu_service import (
+    PointSupervisorCpuSettings,
+)
 
 
 def _hash(value: object) -> str:
@@ -253,3 +256,28 @@ def test_bedrock_reviewer_rejects_thermal_or_unknown_candidate_selection() -> No
         match="unknown_or_ineligible_candidate",
     ):
         reviewer.review(context)
+
+
+def test_geometry_backend_can_use_a_dedicated_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FIREVIEWER_BACKEND_BASE_URL", "https://backend.fireviewer.test")
+    monkeypatch.setenv("FIREVIEWER_BACKEND_TOKEN", "e" * 40)
+    monkeypatch.setenv("FIREVIEWER_GEOMETRY_BACKEND_TOKEN", "g" * 40)
+
+    settings = PointSupervisorCpuSettings.from_environment()
+
+    assert settings.backend.bearer_token.get_secret_value() == "e" * 40
+    assert settings.geometry_backend.bearer_token.get_secret_value() == "g" * 40
+
+
+def test_geometry_backend_token_defaults_to_existing_backend_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FIREVIEWER_BACKEND_BASE_URL", "https://backend.fireviewer.test")
+    monkeypatch.setenv("FIREVIEWER_BACKEND_TOKEN", "e" * 40)
+    monkeypatch.delenv("FIREVIEWER_GEOMETRY_BACKEND_TOKEN", raising=False)
+
+    settings = PointSupervisorCpuSettings.from_environment()
+
+    assert settings.geometry_backend.bearer_token.get_secret_value() == "e" * 40
