@@ -3,6 +3,7 @@ from __future__ import annotations
 from firewarning_worker.mvp.contracts import EventEvidenceV1
 from firewarning_worker.mvp.research.source_planner import (
     AutomaticSourceAcquisitionPlanner,
+    AutomaticSourcePlannerConfig,
 )
 from firewarning_worker.mvp.supervision.backend_event_evidence import (
     BackendIncidentDayCoverage,
@@ -43,10 +44,12 @@ def test_automatic_planner_builds_stable_queries_without_a_media_completeness_ta
     assert first.video_ticket_limit == 30
     assert first.max_source_pages == 200
     assert len(first.source_policies) >= 20
-    assert len(first.queries) == 9
+    assert len(first.queries) == 9 + len(first.source_policies)
     assert all("Massif des Maures" in query for query in first.queries)
     assert any("photo video drone" in query for query in first.queries)
     assert any("progression front secteur" in query for query in first.queries)
+    assert any("site:interieur.gouv.fr" in query for query in first.queries)
+    assert any("site:ledauphine.com" in query for query in first.queries)
     assert first.search_provider_domain not in first.allowed_domains
 
 
@@ -95,6 +98,22 @@ def test_automatic_planner_uses_backend_incident_registry() -> None:
         "fire_progression",
     )
     assert plan.queries[0] == 'incendie "Die Justin" 2026-08-23'
+    assert plan.queries[-2:] == (
+        'incendie "Die Justin" 2026-08-23 site:drome.gouv.fr',
+        'incendie "Die Justin" 2026-08-23 site:ledauphine.com',
+    )
+
+
+def test_automatic_planner_bounds_site_qualified_queries() -> None:
+    planner = AutomaticSourceAcquisitionPlanner(
+        config=AutomaticSourcePlannerConfig(max_site_qualified_queries=1)
+    )
+
+    plan = planner.build(_durable(label="Die Justin"))
+
+    site_queries = tuple(query for query in plan.queries if "site:" in query)
+    assert len(site_queries) == 1
+    assert site_queries[0].endswith("site:ec.europa.eu")
 
 
 def test_automatic_planner_opens_a_new_focused_wave_after_partial_completion() -> None:

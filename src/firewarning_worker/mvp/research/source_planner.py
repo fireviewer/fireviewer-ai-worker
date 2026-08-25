@@ -27,6 +27,16 @@ _WEB_ACTIONABLE_FOCUS = frozenset(
         "visual_or_satellite_evidence",
     }
 )
+_SOURCE_TYPE_PRIORITY = {
+    "official": 0,
+    "satellite": 1,
+    "press": 2,
+    "panoramax": 3,
+    "metadata": 4,
+    "witness": 5,
+    "social": 6,
+    "other": 7,
+}
 
 
 def _policy(
@@ -87,6 +97,7 @@ class AutomaticSourcePlannerConfig(StrictModel):
     media_per_source: int = Field(default=8, ge=1, le=20)
     max_pages_per_run: int = Field(default=5, ge=1, le=50)
     max_multimodal_analyses_per_run: int = Field(default=20, ge=1, le=100)
+    max_site_qualified_queries: int = Field(default=32, ge=0, le=64)
 
     @model_validator(mode="after")
     def validate_domains(self) -> AutomaticSourcePlannerConfig:
@@ -207,6 +218,19 @@ class AutomaticSourceAcquisitionPlanner:
         policies = {
             domain.casefold().rstrip("."): policy for domain, policy in configured_policies.items()
         }
+        ordered_domains = sorted(
+            policies,
+            key=lambda domain: (
+                _SOURCE_TYPE_PRIORITY.get(policies[domain].source_type, 99),
+                -policies[domain].independence_weight,
+                domain,
+            ),
+        )
+        site_queries = tuple(
+            " ".join(part for part in ("incendie", subject, date, f"site:{domain}") if part)
+            for domain in ordered_domains[: self.config.max_site_qualified_queries]
+        )
+        queries = tuple(dict.fromkeys((*queries, *site_queries)))
         search_provider_domain = self.config.search_provider_domain
         search_template = self.config.search_template
         if durable.research_search_templates:
