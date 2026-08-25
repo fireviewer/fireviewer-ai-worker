@@ -242,6 +242,18 @@ def test_bedrock_reviewer_can_only_copy_an_eligible_deterministic_candidate() ->
     assert request["inferenceConfig"] == {"maxTokens": 512, "temperature": 0}
     response_schema_prompt = request["system"][0]["text"]
     assert "Never output, alter, or" in response_schema_prompt
+    model_context = json.loads(request["messages"][0]["content"][0]["text"])
+    model_candidate = model_context["candidate_geometries"][0]
+    assert "geometry_geojson" not in model_candidate
+    assert model_candidate["geometry_summary"] == {
+        "schema": "fireviewer.geometry-summary.v1",
+        "geometry_type": "Polygon",
+        "geometry_sha256": _hash(
+            context.candidate_geometries[0]["geometry_geojson"]
+        ),
+        "coordinate_count": 5,
+        "bbox": [5.36, 44.74, 5.38, 44.76],
+    }
 
 
 def test_bedrock_reviewer_rejects_thermal_or_unknown_candidate_selection() -> None:

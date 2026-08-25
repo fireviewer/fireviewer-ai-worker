@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from hashlib import sha256
+from math import isfinite
+from numbers import Real
 from typing import Any, Literal, Protocol
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -19,7 +21,7 @@ from firewarning_worker.mvp.supervision.backend_event_evidence import (
     BackendIncidentDayGeometryReviewRequest,
 )
 
-PROMPT_REVISION = "fireviewer-incident-day-geometry-review-1.0.0"
+PROMPT_REVISION = "fireviewer-incident-day-geometry-review-1.0.1"
 
 
 class IncidentDayGeometryReviewerError(RuntimeError):
@@ -65,6 +67,71 @@ def _canonical_sha256(value: object) -> str:
     ).hexdigest()
 
 
+def _geometry_summary(geometry: Mapping[str, Any]) -> dict[str, Any]:
+    bounds: list[float] | None = None
+    coordinate_count = 0
+
+    def visit(value: object) -> None:
+        nonlocal bounds, coordinate_count
+        if not isinstance(value, list):
+            return
+        if (
+            len(value) >= 2
+            and isinstance(value[0], Real)
+            and not isinstance(value[0], bool)
+            and isinstance(value[1], Real)
+            and not isinstance(value[1], bool)
+        ):
+            x = float(value[0])
+            y = float(value[1])
+            if not isfinite(x) or not isfinite(y):
+                return
+            coordinate_count += 1
+            if bounds is None:
+                bounds = [x, y, x, y]
+            else:
+                bounds[0] = min(bounds[0], x)
+                bounds[1] = min(bounds[1], y)
+                bounds[2] = max(bounds[2], x)
+                bounds[3] = max(bounds[3], y)
+            return
+        for item in value:
+            visit(item)
+
+    visit(geometry.get("coordinates"))
+    return {
+        "schema": "fireviewer.geometry-summary.v1",
+        "geometry_type": geometry.get("type"),
+        "geometry_sha256": _canonical_sha256(geometry),
+        "coordinate_count": coordinate_count,
+        "bbox": bounds,
+    }
+
+
+def _compact_model_value(value: object) -> object:
+    if isinstance(value, Mapping):
+        if value.get("type") in {"Polygon", "MultiPolygon"} and isinstance(
+            value.get("coordinates"), list
+        ):
+            return _geometry_summary(value)
+        return {key: _compact_model_value(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_compact_model_value(item) for item in value]
+    return value
+
+
+def _compact_model_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    result = {
+        key: _compact_model_value(value)
+        for key, value in candidate.items()
+        if key != "geometry_geojson"
+    }
+    geometry = candidate.get("geometry_geojson")
+    if "geometry_summary" not in result and isinstance(geometry, Mapping):
+        result["geometry_summary"] = _geometry_summary(geometry)
+    return result
+
+
 def _json_object(value: str) -> Mapping[str, Any]:
     decoder = json.JSONDecoder()
     for index, character in enumerate(value):
@@ -93,7 +160,7 @@ def _review_id(context: BackendIncidentDayGeometryReviewContext, decision: objec
 class SimulatedIncidentDayGeometryReviewer:
     supervisor_mode: Literal["simulated"] = "simulated"
     provider_id = "fireviewer-simulated-geometry-reviewer"
-    provider_version = "1.0.0"
+    provider_version = "1.0.1"
     model_id = "simulated-no-model"
     model_version = "simulated-no-model-v1"
 
@@ -154,7 +221,7 @@ prior, not a veto. Prefer abstain when evidence is contradictory or incomplete.
 class BedrockIncidentDayGeometryReviewer:
     supervisor_mode: Literal["managed_vl"] = "managed_vl"
     provider_id = "aws-bedrock-incident-day-geometry-reviewer"
-    provider_version = "1.0.0"
+    provider_version = "1.0.1"
 
     def __init__(
         self,
@@ -179,10 +246,14 @@ class BedrockIncidentDayGeometryReviewer:
             "analysis_id": context.analysis_id,
             "fire_id": context.fire_id,
             "local_date": context.local_date.isoformat(),
-            "deterministic_perimeter": context.deterministic_perimeter,
-            "candidate_geometries": context.candidate_geometries,
-            "evidence_summary": context.evidence_summary,
-            "prior_daily_states": context.prior_daily_states,
+            "deterministic_perimeter": _compact_model_value(
+                context.deterministic_perimeter
+            ),
+            "candidate_geometries": [
+                _compact_model_candidate(item) for item in context.candidate_geometries
+            ],
+            "evidence_summary": _compact_model_value(context.evidence_summary),
+            "prior_daily_states": _compact_model_value(context.prior_daily_states),
             "allowed_competing_candidate_ids": sorted(eligible),
             "published_reference_accessed": False,
             "geometry_mutation_allowed": False,
