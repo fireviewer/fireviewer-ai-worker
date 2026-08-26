@@ -1,117 +1,111 @@
 # FireViewer AI Worker
 
-The FireViewer AI Worker acquires and transforms private event evidence. It
-connects bounded source research, image and video processing, deterministic
-geographic hypotheses, optional managed providers, event memory, and structured
-point assessment.
+The FireViewer AI Worker acquires, transforms and assembles evidence for FireViewer incident analysis. It connects bounded source research, image/video processing, satellite observations, deterministic geographic hypotheses, optional accelerated providers, event memory and structured multimodal assessment.
 
-> This component does not issue emergency alerts, publish incidents, define
-> official coordinates, or predict fire spread. Its outputs are versioned
-> proposals that can be rejected or held for review.
+> This component does not issue emergency alerts, publish incidents, define official coordinates or predict fire spread. Its outputs are versioned evidence and proposals that can be rejected, held for review or produce explicit abstention.
 
-## Role in FireViewer
+## Place in the system
 
 ```text
-source pages / authorised images / video / satellite references
-                              |
-                              v
-          evidence acquisition and visual observations
-                              |
-                              v
-             deterministic geographic hypotheses
-                              |
-                              v
-             EventEvidence and event-history retrieval
-                              |
-                              v
-             compact PointEvidenceBundle per point
-                              |
-                              v
-              managed multimodal PointAssessment
-                              |
-                              v
-                    guarded backend receipt
-                              |
-                              v
-         deterministic backend Part.4 perimeter candidate
+public / official sources + authorised media
+                    |
+                    v
+     acquisition + source provenance
+                    |
+                    v
+ visual observations / keyframes / satellite evidence
+                    |
+                    v
+ deterministic geographic hypotheses
+                    |
+                    v
+ EventEvidence + spatio-temporal history
+                    |
+                    v
+ compact PointEvidenceBundle per candidate
+                    |
+                    v
+ managed multimodal PointAssessment
+                    |
+                    v
+ guarded backend receipt and human review
+                    |
+                    v
+ backend Part.4 3.2 fire-state reconstruction
 ```
 
-The worker follows a provider architecture: external search, multimodal
-extraction, visual detection, terrain, maps, satellite processing, and final
-supervision can be replaced independently as long as they preserve the same
-strict contracts and failure semantics.
+The worker follows explicit provider boundaries. Search, multimodal extraction, visual detection, terrain, maps, satellite processing, cross-view evidence and final supervision can be replaced independently when they preserve the same contracts and failure semantics.
 
 ## Implemented areas
 
-- strict `EventEvidence`, geographic-hypothesis, point-bundle, and
-  point-assessment contracts;
-- bounded HTTP acquisition, domain policies, automatic research planning,
-  media-candidate collection, deduplication, and source tickets;
-- in-memory multimodal extraction from a page and a bounded public-image set;
-- durable CPU video-keyframe extraction followed by the replaceable CPU YOLO
-  smoke detector;
-- upload-location, camera, map, terrain, visibility, uncertainty, and
-  history-aware geographic hypothesis services;
-- durable read/write adapters for backend evidence, derived keyframes,
-  geographic hypotheses, and terrain references;
-- provider boundaries for optional cross-view and satellite acceleration;
-- bounded CLMS, Sentinel-2 optical-change, Sentinel-1 radar-change, and
-  Sentinel-3 FRP observation paths, with immutable source receipts, valid
-  coverage, probability buckets, explicit credentials, invocation, and
-  paid-provider gates;
+- strict `EventEvidence`, geographic-hypothesis, point-bundle and point-assessment contracts;
+- bounded source acquisition, domain policies, query planning, evidence-gap waves, media discovery, deduplication and source tickets;
+- bounded in-memory page/image extraction without turning acquisition into a shadow archive;
+- durable video-keyframe extraction and image-space visual observations;
+- upload-location, camera, map, terrain, visibility, uncertainty and history-aware geographic hypotheses;
+- durable adapters for evidence, derived keyframes, geographic hypotheses, terrain references and point assessments;
+- CLMS, Sentinel-2, Sentinel-3, bounded Sentinel-1 and NASA FIRMS evidence paths with source identity and coverage metadata;
 - spatio-temporal event retrieval and compact evidence-bundle assembly;
-- managed and simulated multimodal supervisors with strict JSON output and
-  bounded managed-model invocation counts;
-- calibrated publication policy, contradiction handling, competing-point JSON,
-  and explicit abstention;
-- CPU and optional GPU container entry points for independently scalable stages.
+- managed and simulated multimodal supervisors with strict structured output, contradiction handling and abstention;
+- CPU and optional accelerated service/container boundaries;
+- artifact-retention contracts for remotely retained models/datasets and bounded local scratch.
 
-Presence in this repository does not mean that every provider is configured,
-funded, deployed, or accepted on real data. The complete acquisition-to-review
-flow remains an integration milestone.
+Presence in the repository does not mean that every provider is configured, funded, deployed or accepted on real data.
 
 ## Geographic safety boundary
 
-YOLO and other detectors supply image-space boxes, classes, and scores only.
-They never produce authoritative coordinates. Candidate GPS points come from a
-separate deterministic stage using the upload position, declared accuracy,
-orientation and field of view when available, terrain, map and satellite
-references, and earlier reviewed fire states.
+Visual detectors supply image-space boxes, classes and scores only. They never produce authoritative coordinates.
 
-The final vision-language supervisor judges a supplied candidate. It may
-`accept`, `reject`, or `abstain`; it may not mutate the source point. A proposed
-correction is a competing JSON object with its own evidence references.
+Geographic candidates are built separately from documented upload/camera information, declared accuracy, orientation/FOV when available, terrain, maps, satellite evidence and earlier reviewed event states.
 
-Automatic-publication eligibility requires calibrated confidence strictly
-above 0.85, an accepted managed-provider result, and no hard contradiction or
-missing required evidence. Simulated outputs are always held for review.
+The final multimodal supervisor judges a supplied candidate. It may `accept`, `reject` or `abstain`; it may not silently mutate the source point. A proposed correction is a competing referenced object with its own evidence trail.
 
-The worker never draws the final perimeter. It supplies dated, referenced
-spatial observations to backend Part.4, where an allowlisted, versioned profile
-drives deterministic probability-grid reconstruction. Pixels and frames from
-one product lineage remain spatially visible but cannot masquerade as independent
-sources. Media are evidence inputs, not the pipeline deliverable.
+The worker does not author the final daily boundary. Reviewed spatial observations are consumed downstream by backend **Part.4 3.2**, where an allowlisted deterministic fusion profile reconstructs `affected`, `active` and uncertainty products. The current baseline profile remains uncalibrated and therefore cannot authorize unattended publication.
 
-## Data boundary
+## Satellite evidence boundary
 
-The acquisition layer retains evidence tickets, source references, hashes,
-derived claims, outcomes, and failure information. It is not intended to retain
-complete scraped articles, public-media binaries, or full transcripts. Raw
-third-party content is discarded after bounded in-memory processing unless a
-separate right and retention rule explicitly apply.
+FireViewer keeps satellite product semantics explicit:
 
-No private incident evidence, model weights, checkpoints, provider secrets, or
-generated inference payloads belong in Git.
+- CLMS and eligible optical-change observations can support affected-area evidence;
+- Sentinel-3 and FIRMS remain thermal/activity likelihood footprints, not exact active fronts;
+- Sentinel-1 is a bounded radar-change second opinion;
+- multiple pixels or probability buckets from one product lineage remain one source lineage rather than independent votes.
 
-Large inactive artifacts are inventoried with `fireviewer-artifact-audit` and
-classified as active, remotely available, legacy, rebuildable, unused dataset,
-or unknown. Redistributable legacy checkpoints live in a private common Hugging
-Face archive; third-party weights remain pinned to their upstream provider.
-Inactive datasets are likewise stored or referenced by immutable Hub revision.
-Job caches use at most 20 GiB or ten percent of free space, whichever is lower,
-and are removed after the remote revision, file sizes, and one representative
-read have been confirmed. Production never consumes the common legacy archive
-directly; a reactivated model must first be promoted to a dedicated repository.
+Product availability does not imply live provider qualification.
+
+## Data and retention
+
+The acquisition layer retains evidence tickets, source references, hashes, derived claims, processing outcomes and failure information. It is not intended to retain complete scraped articles, copied public-media binaries or full transcripts by default.
+
+No provider secrets, private incident payloads, generated inference dumps or large inactive checkpoints belong in Git.
+
+Inactive artifacts are classified and, where appropriate, retained by immutable remote revision. Production code must not consume a common legacy archive directly.
+
+## Model and artifact status
+
+The public FireViewer model list is intentionally separate from the internal research/legacy inventory.
+
+Deprecated, superseded, incomplete and low-quality historical checkpoints are consolidated in the private `fireviewer/fireviewer-legacy-models` archive when they are worth retaining for provenance or reproducibility. A legacy artifact must be re-evaluated and promoted into a dedicated repository before it can become a current runtime dependency.
+
+Third-party weights remain pinned to their upstream provider/revision when redistribution is unnecessary or not authorised.
+
+## Historical namespace
+
+The Python package still uses the historical namespace `firewarning_worker` in multiple modules and contracts. It is retained for compatibility with existing imports, manifests and artifacts.
+
+**The active project identity is FireViewer.** Renaming that namespace is a code migration, not a documentation cleanup, and must not be performed casually.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `src/firewarning_worker/` | Core worker implementation and current compatibility namespace. |
+| `contracts/` | Public/portable machine-readable evidence and retention contracts. |
+| `eve-point-supervisor/` | Structured point-supervision harness and evaluation wiring. |
+| `training/` | Training/research preparation and benchmark code; not a statement that every historical model is active. |
+| `tools/` | Dataset, evaluation, conversion and operational preparation utilities. |
+| `benchmarks/` | Bounded benchmark corpora/manifests and reproducibility material. |
+| `deploy/` | Provider-specific deployment adapters; deployment files do not prove that a service is active. |
 
 ## Development
 
@@ -125,11 +119,7 @@ mypy src
 pytest -q
 ```
 
-Optional extras in `pyproject.toml` install only the dependencies required for
-a selected stage. CPU, container, cloud-provider, GPU, and real-data acceptance
-remain separate gates; local unit tests do not prove them.
-
-The Eve point-supervisor harness has its own Node workspace:
+The Eve harness has its own Node workspace:
 
 ```bash
 cd eve-point-supervisor
@@ -137,18 +127,23 @@ npm ci
 npm run build
 ```
 
-## Contracts and project documentation
+Unit tests, container builds and synthetic fixtures do not prove live cloud permissions, real-data quality or end-to-end publication readiness.
 
-- [Source acquisition method](docs/SOURCE_ACQUISITION_METHOD.md) defines the
-  incident/day acquisition loop, media and satellite handling, coverage gates,
-  retention boundary, and evaluation isolation.
+## Documentation
+
+- [Source acquisition method](docs/SOURCE_ACQUISITION_METHOD.md)
 - [`contracts/point-supervisor/v1`](contracts/point-supervisor/v1/README.md)
-  documents the public point-supervision schemas.
 - [`contracts/geographic-hypotheses/v1`](contracts/geographic-hypotheses/v1/geographic-hypotheses.schema.json)
-  contains the geographic-hypothesis schema.
 - [Canonical FireViewer documentation](https://github.com/fireviewer/Fireviewer_doc)
-  explains architecture, data governance, safety, and current maturity.
+- [Current FireViewer status](https://github.com/fireviewer/Fireviewer_doc/blob/main/docs/public/STATUS.md)
+- [Resource status](https://github.com/fireviewer/Fireviewer_doc/blob/main/docs/public/RESOURCES.md)
 
-Code is licensed under AGPL-3.0-or-later. Original documentation is available
-under CC BY 4.0. Models, datasets, services, and upstream assets retain their
-own terms. See [SECURITY.md](SECURITY.md) for responsible disclosure.
+## Licensing and security
+
+Code is licensed under AGPL-3.0-or-later. Original documentation is available under CC BY 4.0. Models, datasets, services and upstream assets retain their own terms.
+
+See [SECURITY.md](SECURITY.md) for responsible disclosure.
+
+## Contact
+
+Research, infrastructure, provenance, rights or security: **unicornwhodev@gmail.com**.
