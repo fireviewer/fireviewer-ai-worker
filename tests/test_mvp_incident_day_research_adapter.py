@@ -227,7 +227,7 @@ def test_satellite_observation_batch_accepts_explicit_openeo_unavailability() ->
             "status": "unavailable",
             "unavailable_reason": "cdse_openeo_not_authorized",
             "processor": "sentinel1_vvvh_change_v1",
-            "processor_revision": "fireviewer-sentinel1-vvvh-change-openeo-1.0.0",
+            "processor_revision": "fireviewer-sentinel1-vvvh-change-openeo-1.1.0",
             "claim_ids": [],
             "observed_at": "2026-07-06T10:00:00Z",
             "valid_coverage_geojson": None,

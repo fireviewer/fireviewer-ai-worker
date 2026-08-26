@@ -316,9 +316,7 @@ class _LocalObservationReader:
         assert self.sentinel2_window is not None
         return self.sentinel2_window
 
-    def read_sentinel1_change_window(
-        self, *, reference_artifact, observation_artifact, bbox
-    ):
+    def read_sentinel1_change_window(self, *, reference_artifact, observation_artifact, bbox):
         assert reference_artifact.quality_flags["temporal_role"] == "pre_fire_reference"
         assert observation_artifact.quality_flags["temporal_role"] == "post_fire_observation"
         assert self.sentinel1_window is not None
@@ -698,11 +696,23 @@ def test_clms_daily_cogs_produce_a_clipped_burn_scar_without_raw_rasters(
     payload = publisher.payloads[0]
     assert payload["raw_satellite_content_stored"] is False
     assert len(payload["asset_receipts"]) == 3
-    assert len(payload["observations"]) == 1
-    observation = payload["observations"][0]
-    assert observation["geometry_geojson"]["type"] in {"Polygon", "MultiPolygon"}
-    assert observation["metrics"]["pixel_count"] == 3
-    assert observation["metrics"]["target_day_of_year"] == target_day
+    assert len(payload["observations"]) == 3
+    observations = payload["observations"]
+    assert all(
+        observation["geometry_geojson"]["type"] in {"Polygon", "MultiPolygon"}
+        for observation in observations
+    )
+    assert {observation["metrics"]["pixel_count"] for observation in observations} == {3}
+    assert (
+        sum(
+            observation["metrics"]["probability_bucket_pixel_count"] for observation in observations
+        )
+        == 3
+    )
+    assert {round(observation["confidence"], 2) for observation in observations} == {0.7, 0.8, 0.9}
+    assert {observation["metrics"]["target_day_of_year"] for observation in observations} == {
+        target_day
+    }
     assert "object_uri" not in str(payload)
 
 
@@ -841,9 +851,10 @@ def test_openeo_sentinel1_reader_is_bounded_and_never_exposes_its_token() -> Non
         load = payload["process"]["process_graph"]["load"]
         extent = load["arguments"]["spatial_extent"]
         assert load["arguments"]["bands"] == ["VV", "VH"]
-        assert payload["process"]["process_graph"]["backscatter"]["arguments"][
-            "coefficient"
-        ] == "sigma0-ellipsoid"
+        assert (
+            payload["process"]["process_graph"]["backscatter"]["arguments"]["coefficient"]
+            == "sigma0-ellipsoid"
+        )
         assert "token-" not in json.dumps(payload)
         memory = MemoryFile()
         with memory.open(
@@ -1123,7 +1134,7 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     assert receipt.status == "completed"
     payload = publisher.payloads[0]
     assert payload["processor"] == "sentinel2_nbr_change_v1"
-    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.0.3"
+    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.1.0"
     assert len(payload["processing_context_sha256"]) == 64
     assert payload["result_id"].startswith("SATOBS-")
     assert payload["reference_artifact_revision_id"] == reference.artifact_revision_id
@@ -1161,9 +1172,7 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     assert no_change.status == "no_observation"
     no_change_payload = no_change_publisher.payloads[0]
     assert no_change_payload["result_id"] == payload["result_id"]
-    assert no_change_payload["processing_context_sha256"] == payload[
-        "processing_context_sha256"
-    ]
+    assert no_change_payload["processing_context_sha256"] == payload["processing_context_sha256"]
     assert no_change_payload["observations"] == []
     assert no_change_payload["valid_coverage_geojson"]["type"] == "Polygon"
     assert no_change_payload["coverage_metrics"]["valid_pixel_count"] == 16

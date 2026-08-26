@@ -55,8 +55,10 @@ strict contracts and failure semantics.
 - durable read/write adapters for backend evidence, derived keyframes,
   geographic hypotheses, and terrain references;
 - provider boundaries for optional cross-view and satellite acceleration;
-- bounded Sentinel-2 optical-change and Sentinel-1 radar-change observation
-  paths, with explicit credentials, invocation, and paid-provider gates;
+- bounded CLMS, Sentinel-2 optical-change, Sentinel-1 radar-change, and
+  Sentinel-3 FRP observation paths, with immutable source receipts, valid
+  coverage, probability buckets, explicit credentials, invocation, and
+  paid-provider gates;
 - spatio-temporal event retrieval and compact evidence-bundle assembly;
 - managed and simulated multimodal supervisors with strict JSON output and
   bounded managed-model invocation counts;
@@ -100,6 +102,16 @@ separate right and retention rule explicitly apply.
 
 No private incident evidence, model weights, checkpoints, provider secrets, or
 generated inference payloads belong in Git.
+
+Large inactive artifacts are inventoried with `fireviewer-artifact-audit` and
+classified as active, remotely available, legacy, rebuildable, unused dataset,
+or unknown. Redistributable legacy checkpoints live in a private common Hugging
+Face archive; third-party weights remain pinned to their upstream provider.
+Inactive datasets are likewise stored or referenced by immutable Hub revision.
+Job caches use at most 20 GiB or ten percent of free space, whichever is lower,
+and are removed after the remote revision, file sizes, and one representative
+read have been confirmed. Production never consumes the common legacy archive
+directly; a reactivated model must first be promoted to a dedicated repository.
 
 ## Development
 

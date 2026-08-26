@@ -31,19 +31,20 @@ from firewarning_worker.mvp.supervision.backend_event_evidence import (
 )
 
 _CLMS_PROCESSOR = "clms_burned_area_daily_v1"
-_CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.0.0"
+_CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.1.0"
 _CLMS_COLLECTION = "clms_ba_global_300m_daily_v4_cog"
 _CLMS_ASSETS = ("ba300_dob_nrt", "ba300_cp_nrt", "ba300_bf_nrt")
 _S2_PROCESSOR = "sentinel2_nbr_change_v1"
-_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.0.3"
+_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.1.0"
 _S2_COLLECTION = "sentinel-2-l2a"
 _S2_ASSETS = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
 _S1_PROCESSOR = "sentinel1_vvvh_change_v1"
-_S1_REVISION = "fireviewer-sentinel1-vvvh-change-openeo-1.0.0"
+_S1_REVISION = "fireviewer-sentinel1-vvvh-change-openeo-1.1.0"
 _S1_COLLECTION = "sentinel-1-grd"
 _S1_ASSETS = ("openeo_vv_vh",)
 _FRP_PROCESSOR = "sentinel3_frp_v1"
 _FRP_REVISION = "fireviewer-sentinel3-frp-cpu-1.1.0"
+_PROBABILITY_BUCKET_WIDTH = 0.05
 _FRP_COLLECTIONS = {"sentinel-3-sl-2-frp-nrt", "sentinel-3-sl-2-frp-ntc"}
 _FRP_ASSETS_BY_COLLECTION = {
     "sentinel-3-sl-2-frp-nrt": ("FRP_MWIR1km_STANDARD",),
@@ -460,16 +461,10 @@ class CdseS3ObservationAssetReader:
         mean_latitude = (south + north) / 2
         width = max(
             1,
-            math.ceil(
-                (east - west) * 111_320 * math.cos(math.radians(mean_latitude)) / 20
-            ),
+            math.ceil((east - west) * 111_320 * math.cos(math.radians(mean_latitude)) / 20),
         )
         height = max(1, math.ceil((north - south) * 110_540 / 20))
-        if (
-            width > 2_500
-            or height > 2_500
-            or width * height > self.config.maximum_window_pixels
-        ):
+        if width > 2_500 or height > 2_500 or width * height > self.config.maximum_window_pixels:
             raise SatelliteCpuError("cdse_openeo_window_too_large", retryable=False)
         pre, pre_transform, pre_crs, pre_receipt = self._openeo_raster(
             artifact=reference_artifact,
@@ -702,9 +697,7 @@ class CdseS3ObservationAssetReader:
                     target = observation["B11_20m"]
                     if target.crs is None:
                         raise SatelliteCpuError("sentinel2_target_crs_missing", retryable=False)
-                    target_bounds = transform_bounds(
-                        "EPSG:4326", target.crs, *bbox, densify_pts=21
-                    )
+                    target_bounds = transform_bounds("EPSG:4326", target.crs, *bbox, densify_pts=21)
                     requested = from_bounds(*target_bounds, transform=target.transform)
                     requested = requested.round_offsets().round_lengths()
                     try:
@@ -725,9 +718,7 @@ class CdseS3ObservationAssetReader:
                     def aligned(
                         datasets: Mapping[str, Any],
                         assets: tuple[SatelliteObservationAsset, ...],
-                    ) -> tuple[
-                        dict[str, np.ndarray[Any, Any]], tuple[SatelliteAssetReceipt, ...]
-                    ]:
+                    ) -> tuple[dict[str, np.ndarray[Any, Any]], tuple[SatelliteAssetReceipt, ...]]:
                         arrays: dict[str, np.ndarray[Any, Any]] = {}
                         receipts: list[SatelliteAssetReceipt] = []
                         assets_by_name = {item.asset_name: item for item in assets}
@@ -801,9 +792,7 @@ def _artifact_assets(
         _S1_PROCESSOR,
         _S2_PROCESSOR,
         _FRP_PROCESSOR,
-    } or not isinstance(
-        raw_assets, list
-    ):
+    } or not isinstance(raw_assets, list):
         raise SatelliteCpuError("satellite_observation_manifest_missing", retryable=False)
     try:
         assets = tuple(SatelliteObservationAsset.model_validate(item) for item in raw_assets)
@@ -930,6 +919,63 @@ def _observation_time(
     return start + ((end - start) / 2)
 
 
+def _probability_bucket_geometries(
+    *,
+    probability: np.ndarray[Any, Any],
+    selected: np.ndarray[Any, Any],
+    transform: Any,
+    crs: str,
+    incident_bbox: tuple[float, float, float, float],
+    bucket_width: float = _PROBABILITY_BUCKET_WIDTH,
+) -> tuple[tuple[int, float, int, Any], ...]:
+    """Preserve spatial probability variation with a bounded polygon set."""
+
+    from rasterio.features import shapes
+    from rasterio.warp import transform_geom
+    from shapely.geometry import box, shape
+    from shapely.ops import unary_union
+
+    if not 0 < bucket_width <= 0.25:
+        raise ValueError("probability bucket width is outside the reviewed range")
+    if probability.shape != selected.shape or not np.isfinite(probability[selected]).all():
+        raise SatelliteCpuError("satellite_probability_grid_invalid", retryable=False)
+    bucket_count = round(1.0 / bucket_width)
+    bucket_index = np.zeros(probability.shape, dtype=np.uint8)
+    bucket_index[selected] = np.clip(
+        np.floor(probability[selected] / bucket_width).astype(np.int32) + 1,
+        1,
+        bucket_count,
+    ).astype(np.uint8)
+    incident_extent = box(*incident_bbox)
+    results: list[tuple[int, float, int, Any]] = []
+    for index in sorted(int(item) for item in np.unique(bucket_index[selected])):
+        bucket_mask = selected & (bucket_index == index)
+        polygons = []
+        for raw_geometry, value in shapes(
+            bucket_mask.astype(np.uint8), mask=bucket_mask, transform=transform
+        ):
+            if int(value) != 1:
+                continue
+            projected = transform_geom(crs, "EPSG:4326", raw_geometry, precision=7)
+            clipped = shape(projected).intersection(incident_extent)
+            if not clipped.is_empty:
+                polygons.append(clipped)
+        if not polygons:
+            continue
+        geometry = unary_union(polygons)
+        if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
+            raise SatelliteCpuError("satellite_probability_geometry_invalid", retryable=False)
+        results.append(
+            (
+                index,
+                float(np.mean(probability[bucket_mask])),
+                int(np.count_nonzero(bucket_mask)),
+                geometry,
+            )
+        )
+    return tuple(results)
+
+
 def _sentinel1_vvvh_observations(
     *,
     durable: DurableEventEvidence,
@@ -995,11 +1041,7 @@ def _sentinel1_vvvh_observations(
     vv_change = np.abs(post_vv_db - pre_vv_db)
     vh_change = np.abs(post_vh_db - pre_vh_db)
     magnitude = np.hypot(vv_change, vh_change)
-    selected = (
-        valid
-        & (vv_change >= vv_change_threshold_db)
-        & (vh_change >= vh_change_threshold_db)
-    )
+    selected = valid & (vv_change >= vv_change_threshold_db) & (vh_change >= vh_change_threshold_db)
     changed_pixel_count = int(np.count_nonzero(selected))
     if changed_pixel_count == 0:
         return Sentinel1ObservationOutcome(
@@ -1017,45 +1059,42 @@ def _sentinel1_vvvh_observations(
         0,
         0.45,
     )
-    polygons = []
-    for raw_geometry, value in shapes(
-        probability.astype(np.float32), mask=selected, transform=window.transform
-    ):
-        if float(value) <= 0:
-            continue
-        projected = transform_geom(window.crs, "EPSG:4326", raw_geometry, precision=7)
-        clipped = shape(projected).intersection(incident_extent)
-        if not clipped.is_empty:
-            polygons.append(clipped)
-    if not polygons:
+    buckets = _probability_bucket_geometries(
+        probability=probability,
+        selected=selected,
+        transform=window.transform,
+        crs=window.crs,
+        incident_bbox=durable.incident_day_bbox,
+    )
+    if not buckets:
         return Sentinel1ObservationOutcome(
             observations=(),
             valid_coverage_geojson=coverage_geojson,
             coverage_metrics={**coverage_metrics, "changed_pixel_count": changed_pixel_count},
         )
-    geometry = unary_union(polygons)
-    if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
-        raise SatelliteCpuError("sentinel1_change_geometry_invalid", retryable=False)
-    observation_digest = sha256(
-        (
-            artifact.artifact_revision_id
-            + geometry.wkb_hex
-            + f"{vv_change_threshold_db:.6f}:{vh_change_threshold_db:.6f}"
-        ).encode()
-    ).hexdigest()
-    return Sentinel1ObservationOutcome(
-        observations=(
+    observations = []
+    for bucket_index, bucket_probability, bucket_pixels, geometry in buckets:
+        observation_digest = sha256(
+            (
+                artifact.artifact_revision_id
+                + geometry.wkb_hex
+                + f"{vv_change_threshold_db:.6f}:{vh_change_threshold_db:.6f}:"
+                + f"{bucket_index}:{bucket_probability:.6f}"
+            ).encode()
+        ).hexdigest()
+        observations.append(
             {
                 "observation_id": f"S1-VVVH-{observation_digest[:24]}",
                 "observed_at": _observation_time(durable, artifact).isoformat(),
                 "geometry_geojson": mapping(geometry),
                 "coverage_geojson": coverage_geojson,
                 "horizontal_accuracy_m": max(40.0, float(artifact.resolution_m or 40)),
-                "confidence": float(np.mean(probability[selected])),
+                "confidence": bucket_probability,
                 "metrics": {
                     **coverage_metrics,
                     "changed_pixel_count": changed_pixel_count,
-                    "change_probability_mean": float(np.mean(probability[selected])),
+                    "probability_bucket_pixel_count": bucket_pixels,
+                    "change_probability_mean": bucket_probability,
                     "change_magnitude_mean_db": float(np.mean(magnitude[selected])),
                     "pre_vv_db_mean": float(np.mean(pre_vv_db[selected])),
                     "post_vv_db_mean": float(np.mean(post_vv_db[selected])),
@@ -1064,8 +1103,10 @@ def _sentinel1_vvvh_observations(
                     "vv_change_threshold_db": vv_change_threshold_db,
                     "vh_change_threshold_db": vh_change_threshold_db,
                 },
-            },
-        ),
+            }
+        )
+    return Sentinel1ObservationOutcome(
+        observations=tuple(observations),
         valid_coverage_geojson=coverage_geojson,
         coverage_metrics={**coverage_metrics, "changed_pixel_count": changed_pixel_count},
     )
@@ -1148,50 +1189,60 @@ def _sentinel2_nbr_observations(
             valid_coverage_geojson=coverage_geojson,
             coverage_metrics={**coverage_metrics, "burned_pixel_count": 0},
         )
-    polygons = []
-    for raw_geometry, value in shapes(
-        probability.astype(np.float32), mask=selected, transform=window.transform
-    ):
-        if float(value) < minimum_probability:
-            continue
-        projected = transform_geom(window.crs, "EPSG:4326", raw_geometry, precision=7)
-        clipped = shape(projected).intersection(incident_extent)
-        if not clipped.is_empty:
-            polygons.append(clipped)
-    if not polygons:
+    buckets = _probability_bucket_geometries(
+        probability=probability,
+        selected=selected,
+        transform=window.transform,
+        crs=window.crs,
+        incident_bbox=durable.incident_day_bbox,
+    )
+    if not buckets:
         return Sentinel2ObservationOutcome(
             observations=(),
             valid_coverage_geojson=coverage_geojson,
             coverage_metrics={**coverage_metrics, "burned_pixel_count": burned_pixel_count},
         )
-    geometry = unary_union(polygons)
-    if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
-        raise SatelliteCpuError("sentinel2_burned_geometry_invalid", retryable=False)
     observed_at = _observation_time(durable, artifact)
-    observation_digest = sha256(
-        (artifact.artifact_revision_id + geometry.wkb_hex + f"{dnbr_threshold:.6f}").encode()
-    ).hexdigest()
-    return Sentinel2ObservationOutcome(
-        observations=(
+    observations = []
+    for bucket_index, bucket_probability, bucket_pixels, geometry in buckets:
+        bucket_mask = selected & (
+            np.clip(
+                np.floor(probability / _PROBABILITY_BUCKET_WIDTH).astype(np.int32) + 1,
+                1,
+                20,
+            )
+            == bucket_index
+        )
+        observation_digest = sha256(
+            (
+                artifact.artifact_revision_id
+                + geometry.wkb_hex
+                + f"{dnbr_threshold:.6f}:{bucket_index}:{bucket_probability:.6f}"
+            ).encode()
+        ).hexdigest()
+        observations.append(
             {
                 "observation_id": f"S2-DNBR-{observation_digest[:24]}",
                 "observed_at": observed_at.isoformat(),
                 "geometry_geojson": mapping(geometry),
                 "coverage_geojson": coverage_geojson,
                 "horizontal_accuracy_m": max(20.0, float(artifact.resolution_m or 20)),
-                "confidence": float(np.mean(probability[selected])),
+                "confidence": bucket_probability,
                 "metrics": {
                     **coverage_metrics,
                     "burned_pixel_count": burned_pixel_count,
-                    "dnbr_mean": float(np.mean(dnbr[selected])),
-                    "dnbr_max": float(np.max(dnbr[selected])),
-                    "pre_nbr_mean": float(np.mean(pre_nbr[selected])),
-                    "post_nbr_mean": float(np.mean(post_nbr[selected])),
+                    "probability_bucket_pixel_count": bucket_pixels,
+                    "dnbr_mean": float(np.mean(dnbr[bucket_mask])),
+                    "dnbr_max": float(np.max(dnbr[bucket_mask])),
+                    "pre_nbr_mean": float(np.mean(pre_nbr[bucket_mask])),
+                    "post_nbr_mean": float(np.mean(post_nbr[bucket_mask])),
                     "dnbr_threshold": dnbr_threshold,
                     "minimum_probability": minimum_probability,
                 },
-            },
-        ),
+            }
+        )
+    return Sentinel2ObservationOutcome(
+        observations=tuple(observations),
         valid_coverage_geojson=coverage_geojson,
         coverage_metrics={**coverage_metrics, "burned_pixel_count": burned_pixel_count},
     )
@@ -1205,9 +1256,7 @@ def _clms_observations(
     probability_threshold: float,
     fraction_threshold: float,
 ) -> list[dict[str, Any]]:
-    from rasterio.features import shapes
-    from shapely.geometry import box, mapping, shape
-    from shapely.ops import unary_union
+    from shapely.geometry import mapping
 
     if durable.incident_day_local_date is None or durable.incident_day_bbox is None:
         raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
@@ -1222,43 +1271,51 @@ def _clms_observations(
     pixel_count = int(np.count_nonzero(selected))
     if pixel_count == 0:
         return []
-    incident_extent = box(*durable.incident_day_bbox)
-    polygons = []
-    for raw_geometry, value in shapes(
-        selected.astype(np.uint8), mask=selected, transform=window.transform
-    ):
-        if int(value) != 1:
-            continue
-        clipped = shape(raw_geometry).intersection(incident_extent)
-        if not clipped.is_empty:
-            polygons.append(clipped)
-    if not polygons:
-        return []
-    geometry = unary_union(polygons)
-    if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
-        raise SatelliteCpuError("clms_burned_area_geometry_invalid", retryable=False)
-    probability_mean = float(np.mean(window.burn_probability[selected]))
-    fraction_mean = float(np.mean(window.burn_fraction[selected]))
-    observation_digest = sha256(
-        (artifact.artifact_revision_id + str(target_day) + geometry.wkb_hex).encode()
-    ).hexdigest()
-    return [
-        {
-            "observation_id": f"CLMS-BA-{observation_digest[:24]}",
-            "observed_at": _observation_time(durable, artifact).isoformat(),
-            "geometry_geojson": mapping(geometry),
-            "horizontal_accuracy_m": max(300.0, float(artifact.resolution_m or 300)),
-            "confidence": min(1.0, max(0.0, probability_mean)),
-            "metrics": {
-                "target_day_of_year": target_day,
-                "pixel_count": pixel_count,
-                "burn_probability_mean": probability_mean,
-                "burn_fraction_mean": fraction_mean,
-                "probability_threshold": probability_threshold,
-                "fraction_threshold": fraction_threshold,
-            },
-        }
-    ]
+    buckets = _probability_bucket_geometries(
+        probability=window.burn_probability,
+        selected=selected,
+        transform=window.transform,
+        crs="EPSG:4326",
+        incident_bbox=durable.incident_day_bbox,
+    )
+    observations = []
+    for bucket_index, bucket_probability, bucket_pixels, geometry in buckets:
+        bucket_mask = selected & (
+            np.clip(
+                np.floor(window.burn_probability / _PROBABILITY_BUCKET_WIDTH).astype(np.int32) + 1,
+                1,
+                20,
+            )
+            == bucket_index
+        )
+        fraction_mean = float(np.mean(window.burn_fraction[bucket_mask]))
+        observation_digest = sha256(
+            (
+                artifact.artifact_revision_id
+                + str(target_day)
+                + geometry.wkb_hex
+                + f":{bucket_index}:{bucket_probability:.6f}"
+            ).encode()
+        ).hexdigest()
+        observations.append(
+            {
+                "observation_id": f"CLMS-BA-{observation_digest[:24]}",
+                "observed_at": _observation_time(durable, artifact).isoformat(),
+                "geometry_geojson": mapping(geometry),
+                "horizontal_accuracy_m": max(300.0, float(artifact.resolution_m or 300)),
+                "confidence": min(1.0, max(0.0, bucket_probability)),
+                "metrics": {
+                    "target_day_of_year": target_day,
+                    "pixel_count": pixel_count,
+                    "probability_bucket_pixel_count": bucket_pixels,
+                    "burn_probability_mean": bucket_probability,
+                    "burn_fraction_mean": fraction_mean,
+                    "probability_threshold": probability_threshold,
+                    "fraction_threshold": fraction_threshold,
+                },
+            }
+        )
+    return observations
 
 
 def _netcdf_variables(dataset: Any) -> dict[str, Any]:
@@ -1532,9 +1589,7 @@ class SatelliteObservationCpuWorker:
                 _S1_PROCESSOR,
                 _S2_PROCESSOR,
                 _FRP_PROCESSOR,
-            } and (
-                item.quality_flags.get("temporal_role") != "pre_fire_reference"
-            ):
+            } and (item.quality_flags.get("temporal_role") != "pre_fire_reference"):
                 eligible.append(item)
         completed_ids = _current_completed_artifact_ids(durable, eligible)
         artifact = next(
@@ -1584,9 +1639,7 @@ class SatelliteObservationCpuWorker:
             durable=durable,
             artifact_id=artifact_revision_id,
             reference_artifact_id=(
-                reference_artifact.artifact_revision_id
-                if reference_artifact is not None
-                else None
+                reference_artifact.artifact_revision_id if reference_artifact is not None else None
             ),
             processor=processor,
             processor_revision=processor_revision,
@@ -1657,6 +1710,7 @@ class SatelliteObservationCpuWorker:
                 parameters = {
                     "probability_threshold": self.probability_threshold,
                     "fraction_threshold": self.fraction_threshold,
+                    "probability_bucket_width": _PROBABILITY_BUCKET_WIDTH,
                 }
                 receipt_payloads = [
                     item.as_payload(source_artifact_revision_id=artifact_revision_id)
@@ -1696,6 +1750,7 @@ class SatelliteObservationCpuWorker:
                     "vv_change_threshold_db": self.sentinel1_vv_change_threshold_db,
                     "vh_change_threshold_db": self.sentinel1_vh_change_threshold_db,
                     "maximum_authorized_credits": self.openeo_maximum_authorized_credits,
+                    "probability_bucket_width": _PROBABILITY_BUCKET_WIDTH,
                 }
             elif processor == _S2_PROCESSOR:
                 assert reference_artifact is not None
@@ -1728,6 +1783,7 @@ class SatelliteObservationCpuWorker:
                 parameters = {
                     "dnbr_threshold": self.dnbr_threshold,
                     "minimum_probability": self.minimum_burn_probability,
+                    "probability_bucket_width": _PROBABILITY_BUCKET_WIDTH,
                 }
             else:
                 output_path = Path(directory) / "sentinel3-frp.nc"
