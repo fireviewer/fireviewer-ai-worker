@@ -64,6 +64,13 @@ class _BedrockClient:
                                             ),
                                             "observed_at": "2026-08-23T12:00:00Z",
                                             "confidence": 0.93,
+                                            "surface_area": {
+                                                "component": "affected",
+                                                "qualifier": "approximate",
+                                                "value_ha": 120,
+                                                "valid_from": "2026-08-23T12:00:00Z",
+                                                "valid_until": "2026-08-23T12:00:00Z",
+                                            },
                                             "evidence_media_ids": [self.claim_media_id],
                                         }
                                     ],
@@ -97,6 +104,8 @@ def test_bedrock_pixtral_extracts_strict_multimodal_claims_with_converse() -> No
     assert result.provider_id == "aws-bedrock-pixtral"
     assert result.model_revision == "mistral.pixtral-large-2502-v1:0"
     assert result.claims[0].evidence_media_ids == ("MEDIA-WEB-1",)
+    assert result.claims[0].surface_area.value_ha == 120
+    assert result.claims[0].surface_area.upper_ha is None
 
 
 def test_bedrock_pixtral_rejects_fabricated_media_reference() -> None:

@@ -6,33 +6,21 @@ The FireViewer AI Worker acquires, transforms and assembles evidence for FireVie
 
 ## Place in the system
 
-```text
-public / official sources + authorised media
-                    |
-                    v
-     acquisition + source provenance
-                    |
-                    v
- visual observations / keyframes / satellite evidence
-                    |
-                    v
- deterministic geographic hypotheses
-                    |
-                    v
- EventEvidence + spatio-temporal history
-                    |
-                    v
- compact PointEvidenceBundle per candidate
-                    |
-                    v
- managed multimodal PointAssessment
-                    |
-                    v
- guarded backend receipt and human review
-                    |
-                    v
- backend Part.4 3.2 fire-state reconstruction
+```mermaid
+flowchart TD
+    sources["Authorised sources, images, video and satellite references"] --> evidence["Part.2: acquisition and versioned evidence"]
+    evidence --> geography["Part.3: deterministic geographic hypotheses"]
+    geography --> dossier["PointEvidenceBundle and event history"]
+    dossier --> supervisor["Multimodal assessment or abstention"]
+    supervisor --> backend["Guarded backend evidence receipt"]
+    evidence --> satellite["Normalised satellite observations"]
+    satellite --> backend
+    backend --> fusion["Backend Part.4: daily state and review"]
 ```
+
+The graph describes responsibilities, not an accepted live pipeline. The
+worker does not create the administrative spatial seed, mutate a frozen
+perimeter, or authorize public release.
 
 The worker follows explicit provider boundaries. Search, multimodal extraction, visual detection, terrain, maps, satellite processing, cross-view evidence and final supervision can be replaced independently when they preserve the same contracts and failure semantics.
 
@@ -60,7 +48,7 @@ Geographic candidates are built separately from documented upload/camera informa
 
 The final multimodal supervisor judges a supplied candidate. It may `accept`, `reject` or `abstain`; it may not silently mutate the source point. A proposed correction is a competing referenced object with its own evidence trail.
 
-The worker does not author the final daily boundary. Reviewed spatial observations are consumed downstream by backend **Part.4 3.2**, where an allowlisted deterministic fusion profile reconstructs `affected`, `active` and uncertainty products. The current baseline profile remains uncalibrated and therefore cannot authorize unattended publication.
+The worker does not author the final daily boundary. Reviewed spatial observations are consumed downstream by backend **Part.4 3.3**, where an allowlisted deterministic fusion profile reconstructs `affected`, `active` and uncertainty products. The current baseline profile remains uncalibrated and therefore cannot authorize unattended publication.
 
 ## Satellite evidence boundary
 
@@ -72,6 +60,26 @@ FireViewer keeps satellite product semantics explicit:
 - multiple pixels or probability buckets from one product lineage remain one source lineage rather than independent votes.
 
 Product availability does not imply live provider qualification.
+
+## Bounded satellite corpus readers
+
+The `satellite_corpus`, `cdse_corpus` and `sentinel1_corpus` modules expose
+bounded CPU acquisition paths for historical reconstruction. They preserve
+acquisition identity, source availability, coverage and retained derivative
+receipts. A source published after the state cutoff is not historical evidence.
+
+Sentinel-2 reflectance encoding is checked against the same original SAFE
+product and native-grid samples, not inferred from a catalog offset flag.
+Invalid spectra and SCL water cannot become positive burned-area support.
+Archived-AOI repair verifies object identities and preserves grids instead of
+searching for new scenes. These corrections create new corpus revisions and
+never overwrite frozen predictions.
+
+CLMS remains affected-area support, Sentinel-3/FIRMS remain thermal footprints,
+and Sentinel-1 remains experimental modelled support. Missing detections do not
+automatically create negative observations. Optional openEO processing is off
+by default and requires explicit authorization and a verified bounded budget.
+Code availability does not activate a provider or qualify a fusion profile.
 
 ## Data and retention
 

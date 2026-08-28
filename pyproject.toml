@@ -87,12 +87,14 @@ public-media = [
 ]
 satellite-cpu = [
   "boto3==1.43.50",
+  "defusedxml==0.7.1",
   "h5py==3.15.1",
   "httpx==0.28.1",
   "numpy==2.4.6",
   "pillow==12.3.0",
   "rasterio==1.4.4",
   "shapely==2.1.2",
+  "tzdata==2026.3",
 ]
 corpus = [
   "datasets==4.8.5",
@@ -159,6 +161,7 @@ dev = [
   "pytest==9.0.2",
   "ruff==0.15.21",
   "mypy==2.2.0",
+  "types-defusedxml==0.7.0.20260504",
 ]
 
 [project.scripts]

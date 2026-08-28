@@ -19,6 +19,9 @@ tests/*
 !tests/test_mvp_transcription.py
 !tests/test_research_broker.py
 !tests/test_mvp_satellite_cpu.py
+!tests/test_satellite_corpus.py
+!tests/test_sentinel2_radiometry.py
+!tests/test_cdse_corpus.py
 benchmark-results
 checkpoints
 data

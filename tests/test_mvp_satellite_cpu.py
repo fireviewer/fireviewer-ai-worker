@@ -1134,7 +1134,7 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     assert receipt.status == "completed"
     payload = publisher.payloads[0]
     assert payload["processor"] == "sentinel2_nbr_change_v1"
-    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.1.0"
+    assert payload["processor_revision"] == "fireviewer-sentinel2-nbr-change-cpu-1.3.0"
     assert len(payload["processing_context_sha256"]) == 64
     assert payload["result_id"].startswith("SATOBS-")
     assert payload["reference_artifact_revision_id"] == reference.artifact_revision_id
@@ -1149,8 +1149,14 @@ def test_sentinel2_prefire_postfire_nbr_change_produces_burned_probability() -> 
     assert payload["valid_coverage_geojson"]["type"] == "Polygon"
     assert payload["coverage_metrics"] == {
         "valid_pixel_count": 16,
+        "valid_fraction": 1.0,
         "cloud_fraction": 0.0,
+        "no_data_fraction": 0.0,
+        "scl_invalid_fraction": 0.0,
+        "spectral_invalid_pixel_count": 0,
         "burned_pixel_count": 4,
+        "water_pixel_count": 0,
+        "water_positive_excluded_count": 0,
     }
     assert result["coverage_geojson"]["type"] == "Polygon"
     assert result["geometry_geojson"]["type"] in {"Polygon", "MultiPolygon"}

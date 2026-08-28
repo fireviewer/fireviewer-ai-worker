@@ -7,7 +7,7 @@ import math
 from collections.abc import Mapping
 from contextlib import ExitStack
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -35,7 +35,7 @@ _CLMS_REVISION = "fireviewer-clms-burned-area-cpu-1.1.0"
 _CLMS_COLLECTION = "clms_ba_global_300m_daily_v4_cog"
 _CLMS_ASSETS = ("ba300_dob_nrt", "ba300_cp_nrt", "ba300_bf_nrt")
 _S2_PROCESSOR = "sentinel2_nbr_change_v1"
-_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.1.0"
+_S2_REVISION = "fireviewer-sentinel2-nbr-change-cpu-1.3.0"
 _S2_COLLECTION = "sentinel-2-l2a"
 _S2_ASSETS = ("B04_20m", "B8A_20m", "B11_20m", "B12_20m", "SCL_20m")
 _S1_PROCESSOR = "sentinel1_vvvh_change_v1"
@@ -587,8 +587,8 @@ class CdseS3ObservationAssetReader:
         size = 0
         try:
             response = self._s3.get_object(Bucket="eodata", Key=asset.s3_key)
-            body = response["Body"]
-            with output_path.open("wb") as stream:
+            # Close the response even when a size guard interrupts the download.
+            with response["Body"] as body, output_path.open("wb") as stream:
                 while True:
                     chunk = body.read(1024 * 1024)
                     if not chunk:
@@ -984,13 +984,35 @@ def _sentinel1_vvvh_observations(
     vv_change_threshold_db: float,
     vh_change_threshold_db: float,
 ) -> Sentinel1ObservationOutcome:
+    if durable.incident_day_bbox is None:
+        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
+    return sentinel1_vvvh_from_window(
+        incident_bbox=durable.incident_day_bbox,
+        observed_at=_observation_time(durable, artifact),
+        source_revision_id=artifact.artifact_revision_id,
+        resolution_m=float(artifact.resolution_m or 40),
+        window=window,
+        vv_change_threshold_db=vv_change_threshold_db,
+        vh_change_threshold_db=vh_change_threshold_db,
+    )
+
+
+def sentinel1_vvvh_from_window(
+    *,
+    incident_bbox: tuple[float, float, float, float],
+    observed_at: datetime,
+    source_revision_id: str,
+    resolution_m: float,
+    window: Sentinel1ChangeWindow,
+    vv_change_threshold_db: float = 1.5,
+    vh_change_threshold_db: float = 1.5,
+) -> Sentinel1ObservationOutcome:
+    """Shared, uncalibrated SAR support; an absence of change is not a negative."""
     from rasterio.features import shapes
     from rasterio.warp import transform_geom
     from shapely.geometry import box, mapping, shape
     from shapely.ops import unary_union
 
-    if durable.incident_day_bbox is None:
-        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
     pre_vv = np.asarray(window.pre["VV"], dtype=np.float64)
     pre_vh = np.asarray(window.pre["VH"], dtype=np.float64)
     post_vv = np.asarray(window.post["VV"], dtype=np.float64)
@@ -1014,7 +1036,7 @@ def _sentinel1_vvvh_observations(
             valid_coverage_geojson=None,
             coverage_metrics={"valid_pixel_count": 0, "invalid_fraction": 1.0},
         )
-    incident_extent = box(*durable.incident_day_bbox)
+    incident_extent = box(*incident_bbox)
     coverage_polygons = []
     for raw_geometry, value in shapes(
         valid.astype(np.uint8), mask=valid, transform=window.transform
@@ -1064,7 +1086,7 @@ def _sentinel1_vvvh_observations(
         selected=selected,
         transform=window.transform,
         crs=window.crs,
-        incident_bbox=durable.incident_day_bbox,
+        incident_bbox=incident_bbox,
     )
     if not buckets:
         return Sentinel1ObservationOutcome(
@@ -1074,9 +1096,11 @@ def _sentinel1_vvvh_observations(
         )
     observations = []
     for bucket_index, bucket_probability, bucket_pixels, geometry in buckets:
+        # Reduction roundoff must not lift the experimental 0.45 ceiling.
+        bucket_probability = min(0.45, bucket_probability)
         observation_digest = sha256(
             (
-                artifact.artifact_revision_id
+                source_revision_id
                 + geometry.wkb_hex
                 + f"{vv_change_threshold_db:.6f}:{vh_change_threshold_db:.6f}:"
                 + f"{bucket_index}:{bucket_probability:.6f}"
@@ -1085,10 +1109,10 @@ def _sentinel1_vvvh_observations(
         observations.append(
             {
                 "observation_id": f"S1-VVVH-{observation_digest[:24]}",
-                "observed_at": _observation_time(durable, artifact).isoformat(),
+                "observed_at": observed_at.isoformat(),
                 "geometry_geojson": mapping(geometry),
                 "coverage_geojson": coverage_geojson,
-                "horizontal_accuracy_m": max(40.0, float(artifact.resolution_m or 40)),
+                "horizontal_accuracy_m": max(40.0, resolution_m),
                 "confidence": bucket_probability,
                 "metrics": {
                     **coverage_metrics,
@@ -1120,39 +1144,77 @@ def _sentinel2_nbr_observations(
     dnbr_threshold: float,
     minimum_probability: float,
 ) -> Sentinel2ObservationOutcome:
+    if durable.incident_day_bbox is None:
+        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
+    return sentinel2_nbr_from_window(
+        incident_bbox=durable.incident_day_bbox,
+        observed_at=_observation_time(durable, artifact),
+        source_revision_id=artifact.artifact_revision_id,
+        resolution_m=float(artifact.resolution_m or 20),
+        window=window,
+        dnbr_threshold=dnbr_threshold,
+        minimum_probability=minimum_probability,
+    )
+
+
+def sentinel2_nbr_from_window(
+    *,
+    incident_bbox: tuple[float, float, float, float],
+    observed_at: datetime,
+    source_revision_id: str,
+    resolution_m: float,
+    window: Sentinel2ChangeWindow,
+    dnbr_threshold: float,
+    minimum_probability: float,
+) -> Sentinel2ObservationOutcome:
     from rasterio.features import shapes
     from rasterio.warp import transform_geom
     from shapely.geometry import box, mapping, shape
     from shapely.ops import unary_union
 
-    if durable.incident_day_bbox is None:
-        raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
     pre_scl = np.rint(window.pre["SCL_20m"]).astype(np.int16)
     post_scl = np.rint(window.post["SCL_20m"]).astype(np.int16)
     invalid_scl = np.array([0, 1, 3, 8, 9, 10, 11], dtype=np.int16)
-    valid = ~np.isin(pre_scl, invalid_scl) & ~np.isin(post_scl, invalid_scl)
+    scl_valid = ~np.isin(pre_scl, invalid_scl) & ~np.isin(post_scl, invalid_scl)
     pre_nir = np.asarray(window.pre["B8A_20m"], dtype=np.float64)
     pre_swir = np.asarray(window.pre["B12_20m"], dtype=np.float64)
     post_nir = np.asarray(window.post["B8A_20m"], dtype=np.float64)
     post_swir = np.asarray(window.post["B12_20m"], dtype=np.float64)
     pre_denominator = pre_nir + pre_swir
     post_denominator = post_nir + post_swir
-    valid &= (
+    spectral_valid = (
         np.isfinite(pre_nir)
         & np.isfinite(pre_swir)
         & np.isfinite(post_nir)
         & np.isfinite(post_swir)
+        & (pre_nir >= 0)
+        & (pre_swir >= 0)
+        & (post_nir >= 0)
+        & (post_swir >= 0)
         & (pre_denominator > 0)
         & (post_denominator > 0)
     )
+    # Negative BOA values may exist, but cannot form bounded NBR evidence. Do
+    # not clip a physically invalid ratio into a maximum-confidence burn mask.
+    valid = scl_valid & spectral_valid
     valid_pixel_count = int(np.count_nonzero(valid))
+    coverage_metrics: dict[str, float | int] = {
+        "valid_pixel_count": valid_pixel_count,
+        "valid_fraction": float(valid_pixel_count / valid.size),
+        "cloud_fraction": float(
+            np.mean(np.isin(pre_scl, [8, 9, 10]) | np.isin(post_scl, [8, 9, 10]))
+        ),
+        "no_data_fraction": float(np.mean((pre_scl == 0) | (post_scl == 0))),
+        "scl_invalid_fraction": float(np.mean(~scl_valid)),
+        "spectral_invalid_pixel_count": int(np.count_nonzero(scl_valid & ~spectral_valid)),
+    }
     if valid_pixel_count == 0:
         return Sentinel2ObservationOutcome(
             observations=(),
             valid_coverage_geojson=None,
-            coverage_metrics={"valid_pixel_count": 0, "cloud_fraction": 1.0},
+            coverage_metrics=coverage_metrics,
         )
-    incident_extent = box(*durable.incident_day_bbox)
+    incident_extent = box(*incident_bbox)
     coverage_polygons = []
     for raw_geometry, value in shapes(
         valid.astype(np.uint8), mask=valid, transform=window.transform
@@ -1167,10 +1229,6 @@ def _sentinel2_nbr_observations(
     if valid_coverage is not None and valid_coverage.geom_type not in {"Polygon", "MultiPolygon"}:
         raise SatelliteCpuError("sentinel2_coverage_geometry_invalid", retryable=False)
     coverage_geojson = mapping(valid_coverage) if valid_coverage is not None else None
-    coverage_metrics: dict[str, float | int] = {
-        "valid_pixel_count": valid_pixel_count,
-        "cloud_fraction": float(1 - (valid_pixel_count / valid.size)),
-    }
     pre_nbr = np.zeros_like(pre_nir)
     post_nbr = np.zeros_like(post_nir)
     np.divide(pre_nir - pre_swir, pre_denominator, out=pre_nbr, where=valid)
@@ -1181,7 +1239,16 @@ def _sentinel2_nbr_observations(
         0,
         1,
     )
-    selected = valid & (dnbr >= dnbr_threshold) & (probability >= minimum_probability)
+    # SCL 6 is water, not a burned land surface. Keep its valid coverage, but
+    # exclude positive change over water in either acquisition. This is not a
+    # valid_negative observation and must not erase a previous burned state.
+    water = (pre_scl == 6) | (post_scl == 6)
+    spectral_positive = valid & (dnbr >= dnbr_threshold) & (probability >= minimum_probability)
+    selected = spectral_positive & ~water
+    coverage_metrics["water_pixel_count"] = int(np.count_nonzero(valid & water))
+    coverage_metrics["water_positive_excluded_count"] = int(
+        np.count_nonzero(spectral_positive & water)
+    )
     burned_pixel_count = int(np.count_nonzero(selected))
     if burned_pixel_count == 0:
         return Sentinel2ObservationOutcome(
@@ -1194,7 +1261,7 @@ def _sentinel2_nbr_observations(
         selected=selected,
         transform=window.transform,
         crs=window.crs,
-        incident_bbox=durable.incident_day_bbox,
+        incident_bbox=incident_bbox,
     )
     if not buckets:
         return Sentinel2ObservationOutcome(
@@ -1202,7 +1269,6 @@ def _sentinel2_nbr_observations(
             valid_coverage_geojson=coverage_geojson,
             coverage_metrics={**coverage_metrics, "burned_pixel_count": burned_pixel_count},
         )
-    observed_at = _observation_time(durable, artifact)
     observations = []
     for bucket_index, bucket_probability, bucket_pixels, geometry in buckets:
         bucket_mask = selected & (
@@ -1215,7 +1281,7 @@ def _sentinel2_nbr_observations(
         )
         observation_digest = sha256(
             (
-                artifact.artifact_revision_id
+                source_revision_id
                 + geometry.wkb_hex
                 + f"{dnbr_threshold:.6f}:{bucket_index}:{bucket_probability:.6f}"
             ).encode()
@@ -1226,7 +1292,7 @@ def _sentinel2_nbr_observations(
                 "observed_at": observed_at.isoformat(),
                 "geometry_geojson": mapping(geometry),
                 "coverage_geojson": coverage_geojson,
-                "horizontal_accuracy_m": max(20.0, float(artifact.resolution_m or 20)),
+                "horizontal_accuracy_m": max(20.0, float(resolution_m)),
                 "confidence": bucket_probability,
                 "metrics": {
                     **coverage_metrics,
@@ -1256,11 +1322,36 @@ def _clms_observations(
     probability_threshold: float,
     fraction_threshold: float,
 ) -> list[dict[str, Any]]:
-    from shapely.geometry import mapping
 
     if durable.incident_day_local_date is None or durable.incident_day_bbox is None:
         raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
-    target_day = durable.incident_day_local_date.timetuple().tm_yday
+    return clms_observations_from_window(
+        local_date=durable.incident_day_local_date,
+        incident_bbox=durable.incident_day_bbox,
+        observed_at=_observation_time(durable, artifact),
+        source_revision_id=artifact.artifact_revision_id,
+        resolution_m=float(artifact.resolution_m or 300),
+        window=window,
+        probability_threshold=probability_threshold,
+        fraction_threshold=fraction_threshold,
+    )
+
+
+def clms_observations_from_window(
+    *,
+    local_date: date,
+    incident_bbox: tuple[float, float, float, float],
+    observed_at: datetime,
+    source_revision_id: str,
+    resolution_m: float,
+    window: ClmsRasterWindow,
+    probability_threshold: float,
+    fraction_threshold: float,
+) -> list[dict[str, Any]]:
+    """Shared CLMS calculation; a daily product is never dated as its publication day."""
+    from shapely.geometry import mapping
+
+    target_day = local_date.timetuple().tm_yday
     valid = window.valid_masks[0] & window.valid_masks[1] & window.valid_masks[2]
     selected = (
         valid
@@ -1276,7 +1367,7 @@ def _clms_observations(
         selected=selected,
         transform=window.transform,
         crs="EPSG:4326",
-        incident_bbox=durable.incident_day_bbox,
+        incident_bbox=incident_bbox,
     )
     observations = []
     for bucket_index, bucket_probability, bucket_pixels, geometry in buckets:
@@ -1291,7 +1382,7 @@ def _clms_observations(
         fraction_mean = float(np.mean(window.burn_fraction[bucket_mask]))
         observation_digest = sha256(
             (
-                artifact.artifact_revision_id
+                source_revision_id
                 + str(target_day)
                 + geometry.wkb_hex
                 + f":{bucket_index}:{bucket_probability:.6f}"
@@ -1300,9 +1391,9 @@ def _clms_observations(
         observations.append(
             {
                 "observation_id": f"CLMS-BA-{observation_digest[:24]}",
-                "observed_at": _observation_time(durable, artifact).isoformat(),
+                "observed_at": observed_at.isoformat(),
                 "geometry_geojson": mapping(geometry),
-                "horizontal_accuracy_m": max(300.0, float(artifact.resolution_m or 300)),
+                "horizontal_accuracy_m": max(300.0, resolution_m),
                 "confidence": min(1.0, max(0.0, bucket_probability)),
                 "metrics": {
                     "target_day_of_year": target_day,
@@ -1399,15 +1490,38 @@ def _frp_observations(
     path: Path,
     minimum_confidence: float,
 ) -> list[dict[str, Any]]:
-    import h5py
-
     if durable.incident_day_bbox is None:
         raise SatelliteCpuError("satellite_incident_day_required", retryable=False)
     start = durable.event.time_window.from_at
     end = durable.event.time_window.to_at
     if start is None or end is None:
         raise SatelliteCpuError("satellite_incident_day_time_missing", retryable=False)
-    fallback_time = _observation_time(durable, artifact)
+    return frp_observations_from_file(
+        incident_bbox=durable.incident_day_bbox,
+        start=start,
+        end=end,
+        fallback_time=_observation_time(durable, artifact),
+        source_revision_id=artifact.artifact_revision_id,
+        resolution_m=float(artifact.resolution_m or 1000),
+        path=path,
+        minimum_confidence=minimum_confidence,
+    )
+
+
+def frp_observations_from_file(
+    *,
+    incident_bbox: tuple[float, float, float, float],
+    start: datetime,
+    end: datetime,
+    fallback_time: datetime,
+    source_revision_id: str,
+    resolution_m: float,
+    path: Path,
+    minimum_confidence: float,
+) -> list[dict[str, Any]]:
+    """Shared bounded FRP decoder; returns thermal points, never fire boundaries."""
+    import h5py
+
     try:
         with h5py.File(path, "r") as dataset:
             variables = _netcdf_variables(dataset)
@@ -1461,8 +1575,8 @@ def _frp_observations(
     except (OSError, RuntimeError, ValueError) as exc:
         raise SatelliteCpuError("sentinel3_frp_decode_failed", retryable=False) from exc
 
-    min_lon, min_lat, max_lon, max_lat = durable.incident_day_bbox
-    accuracy = max(1_000.0, float(artifact.resolution_m or 1_000))
+    min_lon, min_lat, max_lon, max_lat = incident_bbox
+    accuracy = max(1_000.0, resolution_m)
     observations: list[dict[str, Any]] = []
     for index in range(length):
         lon = float(longitude[index])
@@ -1505,7 +1619,7 @@ def _frp_observations(
         if math.isfinite(confidence_value):
             metrics["provider_confidence"] = normalized_confidence
         digest = sha256(
-            f"{artifact.artifact_revision_id}:{index}:{lon:.8f}:{lat:.8f}:{power:.8f}".encode()
+            f"{source_revision_id}:{index}:{lon:.8f}:{lat:.8f}:{power:.8f}".encode()
         ).hexdigest()
         observations.append(
             {

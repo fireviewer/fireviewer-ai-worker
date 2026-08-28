@@ -653,6 +653,8 @@ class PublicMediaCpuWorker:
                     ),
                     "confidence": claim.confidence,
                     "evidence_media_ids": [media.media_id],
+                    **({"surface_area": claim.surface_area.model_dump(mode="json")}
+                       if claim.surface_area is not None else {}),
                 }
             )
         journal.append(

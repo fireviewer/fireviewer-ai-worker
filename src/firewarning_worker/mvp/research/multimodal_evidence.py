@@ -21,6 +21,7 @@ from PIL import Image, UnidentifiedImageError
 from pydantic import AnyHttpUrl, Field, model_validator
 
 from firewarning_worker.contracts import SafeIdentifierV2, Sha256HexV2, StrictModel
+from firewarning_worker.mvp.research.surface_area import ExtractedSurfaceArea
 
 _PROMPT = """
 You extract explicitly supported wildfire facts from one public source content item and its images.
@@ -37,6 +38,11 @@ Rules:
 - Do not accept, reject, rank or generate a GPS candidate.
 - An evidence_media_id is allowed only when that exact image supports the claim.
 - Keep contradictory statements as separate claims.
+- For an explicitly dated area claim, optionally add surface_area with component
+  (affected/active), scope (incident/episode), accumulation (cumulative/incremental),
+  qualifier (exact/approximate/minimum/maximum/interval), value_ha/lower_ha/upper_ha
+  and timezone-aware valid_from/valid_until. Omit it if the period or meaning is unknown.
+- Never invent bounds, tolerances, dates or an exact qualifier for an approximate area.
 - Use an empty claims list when no supported fact is present.
 - No Markdown and no fields beyond the schema.
 """.strip()
@@ -92,6 +98,7 @@ class ExtractedMultimodalClaim(StrictModel):
     observed_at: datetime | None = None
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
     evidence_media_ids: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=4)
+    surface_area: ExtractedSurfaceArea | None = None
 
 
 class MultimodalEvidenceExtraction(StrictModel):
@@ -173,6 +180,7 @@ class _ProviderClaimPayload(StrictModel):
     observed_at: datetime | None = None
     confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
     evidence_media_ids: tuple[SafeIdentifierV2, ...] = Field(default=(), max_length=4)
+    surface_area: ExtractedSurfaceArea | None = None
 
     @model_validator(mode="after")
     def validate_observed_at(self) -> _ProviderClaimPayload:
@@ -406,6 +414,7 @@ def _validated_extraction(
                 observed_at=claim.observed_at,
                 confidence=claim.confidence,
                 evidence_media_ids=media_ids,
+                surface_area=claim.surface_area,
             ),
         )
     return MultimodalEvidenceExtraction(

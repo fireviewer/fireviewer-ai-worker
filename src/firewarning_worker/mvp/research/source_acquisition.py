@@ -314,6 +314,8 @@ class CpuSourceAcquisitionWorker:
                     else None,
                     "confidence": claim.confidence,
                     "evidence_media_ids": list(claim.evidence_media_ids),
+                    **({"surface_area": claim.surface_area.model_dump(mode="json")}
+                       if claim.surface_area is not None else {}),
                 }
             )
         outcome: Literal["success", "partial"] = "partial" if extraction.partial else "success"

@@ -14,9 +14,12 @@ ENV PATH="/opt/venv/bin:${PATH}"
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY tests/test_mvp_satellite_cpu.py ./tests/test_mvp_satellite_cpu.py
+COPY tests/test_satellite_corpus.py ./tests/test_satellite_corpus.py
+COPY tests/test_sentinel2_radiometry.py ./tests/test_sentinel2_radiometry.py
+COPY tests/test_cdse_corpus.py ./tests/test_cdse_corpus.py
 RUN pip install --upgrade pip \
     && pip install '.[satellite-cpu]' pytest==9.0.2 \
-    && pytest -q -o addopts='' tests/test_mvp_satellite_cpu.py
+    && pytest -q -o addopts='' tests/test_mvp_satellite_cpu.py tests/test_satellite_corpus.py tests/test_sentinel2_radiometry.py tests/test_cdse_corpus.py
 RUN pip uninstall --yes pytest setuptools wheel
 RUN python -m pip uninstall --yes pip
 
