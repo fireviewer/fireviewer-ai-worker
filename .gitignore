@@ -25,6 +25,7 @@ captures/
 caches/
 benchmarks/**/media/
 benchmarks/**/materialized/
+benchmarks/**/corpus/
 **/dataset/
 **/datasets/
 **/checkpoints/
