@@ -1,0 +1,3 @@
+# Reviewed synthetic test-fixture identifiers. Exact fingerprints only.
+658953f9e1f54f508c108fa563842f6016146583:tests/test_contracts_v2.py:generic-api-key:164
+658953f9e1f54f508c108fa563842f6016146583:tests/test_contracts_v2.py:generic-api-key:215
