@@ -11,7 +11,7 @@ from hashlib import sha256
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Final, Literal
 from urllib.parse import urlsplit
 
 from pydantic import Field, ValidationError, model_validator
@@ -27,9 +27,15 @@ from firewarning_worker.prithvi_burned_area import PrithviBurnedAreaAdapter
 
 MEGALOC_REVISION = "37bb43d65dd6388d1578052de5eb0bcdceb497e7"
 PRITHVI_REVISION = "a3f2c410e45b8ac7417976614528a872f024d831"
-REQUEST_SCHEMA = "fireviewer.geo-gpu-request.v1"
-RESPONSE_SCHEMA = "fireviewer.geo-gpu-response.v1"
-ARTIFACT_SCHEMA = "fireviewer.sagemaker-geo-model-artifact.v1"
+REQUEST_SCHEMA: Final[Literal["fireviewer.geo-gpu-request.v1"]] = (
+    "fireviewer.geo-gpu-request.v1"
+)
+RESPONSE_SCHEMA: Final[Literal["fireviewer.geo-gpu-response.v1"]] = (
+    "fireviewer.geo-gpu-response.v1"
+)
+ARTIFACT_SCHEMA: Final[Literal["fireviewer.sagemaker-geo-model-artifact.v1"]] = (
+    "fireviewer.sagemaker-geo-model-artifact.v1"
+)
 
 
 class ArtifactFile(StrictModel):

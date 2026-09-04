@@ -68,7 +68,7 @@ class FaissMatch(StrictModel):
 
 def _load_faiss() -> Any:
     try:
-        import faiss
+        import faiss  # type: ignore[import-not-found]
     except ImportError as exc:
         raise FaissUnavailableError(
             "faiss-cpu is required for the Panoramax regional index"

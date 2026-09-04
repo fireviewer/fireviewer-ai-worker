@@ -22,6 +22,8 @@ jobs:
           --extra dev
           --extra eo4-conversion
           --extra roma-registration
+          --extra satellite-cpu
+          --extra source-acquisition
           --extra spatial-training
           --extra training
       - run: uv run ruff check src tests scripts training tools

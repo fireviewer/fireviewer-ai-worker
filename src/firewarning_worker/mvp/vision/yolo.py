@@ -61,7 +61,7 @@ class HuggingFaceYoloModelLoader:
     def __call__(self) -> Any:
         import torch
         from huggingface_hub import hf_hub_download
-        from ultralytics import YOLO  # type: ignore[attr-defined]
+        from ultralytics import YOLO
 
         cache_dir = str(self.cache_dir) if self.cache_dir is not None else None
         artifact = Path(
